@@ -60,14 +60,11 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#F8F9FA] pb-24">
       <header className="bg-white border-b border-gray-100 px-4 py-4 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className="bg-[#4CAF50]/10 p-2 rounded-lg">
               <Pill className="w-5 h-5 text-[#4CAF50]" />
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-800">Good Morning, {user?.name?.split(" ")[0]}</h1>
-              <p className="text-xs text-gray-500">Today, {new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</p>
-            </div>
+            <span className="text-xl font-bold text-gray-800">MediMind</span>
           </div>
           <Button variant="ghost" size="icon" onClick={handleLogout} className="text-gray-500 hover:text-red-500">
             <LogOut className="w-5 h-5" />
@@ -111,14 +108,14 @@ export default function Dashboard() {
               onClick={() => navigate("/add-medicine")}
               className="text-[#4CAF50] border-[#4CAF50]/30 hover:bg-[#4CAF50]/10"
             >
-              <Plus className="w-4 h-4 mr-1" /> Add
+              <Plus className="w-4 h-4" /> Add
             </Button>
           </div>
 
           {medicines.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-200">
               <Pill className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 mb-4">No medicines added yet</p>
+              <p className="text-gray-500 mb-4">Add your first medicine to get started</p>
               <Button onClick={() => navigate("/add-medicine")} className="bg-[#4CAF50] hover:bg-[#43A047]">
                 Add Your First Medicine
               </Button>
