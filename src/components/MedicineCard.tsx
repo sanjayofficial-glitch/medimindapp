@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, Clock, Pill } from "lucide-react";
+import { Check, Clock, Pill, Trash2 } from "lucide-react";
 
 interface Medicine {
   id: string;
@@ -18,12 +18,11 @@ interface Medicine {
 interface MedicineCardProps {
   medicine: Medicine;
   onToggleTaken: (id: string) => void;
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
-export default function MedicineCard({ medicine, onToggleTaken }: MedicineCardProps) {
-  const isPast = new Date().getHours() > parseInt(medicine.time.split(":")[0]);
-  const isNow = Math.abs(new Date().getHours() - parseInt(medicine.time.split(":")[0])) <= 1;
-
+export default function MedicineCard({ medicine, onToggleTaken, onEdit, onDelete }: MedicineCardProps) {
   return (
     <Card className={`border-0 shadow-sm p-4 transition-all ${medicine.taken ? "bg-gray-50 opacity-75" : "bg-white"}`}>
       <div className="flex items-start justify-between gap-4">
@@ -57,22 +56,32 @@ export default function MedicineCard({ medicine, onToggleTaken }: MedicineCardPr
           </div>
         </div>
 
-        <Button
-          size="sm"
-          variant={medicine.taken ? "outline" : "default"}
-          onClick={() => onToggleTaken(medicine.id)}
-          className={`h-9 px-3 rounded-lg ${
-            medicine.taken
-              ? "border-gray-300 text-gray-500 hover:bg-gray-100"
-              : "bg-[#4CAF50] hover:bg-[#43A047] text-white"
-          }`}
-        >
-          {medicine.taken ? (
-            <Check className="w-4 h-4" />
-          ) : (
-            "Take"
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant={medicine.taken ? "outline" : "default"}
+            onClick={() => onToggleTaken(medicine.id)}
+            className={`h-9 px-3 rounded-lg ${
+              medicine.taken
+                ? "border-gray-300 text-gray-500 hover:bg-gray-100"
+                : "bg-[#4CAF50] hover:bg-[#43A047] text-white"
+            }`}
+          >
+            {medicine.taken ? (
+              <Check className="w-4 h-4" />
+            ) : (
+              "Take"
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => onDelete(medicine.id)}
+            className="h-9 px-3 rounded-lg"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
     </Card>
   );
