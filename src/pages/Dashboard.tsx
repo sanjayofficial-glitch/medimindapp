@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Pill, LogOut, Plus, Calendar, TrendingUp, CheckCircle2 } from "lucide-react";
 import MedicineCard from "@/components/MedicineCard";
-import AddMedicineDialog from "@/components/AddMedicineDialog";
 import { useAuth } from "@/context/AuthContext";
 
 interface Medicine {
@@ -30,8 +29,14 @@ const initialMedicines: Medicine[] = [
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [medicines, setMedicines] = useState<Medicine[]>(initialMedicines);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [medicines, setMedicines] = useState<Medicine[]>(() => {
+    const stored = localStorage.getItem("medimind_medicines");
+    return stored ? JSON.parse(stored) : initialMedicines;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("medimind_medicines", JSON.stringify(medicines));
+  }, [medicines]);
 
   const takenCount = medicines.filter((m) => m.taken).length;
   const adherenceRate = Math.round((takenCount / medicines.length) * 100) || 0;
@@ -40,19 +45,6 @@ export default function Dashboard() {
     setMedicines((prev) =>
       prev.map((m) => (m.id === id ? { ...m, taken: !m.taken } : m))
     );
-  };
-
-  const handleAddMedicine = (newMedicine: Omit<Medicine, "id" | "taken">) => {
-    const medicine: Medicine = {
-      ...newMedicine,
-      id: Date.now().toString(),
-      taken: false,
-    };
-    setMedicines((prev) => [...prev, medicine].sort((a, b) => a.time.localeCompare(b.time)));
-  };
-
-  const handleEditMedicine = (id: string) => {
-    setIsDialogOpen(true);
   };
 
   const handleDeleteMedicine = (id: string) => {
@@ -116,7 +108,7 @@ export default function Dashboard() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIsDialogOpen(true)}
+              onClick={() => navigate("/add-medicine")}
               className="text-[#4CAF50] border-[#4CAF50]/30 hover:bg-[#4CAF50]/10"
             >
               <Plus className="w-4 h-4 mr-1" /> Add
@@ -127,7 +119,7 @@ export default function Dashboard() {
             <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-200">
               <Pill className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500 mb-4">No medicines added yet</p>
-              <Button onClick={() => setIsDialogOpen(true)} className="bg-[#4CAF50] hover:bg-[#43A047]">
+              <Button onClick={() => navigate("/add-medicine")} className="bg-[#4CAF50] hover:bg-[#43A047]">
                 Add Your First Medicine
               </Button>
             </div>
@@ -138,7 +130,7 @@ export default function Dashboard() {
                   key={med.id} 
                   medicine={med} 
                   onToggleTaken={handleToggleTaken}
-                  onEdit={handleEditMedicine}
+                  onEdit={() => {}}
                   onDelete={handleDeleteMedicine}
                 />
               ))}
@@ -146,8 +138,6 @@ export default function Dashboard() {
           )}
         </div>
       </main>
-
-      <AddMedicineDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} onAdd={handleAddMedicine} />
     </div>
   );
 }
