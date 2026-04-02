@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Calendar, ArrowRight } from "lucide-react";
+import { Pill, ArrowRight } from "lucide-react";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 
 const Index = () => {
@@ -13,27 +13,27 @@ const Index = () => {
         
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           <Link
-            to="/history"
+            to="/login"
             className="group bg-white rounded-2xl shadow-sm border border-gray-100 p-8 hover:shadow-md transition-all"
           >
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-blue-600" />
+                <Pill className="w-6 h-6 text-blue-600" />
               </div>
               <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">History</h2>
-            <p className="text-gray-600">View your medication adherence with color-coded calendar tracking</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Get Started</h2>
+            <p className="text-gray-600">Sign in or create an account to begin tracking your medications</p>
           </Link>
           
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 opacity-60">
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-gray-400" />
+                <Pill className="w-6 h-6 text-gray-400" />
               </div>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Reminders</h2>
-            <p className="text-gray-600">Coming soon - Set up your medication schedule</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Features</h2>
+            <p className="text-gray-600">• Medication tracking • History analytics • Smart reminders</p>
           </div>
         </div>
         
