@@ -1,15 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Pill, LogOut, Plus, Calendar, TrendingUp, CheckCircle2, Flame } from "lucide-react";
+import { Pill, LogOut, Plus, Calendar, TrendingUp, CheckCircle2, Flame, AlertTriangle } from "lucide-react";
 import MedicineCard from "@/components/MedicineCard";
+import SnoozeDialog from "@/components/SnoozeDialog";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
-import { cancelNotification, snoozeNotification, type NotificationAction } from "@/utils/notifications";
+import { 
+  cancelNotification, 
+  snoozeNotification, 
+  type NotificationAction,
+  getSnoozeCount,
+  incrementSnoozeCount,
+  resetSnoozeCount,
+  logSnoozeEvent
+} from "@/utils/notifications";
 
 interface Medicine {
   id: string;
@@ -20,12 +29,13 @@ interface Medicine {
   taken: boolean;
   takenAt?: string;
   instructions?: string;
+  missed?: boolean;
 }
 
 interface DoseLog {
   medicineId: string;
   scheduledTime: string;
-  takenTime: string;
+  takenTime?: string;
   status: "taken" | "missed";
 }
 
@@ -46,10 +56,57 @@ export default function Dashboard() {
   const [streak, setStreak] = useState(() => {
     return parseInt(localStorage.getItem("medimind_streak") || "0", 10);
   });
+  
+  const [snoozeDialogOpen, setSnoozeDialogOpen] = useState(false);
+  const [selectedMedicineForSnooze, setSelectedMedicineForSnooze] = useState<Medicine | null>(null);
+  const [missedMedicines, setMissedMedicines] = useState<Medicine[]>([]);
+  
+  const medicinesRef = useRef(medicines);
+  useEffect(() => { medicinesRef.current = medicines; }, [medicines]);
 
   useEffect(() => {
     localStorage.setItem("medimind_medicines", JSON.stringify(medicines));
   }, [medicines]);
+
+  // Check for missed doses every minute
+  useEffect(() => {
+    const checkMissedDoses = () => {
+      const now = new Date();
+      const currentMeds = medicinesRef.current;
+      
+      const missed = currentMeds.filter(m => {
+        if (m.taken || m.missed) return false;
+        const [hours, minutes] = m.time.split(":").map(Number);
+        const scheduled = new Date();
+        scheduled.setHours(hours, minutes, 0, 0);
+        const diffMs = now.getTime() - scheduled.getTime();
+        return diffMs > 15 * 60 * 1000; // 15 minutes
+      });
+      
+      if (missed.length > 0) {
+        setMissedMedicines(missed);
+        setMedicines(prev => {
+          const hasChanges = prev.some(m => missed.find(missed => missed.id === m.id) && !m.missed);
+          if (!hasChanges) return prev;
+          return prev.map(m => 
+            missed.find(missed => missed.id === m.id) ? { ...m, missed: true } : m
+          );
+        });
+        
+        const logs = JSON.parse(localStorage.getItem("medimind_dose_logs") || "[]");
+        missed.forEach(m => {
+          if (!logs.some((l: DoseLog) => l.medicineId === m.id && l.status === "missed")) {
+            logs.push({ medicineId: m.id, scheduledTime: m.time, status: "missed" });
+          }
+        });
+        localStorage.setItem("medimind_dose_logs", JSON.stringify(logs));
+      }
+    };
+
+    checkMissedDoses();
+    const interval = setInterval(checkMissedDoses, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const handleNotificationAction = (event: Event) => {
@@ -61,8 +118,8 @@ export default function Dashboard() {
         handleToggleTaken(medicineId);
         toast.success("Marked as taken via notification!");
       } else if (type === "snooze") {
-        snoozeNotification(medicineId, medicine.name, user?.name || "User");
-        toast.info("Reminder snoozed for 10 minutes");
+        setSelectedMedicineForSnooze(medicine);
+        setSnoozeDialogOpen(true);
       }
     };
 
@@ -77,12 +134,14 @@ export default function Dashboard() {
     const updatedMedicines = medicines.map((m) => {
       if (m.id === id) {
         const isNowTaken = !m.taken;
-        return { ...m, taken: isNowTaken, takenAt: isNowTaken ? new Date().toISOString() : undefined };
+        return { ...m, taken: isNowTaken, takenAt: isNowTaken ? new Date().toISOString() : undefined, missed: false };
       }
       return m;
     });
 
     setMedicines(updatedMedicines);
+    resetSnoozeCount(id);
+    setMissedMedicines(prev => prev.filter(m => m.id !== id));
 
     const medicine = medicines.find(m => m.id === id);
     if (medicine && !medicine.taken) {
@@ -105,6 +164,25 @@ export default function Dashboard() {
         localStorage.setItem("medimind_streak", newStreak.toString());
       }
     }
+  };
+
+  const handleSnooze = (minutes: number) => {
+    if (!selectedMedicineForSnooze) return;
+    
+    const count = getSnoozeCount(selectedMedicineForSnooze.id);
+    incrementSnoozeCount(selectedMedicineForSnooze.id);
+    logSnoozeEvent(selectedMedicineForSnooze.id, minutes);
+    
+    snoozeNotification(selectedMedicineForSnooze.id, selectedMedicineForSnooze.name, user?.name || "User", minutes);
+    
+    if (count >= 2) {
+      toast.warning("⚠️ You've snoozed twice. Please take your medicine now.");
+    } else {
+      toast.info(`Reminder snoozed for ${minutes} minutes`);
+    }
+    
+    setSnoozeDialogOpen(false);
+    setSelectedMedicineForSnooze(null);
   };
 
   const handleDeleteMedicine = (id: string) => {
@@ -141,6 +219,18 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+        {missedMedicines.length > 0 && (
+          <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-orange-800 font-medium">
+                You missed your {missedMedicines.map(m => m.name).join(", ")} dose ❤️ Take care
+              </p>
+              <p className="text-orange-600 text-sm mt-1">Consider rescheduling or taking it now if possible.</p>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <h2 className="text-2xl font-bold text-gray-800 mb-1">
             Good Morning, {user?.name || "User"} 👋
@@ -210,6 +300,16 @@ export default function Dashboard() {
           )}
         </div>
       </main>
+
+      {selectedMedicineForSnooze && (
+        <SnoozeDialog
+          open={snoozeDialogOpen}
+          onOpenChange={setSnoozeDialogOpen}
+          onSnooze={handleSnooze}
+          medicineName={selectedMedicineForSnooze.name}
+          snoozeCount={getSnoozeCount(selectedMedicineForSnooze.id)}
+        />
+      )}
     </div>
   );
 }

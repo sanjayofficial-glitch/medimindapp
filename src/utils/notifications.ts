@@ -55,9 +55,9 @@ export const scheduleNotification = (
   activeTimeouts.set(medicineId, timeoutId);
 };
 
-export const snoozeNotification = (medicineId: string, medicineName: string, userName: string) => {
+export const snoozeNotification = (medicineId: string, medicineName: string, userName: string, minutes: number = 10) => {
   cancelNotification(medicineId);
-  const timeoutId = setTimeout(() => createNotification(medicineId, medicineName, userName), 10 * 60 * 1000);
+  const timeoutId = setTimeout(() => createNotification(medicineId, medicineName, userName), minutes * 60 * 1000);
   activeTimeouts.set(medicineId, timeoutId);
 };
 
@@ -67,4 +67,28 @@ export const cancelNotification = (medicineId: string) => {
     clearTimeout(timeout);
     activeTimeouts.delete(medicineId);
   }
+};
+
+// Snooze tracking helpers (using localStorage as web equivalent to AsyncStorage)
+export const getSnoozeCount = (medicineId: string): number => {
+  const snoozes = JSON.parse(localStorage.getItem("medimind_snoozes") || "{}");
+  return snoozes[medicineId] || 0;
+};
+
+export const incrementSnoozeCount = (medicineId: string) => {
+  const snoozes = JSON.parse(localStorage.getItem("medimind_snoozes") || "{}");
+  snoozes[medicineId] = (snoozes[medicineId] || 0) + 1;
+  localStorage.setItem("medimind_snoozes", JSON.stringify(snoozes));
+};
+
+export const resetSnoozeCount = (medicineId: string) => {
+  const snoozes = JSON.parse(localStorage.getItem("medimind_snoozes") || "{}");
+  delete snoozes[medicineId];
+  localStorage.setItem("medimind_snoozes", JSON.stringify(snoozes));
+};
+
+export const logSnoozeEvent = (medicineId: string, minutes: number) => {
+  const logs = JSON.parse(localStorage.getItem("medimind_snooze_logs") || "[]");
+  logs.push({ medicineId, minutes, timestamp: new Date().toISOString() });
+  localStorage.setItem("medimind_snooze_logs", JSON.stringify(logs));
 };
