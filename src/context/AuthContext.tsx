@@ -6,15 +6,15 @@ export type UserRole = "user" | "caregiver";
 
 export interface User {
   name: string;
-  phone: string;
+  email: string;
   role: UserRole;
   isLoggedIn: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (phone: string, password: string) => Promise<boolean>;
-  signup: (name: string, phone: string, password: string, role: UserRole) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<boolean>;
+  signup: (name: string, email: string, password: string, role: UserRole) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -33,10 +33,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(false);
   }, []);
 
-  const login = async (phone: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<boolean> => {
     await new Promise((resolve) => setTimeout(resolve, 500));
     const storedUsers = JSON.parse(localStorage.getItem("medimind_users") || "[]");
-    const foundUser = storedUsers.find((u: any) => u.phone === phone && u.password === password);
+    const foundUser = storedUsers.find((u: any) => u.email === email && u.password === password);
     
     if (foundUser) {
       const { password: _, ...userData } = foundUser;
@@ -48,15 +48,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return false;
   };
 
-  const signup = async (name: string, phone: string, password: string, role: UserRole): Promise<boolean> => {
+  const signup = async (name: string, email: string, password: string, role: UserRole): Promise<boolean> => {
     await new Promise((resolve) => setTimeout(resolve, 500));
     const storedUsers = JSON.parse(localStorage.getItem("medimind_users") || "[]");
     
-    if (storedUsers.some((u: any) => u.phone === phone)) {
+    if (storedUsers.some((u: any) => u.email === email)) {
       return false;
     }
 
-    const newUser = { name, phone, password, role };
+    const newUser = { name, email, password, role };
     storedUsers.push(newUser);
     localStorage.setItem("medimind_users", JSON.stringify(storedUsers));
 

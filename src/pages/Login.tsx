@@ -13,7 +13,7 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
 const loginSchema = z.object({
-  phone: z.string().min(10, "Phone number must be at least 10 digits").regex(/^\d+$/, "Phone number must contain only digits"),
+  email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
@@ -25,17 +25,17 @@ export default function Login() {
   const { login } = useAuth();
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { phone: "", password: "" },
+    defaultValues: { email: "", password: "" },
   });
 
   const onSubmit = async (data: LoginFormValues) => {
-    const success = await login(data.phone, data.password);
+    const success = await login(data.email, data.password);
     if (success) {
       toast.success("Welcome back!");
       const from = location.state?.from?.pathname || "/dashboard";
       navigate(from, { replace: true });
     } else {
-      toast.error("Invalid phone number or password");
+      toast.error("Invalid email or password");
     }
   };
 
@@ -54,11 +54,11 @@ export default function Login() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField control={form.control} name="phone" render={({ field }) => (
+              <FormField control={form.control} name="email" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Phone Number</FormLabel>
+                  <FormLabel>Email Address</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter your phone number" {...field} className="rounded-lg" />
+                    <Input type="email" placeholder="Enter your email" {...field} className="rounded-lg" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

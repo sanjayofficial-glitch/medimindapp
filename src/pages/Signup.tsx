@@ -15,7 +15,7 @@ import { toast } from "sonner";
 
 const signupSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  phone: z.string().min(10, "Phone number must be at least 10 digits").regex(/^\d+$/, "Phone number must contain only digits"),
+  email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   role: z.enum(["user", "caregiver"], { required_error: "Please select a role" }),
 });
@@ -27,16 +27,16 @@ export default function Signup() {
   const { signup } = useAuth();
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { name: "", phone: "", password: "", role: undefined },
+    defaultValues: { name: "", email: "", password: "", role: undefined },
   });
 
   const onSubmit = async (data: SignupFormValues) => {
-    const success = await signup(data.name, data.phone, data.password, data.role);
+    const success = await signup(data.name, data.email, data.password, data.role);
     if (success) {
       toast.success("Account created successfully!");
       navigate("/dashboard", { replace: true });
     } else {
-      toast.error("Phone number already registered");
+      toast.error("Email already registered");
     }
   };
 
@@ -64,11 +64,11 @@ export default function Signup() {
                   <FormMessage />
                 </FormItem>
               )} />
-              <FormField control={form.control} name="phone" render={({ field }) => (
+              <FormField control={form.control} name="email" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Phone Number</FormLabel>
+                  <FormLabel>Email Address</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter your phone number" {...field} className="rounded-lg" />
+                    <Input type="email" placeholder="Enter your email" {...field} className="rounded-lg" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
