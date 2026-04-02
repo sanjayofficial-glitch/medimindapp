@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ interface Medicine {
   time: string;
   frequency: string;
   taken: boolean;
+  takenAt?: string;
   instructions?: string;
 }
 
@@ -23,6 +25,18 @@ interface MedicineCardProps {
 }
 
 export default function MedicineCard({ medicine, onToggleTaken, onEdit, onDelete }: MedicineCardProps) {
+  const [justTaken, setJustTaken] = useState(false);
+
+  const handleTake = () => {
+    if (!medicine.taken) {
+      setJustTaken(true);
+      onToggleTaken(medicine.id);
+      setTimeout(() => setJustTaken(false), 1500);
+    } else {
+      onToggleTaken(medicine.id);
+    }
+  };
+
   return (
     <Card className={`border-0 shadow-sm p-4 transition-all ${medicine.taken ? "bg-gray-50 opacity-75" : "bg-white"}`}>
       <div className="flex items-start justify-between gap-4">
@@ -57,22 +71,28 @@ export default function MedicineCard({ medicine, onToggleTaken, onEdit, onDelete
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant={medicine.taken ? "outline" : "default"}
-            onClick={() => onToggleTaken(medicine.id)}
-            className={`h-9 px-3 rounded-lg ${
-              medicine.taken
-                ? "border-gray-300 text-gray-500 hover:bg-gray-100"
-                : "bg-[#4CAF50] hover:bg-[#43A047] text-white"
-            }`}
-          >
-            {medicine.taken ? (
-              <Check className="w-4 h-4" />
-            ) : (
-              "Take"
-            )}
-          </Button>
+          {justTaken ? (
+            <div className="flex items-center justify-center w-16 h-9 bg-[#4CAF50] rounded-lg" style={{ animation: "pop 0.3s ease-out" }}>
+              <Check className="w-5 h-5 text-white" />
+            </div>
+          ) : (
+            <Button
+              size="sm"
+              variant={medicine.taken ? "outline" : "default"}
+              onClick={handleTake}
+              className={`h-9 px-3 rounded-lg transition-all ${
+                medicine.taken
+                  ? "border-gray-300 text-gray-500 hover:bg-gray-100"
+                  : "bg-[#4CAF50] hover:bg-[#43A047] text-white"
+              }`}
+            >
+              {medicine.taken ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                "Take"
+              )}
+            </Button>
+          )}
           <Button
             size="sm"
             variant="destructive"

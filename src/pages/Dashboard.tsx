@@ -5,9 +5,10 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Pill, LogOut, Plus, Calendar, TrendingUp, CheckCircle2 } from "lucide-react";
+import { Pill, LogOut, Plus, Calendar, TrendingUp, CheckCircle2, Flame } from "lucide-react";
 import MedicineCard from "@/components/MedicineCard";
 import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 
 interface Medicine {
   id: string;
@@ -16,7 +17,15 @@ interface Medicine {
   time: string;
   frequency: string;
   taken: boolean;
+  takenAt?: string;
   instructions?: string;
+}
+
+interface DoseLog {
+  medicineId: string;
+  scheduledTime: string;
+  takenTime: string;
+  status: "taken" | "missed";
 }
 
 const initialMedicines: Medicine[] = [
@@ -33,18 +42,51 @@ export default function Dashboard() {
     const stored = localStorage.getItem("medimind_medicines");
     return stored ? JSON.parse(stored) : initialMedicines;
   });
+  const [streak, setStreak] = useState(() => {
+    return parseInt(localStorage.getItem("medimind_streak") || "0", 10);
+  });
 
   useEffect(() => {
     localStorage.setItem("medimind_medicines", JSON.stringify(medicines));
   }, [medicines]);
 
   const takenCount = medicines.filter((m) => m.taken).length;
-  const adherenceRate = Math.round((takenCount / medicines.length) * 100) || 0;
+  const adherenceRate = medicines.length > 0 ? Math.round((takenCount / medicines.length) * 100) : 0;
 
   const handleToggleTaken = (id: string) => {
-    setMedicines((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, taken: !m.taken } : m))
-    );
+    const updatedMedicines = medicines.map((m) => {
+      if (m.id === id) {
+        const isNowTaken = !m.taken;
+        return { ...m, taken: isNowTaken, takenAt: isNowTaken ? new Date().toISOString() : undefined };
+      }
+      return m;
+    });
+
+    setMedicines(updatedMedicines);
+
+    const medicine = medicines.find(m => m.id === id);
+    if (medicine && !medicine.taken) {
+      // Log the dose (using localStorage for web compatibility)
+      const doseLog: DoseLog = {
+        medicineId: id,
+        scheduledTime: medicine.time,
+        takenTime: new Date().toISOString(),
+        status: "taken"
+      };
+      const logs = JSON.parse(localStorage.getItem("medimind_dose_logs") || "[]");
+      logs.push(doseLog);
+      localStorage.setItem("medimind_dose_logs", JSON.stringify(logs));
+
+      toast.success("Great job! 💪 Keep the streak going!");
+
+      // Check if all medicines are taken
+      const allTaken = updatedMedicines.every(m => m.taken);
+      if (allTaken && updatedMedicines.length > 0) {
+        const newStreak = streak + 1;
+        setStreak(newStreak);
+        localStorage.setItem("medimind_streak", newStreak.toString());
+      }
+    }
   };
 
   const handleDeleteMedicine = (id: string) => {
@@ -66,13 +108,26 @@ export default function Dashboard() {
             </div>
             <span className="text-xl font-bold text-gray-800">MediMind</span>
           </div>
-          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-gray-500 hover:text-red-500">
-            <LogOut className="w-5 h-5" />
-          </Button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 bg-orange-50 px-3 py-1.5 rounded-full border border-orange-100">
+              <Flame className="w-4 h-4 text-orange-500" />
+              <span className="text-sm font-semibold text-orange-600">{streak} day streak</span>
+            </div>
+            <Button variant="ghost" size="icon" onClick={handleLogout} className="text-gray-500 hover:text-red-500">
+              <LogOut className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <h2 className="text-2xl font-bold text-gray-800 mb-1">
+            Good Morning, {user?.name || "User"} 👋
+          </h2>
+          <p className="text-gray-500">Here's your medication schedule for today.</p>
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <Card className="border-0 shadow-sm bg-white">
             <CardContent className="p-4">
