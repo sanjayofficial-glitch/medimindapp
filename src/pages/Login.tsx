@@ -1,23 +1,4 @@
 "use client";
-...
-```
-
-That would explain all the errors about invalid characters, unterminated regex, etc.
-
-So the fix is to rewrite these files to contain only the actual code, without the dyad-write tags.
-
-Let me create corrected versions of these files:
-
-1. src/pages/Login.tsx - should contain the login component code
-2. src/pages/Signup.tsx - should contain the signup component code
-3. src/pages/Dashboard.tsx - should contain the dashboard component code
-
-I'll also need to check if there are any other issues. The errors 22 and 23 about missing default exports might be because these files are empty or have the wrong content.
-
-Let me rewrite these files properly.</think>I see the issue - the `<dyad-write>` tags were accidentally written into the actual files. I'll fix this by rewriting the affected files to contain only the actual code, without the dyad-write tags.
-
-<dyad-write path="src/pages/Login.tsx" description="Login page with authentication">
-"use client";
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
