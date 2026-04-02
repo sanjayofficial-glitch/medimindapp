@@ -8,7 +8,19 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input"; // Import missing Input componentimport { Pill } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Pill } from "lucide-react";
+
+// Define Medicine interface locally to avoid circular dependencies
+interface Medicine {
+  id: string;
+  name: string;
+  dosage: string;
+  time: string;
+  frequency: string;
+  taken: boolean;
+  instructions?: string;
+}
 
 const medicineSchema = z.object({
   name: z.string().min(2, "Medicine name is required"),
@@ -23,7 +35,7 @@ type MedicineFormValues = z.infer<typeof medicineSchema>;
 interface AddMedicineDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (medicine: Omit<Medicine, "id" | "taken">) => void; // Fix type to match Medicine
+  onAdd: (medicine: Omit<Medicine, "id" | "taken">) => void;
 }
 
 export default function AddMedicineDialog({ open, onOpenChange, onAdd }: AddMedicineDialogProps) {
@@ -39,8 +51,7 @@ export default function AddMedicineDialog({ open, onOpenChange, onAdd }: AddMedi
   });
 
   const onSubmit = async (data: MedicineFormValues) => {
-    // Cast to Omit<Medicine, "id" | "taken"> to satisfy type checker
-    onAdd!(data as Omit<Medicine, "id" | "taken">);
+    onAdd(data as Omit<Medicine, "id" | "taken">);
     form.reset();
     onOpenChange(false);
   };
