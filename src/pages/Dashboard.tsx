@@ -9,6 +9,7 @@ import { Pill, LogOut, Plus, Calendar, TrendingUp, CheckCircle2, Flame } from "l
 import MedicineCard from "@/components/MedicineCard";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import { cancelNotification, snoozeNotification, type NotificationAction } from "@/utils/notifications";
 
 interface Medicine {
   id: string;
@@ -50,6 +51,25 @@ export default function Dashboard() {
     localStorage.setItem("medimind_medicines", JSON.stringify(medicines));
   }, [medicines]);
 
+  useEffect(() => {
+    const handleNotificationAction = (event: Event) => {
+      const { type, medicineId } = (event as CustomEvent<NotificationAction>).detail;
+      const medicine = medicines.find(m => m.id === medicineId);
+      if (!medicine) return;
+
+      if (type === "taken") {
+        handleToggleTaken(medicineId);
+        toast.success("Marked as taken via notification!");
+      } else if (type === "snooze") {
+        snoozeNotification(medicineId, medicine.name, user?.name || "User");
+        toast.info("Reminder snoozed for 10 minutes");
+      }
+    };
+
+    window.addEventListener("medimind_notification_action", handleNotificationAction);
+    return () => window.removeEventListener("medimind_notification_action", handleNotificationAction);
+  }, [medicines, user]);
+
   const takenCount = medicines.filter((m) => m.taken).length;
   const adherenceRate = medicines.length > 0 ? Math.round((takenCount / medicines.length) * 100) : 0;
 
@@ -66,7 +86,6 @@ export default function Dashboard() {
 
     const medicine = medicines.find(m => m.id === id);
     if (medicine && !medicine.taken) {
-      // Log the dose (using localStorage for web compatibility)
       const doseLog: DoseLog = {
         medicineId: id,
         scheduledTime: medicine.time,
@@ -79,7 +98,6 @@ export default function Dashboard() {
 
       toast.success("Great job! 💪 Keep the streak going!");
 
-      // Check if all medicines are taken
       const allTaken = updatedMedicines.every(m => m.taken);
       if (allTaken && updatedMedicines.length > 0) {
         const newStreak = streak + 1;
@@ -90,7 +108,9 @@ export default function Dashboard() {
   };
 
   const handleDeleteMedicine = (id: string) => {
+    cancelNotification(id);
     setMedicines((prev) => prev.filter((m) => m.id !== id));
+    toast.info("Medicine & reminder removed");
   };
 
   const handleLogout = () => {

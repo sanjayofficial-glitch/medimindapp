@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Search, Pill, Clock, Save } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
+import { requestNotificationPermission, scheduleNotification } from "@/utils/notifications";
 
 const COMMON_MEDICINES = [
   "Paracetamol", "Metformin", "Amlodipine", "Atorvastatin", "Omeprazole",
@@ -28,6 +30,7 @@ const getSuggestedTimes = (frequency: string) => {
 
 export default function AddMedicine() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [selectedMedicine, setSelectedMedicine] = useState<string | null>(null);
   const [dosage, setDosage] = useState("500mg");
@@ -42,11 +45,14 @@ export default function AddMedicine() {
     setSuggestedTimes(getSuggestedTimes(frequency));
   }, [frequency]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selectedMedicine) {
       toast.error("Please select a medicine");
       return;
     }
+
+    // Request notification permission if not already granted
+    await requestNotificationPermission();
 
     const newMedicine = {
       id: Date.now().toString(),
@@ -61,7 +67,11 @@ export default function AddMedicine() {
 
     const existing = JSON.parse(localStorage.getItem("medimind_medicines") || "[]");
     localStorage.setItem("medimind_medicines", JSON.stringify([...existing, newMedicine]));
-    toast.success("Medicine saved successfully!");
+    
+    // Schedule notification
+    scheduleNotification(newMedicine.id, newMedicine.name, newMedicine.time, user?.name || "User");
+    
+    toast.success("Medicine saved & reminder scheduled!");
     navigate("/dashboard");
   };
 
