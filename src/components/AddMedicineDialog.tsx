@@ -5,7 +5,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,7 +38,7 @@ export default function AddMedicineDialog({ open, onOpenChange, onAdd }: AddMedi
     },
   });
 
-  const onSubmit = (data: MedicineFormValues) => {
+  const onSubmit = async (data: MedicineFormValues) => {
     onAdd(data);
     form.reset();
     onOpenChange(false);
