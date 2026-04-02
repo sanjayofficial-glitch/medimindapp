@@ -9,7 +9,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
-import AddMedicine from "./pages/AddMedicine";
+import AddMedicine from "./pages/AddMedicine"; // Fixed import path
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
