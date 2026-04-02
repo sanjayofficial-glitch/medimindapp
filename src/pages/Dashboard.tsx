@@ -29,7 +29,7 @@ const initialMedicines: Medicine[] = [
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth(); // Fixed: Added logout to destructuring
+  const { user, logout } = useAuth();
   const [medicines, setMedicines] = useState<Medicine[]>(initialMedicines);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -52,7 +52,6 @@ export default function Dashboard() {
   };
 
   const handleEditMedicine = (id: string) => {
-    // For now, just open the add dialog. In a full app, this would pre-fill the form.
     setIsDialogOpen(true);
   };
 
