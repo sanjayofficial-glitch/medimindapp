@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Bot, X, Send, Loader2, Settings, Sparkles } from "lucide-react";
+import { Bot, X, Send, Loader2, Settings, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { askAIAssistant, getAISettings, saveAISettings } from "@/utils/ai-assist
 import { toast } from "sonner";
 
 interface Message {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "error";
   content: string;
 }
 
@@ -27,7 +27,7 @@ const AIAssistant = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isLoading]);
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -48,8 +48,7 @@ const AIAssistant = () => {
       const response = await askAIAssistant(userMessage);
       setMessages(prev => [...prev, { role: "assistant", content: response }]);
     } catch (error: any) {
-      toast.error(error.message);
-      setMessages(prev => [...prev, { role: "assistant", content: "Sorry, I encountered an error. Please check your API key in settings." }]);
+      setMessages(prev => [...prev, { role: "error", content: error.message || "An unexpected error occurred." }]);
     } finally {
       setIsLoading(false);
     }
@@ -64,6 +63,10 @@ const AIAssistant = () => {
     saveAISettings({ apiKey: apiKey.trim(), provider: "gemini" });
     setShowSettings(false);
     toast.success("AI Settings saved!");
+  };
+
+  const clearChat = () => {
+    setMessages([{ role: "assistant", content: "Chat cleared. How else can I help you?" }]);
   };
 
   return (
@@ -82,7 +85,17 @@ const AIAssistant = () => {
                 variant="ghost" 
                 size="icon" 
                 className="text-white hover:bg-white/20 h-8 w-8"
+                onClick={clearChat}
+                title="Clear Chat"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-white hover:bg-white/20 h-8 w-8"
                 onClick={() => setShowSettings(!showSettings)}
+                title="Settings"
               >
                 <Settings className="w-4 h-4" />
               </Button>
@@ -97,7 +110,7 @@ const AIAssistant = () => {
             </div>
           </CardHeader>
 
-          <CardContent className="flex-1 p-0 overflow-hidden relative">
+          <CardContent className="flex-1 p-0 overflow-hidden relative bg-white">
             {showSettings ? (
               <div className="p-6 space-y-4 bg-gray-50 h-full">
                 <h3 className="font-semibold text-gray-900">AI Configuration</h3>
@@ -128,6 +141,8 @@ const AIAssistant = () => {
                       <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${
                         msg.role === "user" 
                           ? "bg-emerald-600 text-white rounded-tr-none" 
+                          : msg.role === "error"
+                          ? "bg-rose-50 text-rose-600 border border-rose-100 rounded-tl-none"
                           : "bg-gray-100 text-gray-800 rounded-tl-none"
                       }`}>
                         {msg.content}
