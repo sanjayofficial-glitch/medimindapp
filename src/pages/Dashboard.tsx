@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { Medicine, FamilyMember, getMedicines, getFamilyMembers } from "@/utils/storage";
+import AIAssistant from "@/components/AIAssistant";
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -16,7 +17,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     setMedicines(getMedicines());
-    setFamilyMembers(getFamilyMembers());
+    getFamilyMembers().then(setFamilyMembers);
     
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
@@ -44,7 +45,7 @@ const Dashboard = () => {
   const todayMeds = medicines.sort((a, b) => a.times[0]?.localeCompare(b.times[0] || "") || 0);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-20">
       <div className="max-w-4xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -142,6 +143,9 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+      
+      {/* AI Assistant FAB */}
+      <AIAssistant />
     </div>
   );
 };
