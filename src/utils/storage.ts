@@ -10,11 +10,30 @@ export interface DoseLog {
   status: "taken" | "missed" | "partial";
 }
 
-const STORAGE_KEY = "medimind_dose_logs";
+export interface FamilyMember {
+  id: string;
+  name: string;
+  relationship: string;
+}
 
+export interface Medicine {
+  id: string;
+  familyMemberId: string;
+  name: string;
+  dosage: string;
+  time: string;
+  frequency: string;
+  additionalText?: string;
+}
+
+const DOSE_LOGS_KEY = "medimind_dose_logs";
+const FAMILY_MEMBERS_KEY = "medimind_family_members";
+const MEDICINES_KEY = "medimind_medicines";
+
+// Dose Logs
 export const getDoseLogs = async (): Promise<DoseLog[]> => {
   try {
-    const logs = localStorage.getItem(STORAGE_KEY);
+    const logs = localStorage.getItem(DOSE_LOGS_KEY);
     return logs ? JSON.parse(logs) : [];
   } catch (error) {
     console.error("Failed to load dose logs:", error);
@@ -35,7 +54,7 @@ export const saveDoseLog = async (log: DoseLog): Promise<void> => {
       logs.push(log);
     }
     
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+    localStorage.setItem(DOSE_LOGS_KEY, JSON.stringify(logs));
   } catch (error) {
     console.error("Failed to save dose log:", error);
     toast.error("Failed to save dose log");
@@ -101,6 +120,48 @@ export const generateMockData = async (): Promise<void> => {
     });
   }
   
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(mockLogs));
+  localStorage.setItem(DOSE_LOGS_KEY, JSON.stringify(mockLogs));
   toast.success("Mock data generated for testing");
+};
+
+// Family Members
+export const getFamilyMembers = (): FamilyMember[] => {
+  try {
+    const members = localStorage.getItem(FAMILY_MEMBERS_KEY);
+    return members ? JSON.parse(members) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const addFamilyMember = (member: FamilyMember): void => {
+  const members = getFamilyMembers();
+  members.push(member);
+  localStorage.setItem(FAMILY_MEMBERS_KEY, JSON.stringify(members));
+};
+
+export const removeFamilyMember = (id: string): void => {
+  const members = getFamilyMembers().filter(m => m.id !== id);
+  localStorage.setItem(FAMILY_MEMBERS_KEY, JSON.stringify(members));
+};
+
+// Medicines
+export const getMedicines = (): Medicine[] => {
+  try {
+    const meds = localStorage.getItem(MEDICINES_KEY);
+    return meds ? JSON.parse(meds) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const addMedicine = (medicine: Medicine): void => {
+  const meds = getMedicines();
+  meds.push(medicine);
+  localStorage.setItem(MEDICINES_KEY, JSON.stringify(meds));
+};
+
+export const removeMedicine = (id: string): void => {
+  const meds = getMedicines().filter(m => m.id !== id);
+  localStorage.setItem(MEDICINES_KEY, JSON.stringify(meds));
 };
