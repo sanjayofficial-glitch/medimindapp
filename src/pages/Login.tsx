@@ -28,11 +28,11 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-lg border-0">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center">
               <Pill className="w-6 h-6 text-white" />
             </div>
           </div>
@@ -70,7 +70,7 @@ const Login = () => {
             </Button>
             <p className="text-sm text-center text-gray-600">
               Don't have an account?{" "}
-              <Link to="/signup" className="text-blue-600 hover:underline font-medium">
+              <Link to="/signup" className="text-emerald-600 hover:underline font-medium">
                 Sign up
               </Link>
             </p>

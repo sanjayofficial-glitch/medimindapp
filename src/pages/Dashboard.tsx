@@ -59,9 +59,9 @@ const Dashboard = () => {
 
         <div className="grid md:grid-cols-3 gap-6 mb-8">
           <Link to="/add-medicine" className="md:col-span-1">
-            <Card className="h-full hover:shadow-md transition-shadow cursor-pointer border-blue-200 bg-blue-50">
+            <Card className="h-full hover:shadow-md transition-shadow cursor-pointer border-emerald-200 bg-emerald-50">
               <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mb-3">
+                <div className="w-12 h-12 bg-emerald-600 rounded-full flex items-center justify-center mb-3">
                   <Plus className="w-6 h-6 text-white" />
                 </div>
                 <h3 className="font-semibold text-gray-900">Add Medicine</h3>
@@ -71,9 +71,9 @@ const Dashboard = () => {
           </Link>
           
           <Link to="/history" className="md:col-span-2">
-            <Card className="h-full hover:shadow-md transition-shadow cursor-pointer border-indigo-200 bg-indigo-50">
+            <Card className="h-full hover:shadow-md transition-shadow cursor-pointer border-green-200 bg-green-50">
               <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center mb-3">
+                <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center mb-3">
                   <Calendar className="w-6 h-6 text-white" />
                 </div>
                 <h3 className="font-semibold text-gray-900">View History</h3>
@@ -107,8 +107,8 @@ const Dashboard = () => {
                 {todayMeds.map((med) => (
                   <div key={med.id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Clock className="w-5 h-5 text-blue-600" />
+                      <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-emerald-600" />
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900">{med.name}</p>
