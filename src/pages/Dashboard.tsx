@@ -17,7 +17,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     setMedicines(getMedicines());
-    getFamilyMembers().then(setFamilyMembers);
+    setFamilyMembers(getFamilyMembers());
     
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
