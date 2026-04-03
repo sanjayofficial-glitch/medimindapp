@@ -21,7 +21,7 @@ export interface Medicine {
   familyMemberId: string;
   name: string;
   dosage: string;
-  time: string;
+  times: string[];  // changed from single time to array of times
   frequency: string;
   additionalText?: string;
 }
@@ -45,7 +45,7 @@ export const saveDoseLog = async (log: DoseLog): Promise<void> => {
   try {
     const logs = await getDoseLogs();
     const existingIndex = logs.findIndex(
-      (l) => l.medicineId === log.medicineId && l.date === log.date
+      (l) => l.medicineId === log.medicineId && l.date === log.date && l.scheduledTime === log.scheduledTime
     );
     
     if (existingIndex >= 0) {
@@ -78,9 +78,9 @@ export const getDoseLogsForMonth = async (
 export const generateMockData = async (): Promise<void> => {
   const mockLogs: DoseLog[] = [];
   const medicines = [
-    { id: "med1", name: "Vitamin D", time: "08:00" },
-    { id: "med2", name: "Metformin", time: "12:00" },
-    { id: "med3", name: "Lisinopril", time: "20:00" },
+    { id: "med1", name: "Vitamin D", times: ["08:00"] },
+    { id: "med2", name: "Metformin", times: ["12:00", "18:00"] },
+    { id: "med3", name: "Lisinopril", times: ["08:00", "12:00", "20:00"] },
   ];
   
   const today = new Date();
@@ -95,27 +95,29 @@ export const generateMockData = async (): Promise<void> => {
     const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     
     medicines.forEach((med) => {
-      const rand = Math.random();
-      let status: "taken" | "missed" | "partial" = "taken";
-      let actualTime = med.time;
-      
-      if (rand > 0.85) {
-        status = "missed";
-        actualTime = undefined;
-      } else if (rand > 0.7) {
-        status = "partial";
-        const [h, m] = med.time.split(":").map(Number);
-        actualTime = `${String(h).padStart(2, "0")}:${String(m + 15).padStart(2, "0")}`;
-      }
-      
-      mockLogs.push({
-        id: `${med.id}-${dateStr}`,
-        medicineId: med.id,
-        medicineName: med.name,
-        scheduledTime: med.time,
-        actualTime,
-        date: dateStr,
-        status,
+      med.times.forEach((time) => {
+        const rand = Math.random();
+        let status: "taken" | "missed" | "partial" = "taken";
+        let actualTime = time;
+        
+        if (rand > 0.85) {
+          status = "missed";
+          actualTime = undefined;
+        } else if (rand > 0.7) {
+          status = "partial";
+          const [h, m] = time.split(":").map(Number);
+          actualTime = `${String(h).padStart(2, "0")}:${String(m + 15).padStart(2, "0")}`;
+        }
+        
+        mockLogs.push({
+          id: `${med.id}-${dateStr}-${time}`,
+          medicineId: med.id,
+          medicineName: med.name,
+          scheduledTime: time,
+          actualTime,
+          date: dateStr,
+          status,
+        });
       });
     });
   }
@@ -149,7 +151,15 @@ export const removeFamilyMember = (id: string): void => {
 export const getMedicines = (): Medicine[] => {
   try {
     const meds = localStorage.getItem(MEDICINES_KEY);
-    return meds ? JSON.parse(meds) : [];
+    if (!meds) return [];
+    const parsed = JSON.parse(meds);
+    // Migrate old format (single time) to new format (times array)
+    return parsed.map((med: any) => {
+      if (med.time && !med.times) {
+        return { ...med, times: [med.time] };
+      }
+      return med;
+    });
   } catch {
     return [];
   }

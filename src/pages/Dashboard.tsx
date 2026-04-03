@@ -41,7 +41,7 @@ const Dashboard = () => {
     return member ? member.name : "Unknown";
   };
 
-  const todayMeds = medicines.sort((a, b) => a.time.localeCompare(b.time));
+  const todayMeds = medicines.sort((a, b) => a.times[0]?.localeCompare(b.times[0] || "") || 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -122,10 +122,15 @@ const Dashboard = () => {
                         <p className="font-semibold text-gray-900">{med.name}</p>
                         <p className="text-sm text-gray-500">{med.dosage} • {med.frequency}</p>
                         <p className="text-xs text-emerald-600 mt-0.5">For: {getMemberName(med.familyMemberId)}</p>
+                        {med.times && med.times.length > 0 && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            {med.times.join(", ")}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-lg font-medium text-gray-700">{med.time}</span>
+                      <span className="text-lg font-medium text-gray-700">{med.times[0]}</span>
                       <button className="p-2 hover:bg-emerald-100 rounded-full transition-colors" title="Mark as taken">
                         <CheckCircle className="w-5 h-5 text-emerald-600" />
                       </button>

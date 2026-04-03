@@ -17,7 +17,7 @@ const AddMedicine = () => {
     familyMemberId: "self",
     name: "",
     dosage: "",
-    time: "",
+    times: [""],
     frequency: "daily",
     additionalText: ""
   });
@@ -27,9 +27,52 @@ const AddMedicine = () => {
     setFamilyMembers(getFamilyMembers());
   }, []);
 
+  // Update times array when frequency changes
+  useEffect(() => {
+    let requiredTimes = 1;
+    switch (formData.frequency) {
+      case "twice-daily":
+        requiredTimes = 2;
+        break;
+      case "three-times-daily":
+        requiredTimes = 3;
+        break;
+      case "weekly":
+        requiredTimes = 1;
+        break;
+      case "as-needed":
+        requiredTimes = 1;
+        break;
+      default:
+        requiredTimes = 1;
+    }
+    
+    setFormData(prev => {
+      const newTimes = [...prev.times];
+      if (newTimes.length < requiredTimes) {
+        // Add empty slots for missing times
+        while (newTimes.length < requiredTimes) {
+          newTimes.push("");
+        }
+      } else if (newTimes.length > requiredTimes) {
+        // Remove extra times
+        newTimes.splice(requiredTimes);
+      }
+      return { ...prev, times: newTimes };
+    });
+  }, [formData.frequency]);
+
+  const handleTimeChange = (index: number, value: string) => {
+    setFormData(prev => {
+      const newTimes = [...prev.times];
+      newTimes[index] = value;
+      return { ...prev, times: newTimes };
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.dosage || !formData.time) {
+    if (!formData.name || !formData.dosage || formData.times.some(t => !t)) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -42,7 +85,7 @@ const AddMedicine = () => {
       familyMemberId: formData.familyMemberId,
       name: formData.name,
       dosage: formData.dosage,
-      time: formData.time,
+      times: formData.times.filter(t => t), // remove empty times
       frequency: formData.frequency,
       additionalText: formData.additionalText || undefined
     };
@@ -139,15 +182,35 @@ const AddMedicine = () => {
                 </Select>
               </div>
 
+              {/* Dynamic time inputs based on frequency */}
               <div className="space-y-2">
-                <Label htmlFor="time">Reminder Time *</Label>
-                <Input
-                  id="time"
-                  type="time"
-                  value={formData.time}
-                  onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                  className="h-11"
-                />
+                <Label>Reminder Times *</Label>
+                <div className="space-y-3">
+                  {formData.times.map((time, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-gray-700 w-24">
+                        {formData.frequency === "daily" ? "Time" :
+                         formData.frequency === "twice-daily" ? `Time ${index + 1}` :
+                         formData.frequency === "three-times-daily" ? `Time ${index + 1}` :
+                         "Time"}
+                      </span>
+                      <Input
+                        type="time"
+                        value={time}
+                        onChange={(e) => handleTimeChange(index, e.target.value)}
+                        className="h-11"
+                        required
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500">
+                  {formData.frequency === "twice-daily" && "Set two reminder times (e.g., morning and evening)"}
+                  {formData.frequency === "three-times-daily" && "Set three reminder times (e.g., morning, afternoon, evening)"}
+                  {formData.frequency === "weekly" && "Set the time for your weekly reminder"}
+                  {formData.frequency === "as-needed" && "Set an optional reminder time"}
+                  {formData.frequency === "daily" && "Set the time for your daily reminder"}
+                </p>
               </div>
 
               <div className="space-y-2">
