@@ -1,28 +1,22 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Calendar, Plus, LogOut, Clock, CheckCircle } from "lucide-react";
+import { Calendar, Plus, LogOut, Clock, CheckCircle, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
-
-interface Medicine {
-  id: string;
-  name: string;
-  dosage: string;
-  time: string;
-  frequency: string;
-}
+import { Medicine, FamilyMember, getMedicines, getFamilyMembers } from "@/utils/storage";
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [medicines, setMedicines] = useState<Medicine[]>([]);
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
-    const stored = localStorage.getItem("medimind_medicines");
-    if (stored) setMedicines(JSON.parse(stored));
+    setMedicines(getMedicines());
+    setFamilyMembers(getFamilyMembers());
     
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
@@ -41,6 +35,12 @@ const Dashboard = () => {
     return "Good evening";
   };
 
+  const getMemberName = (id: string) => {
+    if (id === "self") return user?.name || "Myself";
+    const member = familyMembers.find(m => m.id === id);
+    return member ? member.name : "Unknown";
+  };
+
   const todayMeds = medicines.sort((a, b) => a.time.localeCompare(b.time));
 
   return (
@@ -51,10 +51,18 @@ const Dashboard = () => {
             <h1 className="text-3xl font-bold text-gray-900">{getGreeting()}, {user?.name}</h1>
             <p className="text-gray-600 mt-1">Here's your medication schedule for today</p>
           </div>
-          <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2">
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Logout</span>
-          </Button>
+          <div className="flex gap-2">
+            <Link to="/family-members">
+              <Button variant="outline" className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                <span className="hidden sm:inline">Family</span>
+              </Button>
+            </Link>
+            <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2">
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Logout</span>
+            </Button>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 mb-8">
@@ -113,6 +121,7 @@ const Dashboard = () => {
                       <div>
                         <p className="font-semibold text-gray-900">{med.name}</p>
                         <p className="text-sm text-gray-500">{med.dosage} • {med.frequency}</p>
+                        <p className="text-xs text-emerald-600 mt-0.5">For: {getMemberName(med.familyMemberId)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">

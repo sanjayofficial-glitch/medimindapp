@@ -10,6 +10,7 @@ import SignUp from "./pages/SignUp";
 import Dashboard from "./pages/Dashboard";
 import AddMedicine from "./pages/AddMedicine";
 import History from "./pages/History";
+import FamilyMembers from "./pages/FamilyMembers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/add-medicine" element={<AddMedicine />} />
             <Route path="/history" element={<History />} />
+            <Route path="/family-members" element={<FamilyMembers />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
