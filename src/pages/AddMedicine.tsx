@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, Pill } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,10 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Medicine, FamilyMember, getFamilyMembers, addMedicine } from "@/utils/storage";
+import { MedicineSelector } from "@/components/MedicineSelector";
+import { MedicineDBEntry } from "@/data/medicineDatabase";
 
 const AddMedicine = () => {
   const navigate = useNavigate();
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+  const [isCustom, setIsCustom] = useState(false);
   const [formData, setFormData] = useState({
     familyMemberId: "self",
     name: "",
@@ -27,35 +30,21 @@ const AddMedicine = () => {
     setFamilyMembers(getFamilyMembers());
   }, []);
 
-  // Update times array when frequency changes
   useEffect(() => {
     let requiredTimes = 1;
     switch (formData.frequency) {
-      case "twice-daily":
-        requiredTimes = 2;
-        break;
-      case "three-times-daily":
-        requiredTimes = 3;
-        break;
-      case "weekly":
-        requiredTimes = 1;
-        break;
-      case "as-needed":
-        requiredTimes = 1;
-        break;
-      default:
-        requiredTimes = 1;
+      case "twice-daily": requiredTimes = 2; break;
+      case "three-times-daily": requiredTimes = 3; break;
+      case "weekly": requiredTimes = 1; break;
+      case "as-needed": requiredTimes = 1; break;
+      default: requiredTimes = 1;
     }
     
     setFormData(prev => {
       const newTimes = [...prev.times];
       if (newTimes.length < requiredTimes) {
-        // Add empty slots for missing times
-        while (newTimes.length < requiredTimes) {
-          newTimes.push("");
-        }
+        while (newTimes.length < requiredTimes) newTimes.push("");
       } else if (newTimes.length > requiredTimes) {
-        // Remove extra times
         newTimes.splice(requiredTimes);
       }
       return { ...prev, times: newTimes };
@@ -68,6 +57,21 @@ const AddMedicine = () => {
       newTimes[index] = value;
       return { ...prev, times: newTimes };
     });
+  };
+
+  const handleMedicineSelect = (med: MedicineDBEntry) => {
+    setFormData(prev => ({
+      ...prev,
+      name: med.brand_name,
+      dosage: med.generic_name,
+      additionalText: `Guidance: ${med.guidance}\n\nCautions: ${med.cautions}`
+    }));
+    setIsCustom(false);
+  };
+
+  const handleCustomToggle = () => {
+    setIsCustom(true);
+    setFormData(prev => ({ ...prev, name: "", dosage: "", additionalText: "" }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -85,7 +89,7 @@ const AddMedicine = () => {
       familyMemberId: formData.familyMemberId,
       name: formData.name,
       dosage: formData.dosage,
-      times: formData.times.filter(t => t), // remove empty times
+      times: formData.times.filter(t => t),
       frequency: formData.frequency,
       additionalText: formData.additionalText || undefined
     };
@@ -143,11 +147,25 @@ const AddMedicine = () => {
               </div>
 
               <div className="space-y-2">
+                <Label>Medicine Selection</Label>
+                {!isCustom ? (
+                  <MedicineSelector onSelect={handleMedicineSelect} onCustom={handleCustomToggle} />
+                ) : (
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" onClick={() => setIsCustom(false)} className="flex-1 h-11">
+                      <Pill className="w-4 h-4 mr-2" />
+                      Select from Database
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="name">Medicine Name *</Label>
                 <Input
                   id="name"
                   type="text"
-                  placeholder="e.g., Vitamin D, Metformin"
+                  placeholder={isCustom ? "e.g., Vitamin D, Metformin" : "Auto-filled or enter custom"}
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="h-11"
@@ -159,7 +177,7 @@ const AddMedicine = () => {
                 <Input
                   id="dosage"
                   type="text"
-                  placeholder="e.g., 500mg, 1 tablet"
+                  placeholder={isCustom ? "e.g., 500mg, 1 tablet" : "Auto-filled or enter custom"}
                   value={formData.dosage}
                   onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
                   className="h-11"
@@ -182,7 +200,6 @@ const AddMedicine = () => {
                 </Select>
               </div>
 
-              {/* Dynamic time inputs based on frequency */}
               <div className="space-y-2">
                 <Label>Reminder Times *</Label>
                 <div className="space-y-3">
@@ -220,7 +237,7 @@ const AddMedicine = () => {
                   placeholder="e.g., Take with food, avoid sunlight..."
                   value={formData.additionalText}
                   onChange={(e) => setFormData({ ...formData, additionalText: e.target.value })}
-                  className="min-h-[80px]"
+                  className="min-h-[100px]"
                 />
               </div>
 
