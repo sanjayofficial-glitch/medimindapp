@@ -23,6 +23,7 @@ const App = () => {
         <Route path="/family-members" element={<FamilyMembers />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <AIButton />
     </BrowserRouter>
   );
 };
