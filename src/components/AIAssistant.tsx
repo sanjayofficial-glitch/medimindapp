@@ -25,7 +25,10 @@ const AIAssistant = () => {
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        viewport.scrollTop = viewport.scrollHeight;
+      }
     }
   }, [messages, isLoading]);
 
@@ -134,7 +137,7 @@ const AIAssistant = () => {
                 </form>
               </div>
             ) : (
-              <ScrollArea className="h-full p-4" viewportRef={scrollRef}>
+              <ScrollArea className="h-full p-4" ref={scrollRef}>
                 <div className="space-y-4">
                   {messages.map((msg, i) => (
                     <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
