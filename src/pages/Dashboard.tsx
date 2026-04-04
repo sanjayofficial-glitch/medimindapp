@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Pill, History, Users, Plus, CheckCircle, Clock } from "lucide-react";
+import { Pill, History, Users, Plus, CheckCircle, Clock, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
-import { getMedicines, getDoseLogsForDate, Medicine, DoseLog } from "@/utils/storage";
+import { getMedicines, getDoseLogsForDate, saveDoseLog, Medicine, DoseLog } from "@/utils/storage";
+import { toast } from "sonner";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -12,19 +13,41 @@ const Dashboard = () => {
   const [todayLogs, setTodayLogs] = useState<DoseLog[]>([]);
   const [today, setToday] = useState("");
 
-  useEffect(() => {
+  const loadData = async () => {
     const d = new Date();
-    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const dateStr = d.toISOString().split('T')[0];
     setToday(dateStr);
-    setMedicines(getMedicines());
-    getDoseLogsForDate(dateStr).then(setTodayLogs);
+    
+    const allMeds = getMedicines();
+    setMedicines(allMeds);
+    
+    const logs = await getDoseLogsForDate(dateStr);
+    
+    // If no logs exist for today but we have medicines, we should show them as pending
+    // In a real app, a background job or initial load would generate these
+    setTodayLogs(logs);
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
 
+  const handleStatusUpdate = async (log: DoseLog, status: "taken" | "missed") => {
+    const updatedLog: DoseLog = {
+      ...log,
+      status,
+      actualTime: status === "taken" ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : undefined
+    };
+    await saveDoseLog(updatedLog);
+    toast.success(`Marked ${log.medicineName} as ${status}`);
+    loadData();
+  };
+
   const takenCount = todayLogs.filter((l) => l.status === "taken").length;
-  const pendingCount = Math.max(0, medicines.length - takenCount);
+  const pendingCount = todayLogs.filter((l) => l.status === "partial").length;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-24">
       <div className="max-w-4xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -93,22 +116,57 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               {todayLogs.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No medications scheduled for today.</p>
+                <div className="text-center py-8">
+                  <p className="text-gray-500 mb-4">No medications scheduled for today.</p>
+                  <Link to="/add-medicine">
+                    <Button variant="link" className="text-emerald-600">Add your first medicine</Button>
+                  </Link>
+                </div>
               ) : (
                 <div className="space-y-3">
-                  {todayLogs.map((log) => (
-                    <div key={log.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="font-medium">{log.medicineName}</p>
-                        <p className="text-sm text-gray-500">{log.scheduledTime}</p>
+                  {todayLogs.sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime)).map((log) => (
+                    <div key={log.id} className="flex items-center justify-between p-3 bg-white border rounded-xl shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center",
+                          log.status === "taken" ? "bg-emerald-100 text-emerald-600" : "bg-gray-100 text-gray-400"
+                        )}>
+                          <Pill className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">{log.medicineName}</p>
+                          <p className="text-xs text-gray-500 flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> {log.scheduledTime}
+                          </p>
+                        </div>
                       </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        log.status === "taken" ? "bg-emerald-100 text-emerald-700" :
-                        log.status === "missed" ? "bg-rose-100 text-rose-700" :
-                        "bg-amber-100 text-amber-700"
-                      }`}>
-                        {log.status}
-                      </span>
+                      
+                      {log.status === "partial" ? (
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-8 w-8 p-0 text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                            onClick={() => handleStatusUpdate(log, "missed")}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            className="h-8 bg-emerald-600 hover:bg-emerald-700"
+                            onClick={() => handleStatusUpdate(log, "taken")}
+                          >
+                            <Check className="w-4 h-4 mr-1" /> Take
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className={cn(
+                          "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
+                          log.status === "taken" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                        )}>
+                          {log.status}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -121,4 +179,5 @@ const Dashboard = () => {
   );
 };
 
+import { cn } from "@/lib/utils";
 export default Dashboard;

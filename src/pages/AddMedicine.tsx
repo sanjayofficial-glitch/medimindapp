@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { MedicineSelector } from "@/components/MedicineSelector";
 import { MedicineDBEntry } from "@/data/medicineDatabase";
-import { addMedicine, getFamilyMembers, FamilyMember } from "@/utils/storage";
+import { addMedicine, getFamilyMembers, FamilyMember, saveDoseLog } from "@/utils/storage";
 
 const AddMedicine = () => {
   const navigate = useNavigate();
@@ -102,10 +102,12 @@ const AddMedicine = () => {
 
     try {
       const medicineName = selectedMed?.brand_name || "Custom Medicine";
+      const today = new Date().toISOString().split('T')[0];
       
-      validTimes.forEach((time) => {
+      for (const time of validTimes) {
+        const medicineId = `med_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const medicine = {
-          id: `med_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          id: medicineId,
           familyMemberId: selectedMember,
           name: medicineName,
           dosage: dosage.trim(),
@@ -113,8 +115,19 @@ const AddMedicine = () => {
           frequency,
           additionalText: notes.trim() || undefined
         };
+        
         addMedicine(medicine);
-      });
+
+        // Create a dose log for today so it shows up in Dashboard/History immediately
+        await saveDoseLog({
+          id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          medicineId: medicineId,
+          medicineName: medicineName,
+          scheduledTime: time.trim(),
+          date: today,
+          status: "partial" // "partial" means pending/scheduled in this app's logic
+        });
+      }
 
       toast.success(`Added ${validTimes.length} dose schedule(s) for ${medicineName}`);
       navigate("/dashboard");
