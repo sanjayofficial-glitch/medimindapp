@@ -7,15 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { MedicineSelector } from "@/components/MedicineSelector";
-import { medicineDatabase, MedicineDBEntry } from "@/data/medicineDatabase";
+import { MedicineDBEntry } from "@/data/medicineDatabase";
 import { addMedicine, getFamilyMembers, FamilyMember } from "@/utils/storage";
-import { cn } from "@/lib/utils";
 
 const AddMedicine = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [selectedMed, setSelectedMed] = useState<MedicineDBEntry | null>(null);
   const [isCustom, setIsCustom] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
