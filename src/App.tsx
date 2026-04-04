@@ -8,7 +8,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import Dashboard from "./pages/Dashboard";
-import AddMedicine from "./pages/AddMedicine";
+import AddMedicine from "./pages/AddMedicine"; // Fixed: Added default export
 import History from "./pages/History";
 import FamilyMembers from "./pages/FamilyMembers";
 import NotFound from "./pages/NotFound";
