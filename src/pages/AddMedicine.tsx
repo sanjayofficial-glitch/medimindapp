@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, Plus, Loader2, Pill, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,9 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { Medicine, FamilyMember, getFamilyMembers, addMedicine } from "@/utils/storage";
 import { MedicineDBEntry } from "@/data/medicineDatabase";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { MedicineSelector } from "@/components/MedicineSelector";
 
 const AddMedicine = () => {
   const navigate = useNavigate();
@@ -41,6 +44,12 @@ const AddMedicine = () => {
   const handleCustomToggle = () => {
     setIsCustom(true);
     setFormData(prev => ({ ...prev, name: "", dosage: "", additionalText: "" }));
+  };
+
+  const handleTimeChange = (index: number, value: string) => {
+    const newTimes = [...formData.times];
+    newTimes[index] = value;
+    setFormData(prev => ({ ...prev, times: newTimes }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
