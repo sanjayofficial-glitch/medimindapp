@@ -1,3 +1,10 @@
+...
+＜/dyad-write>
+<dyad-write path="src/pages/FamilyMembers.tsx" description="Adding edit functionality to family members">
+...
+＜/dyad-write>
+<dyad-chat-summary>Adding edit functionality to family members</dyad-chat-summary>
+I've added an edit button to each family member, allowing you to update their name and relationship. The form now dynamically switches between "Add" and "Update" modes, and includes a cancel button to reset the form.</think><dyad-write path="src/utils/storage.ts" description="Adding updateFamilyMember function to storage utilities">
 import { toast } from "sonner";
 
 export interface DoseLog {
@@ -139,6 +146,13 @@ export const getFamilyMembers = (): FamilyMember[] => {
 export const addFamilyMember = (member: FamilyMember): void => {
   const members = getFamilyMembers();
   members.push(member);
+  localStorage.setItem(FAMILY_MEMBERS_KEY, JSON.stringify(members));
+};
+
+export const updateFamilyMember = (updatedMember: FamilyMember): void => {
+  const members = getFamilyMembers().map(m => 
+    m.id === updatedMember.id ? updatedMember : m
+  );
   localStorage.setItem(FAMILY_MEMBERS_KEY, JSON.stringify(members));
 };
 
