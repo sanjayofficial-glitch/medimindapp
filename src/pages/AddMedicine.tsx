@@ -1,15 +1,13 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Plus, Loader2, Pill } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ChevronLeft, Plus, Loader2, Pill, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { Medicine, FamilyMember, getFamilyMembers, addMedicine } from "@/utils/storage";
-import { MedicineSelector } from "@/components/MedicineSelector";
 import { MedicineDBEntry } from "@/data/medicineDatabase";
 
 const AddMedicine = () => {
@@ -20,7 +18,7 @@ const AddMedicine = () => {
     familyMemberId: "self",
     name: "",
     dosage: "",
-    times: [""],
+    times: [""], // Default to one time slot
     frequency: "daily",
     additionalText: ""
   });
@@ -29,35 +27,6 @@ const AddMedicine = () => {
   useEffect(() => {
     setFamilyMembers(getFamilyMembers());
   }, []);
-
-  useEffect(() => {
-    let requiredTimes = 1;
-    switch (formData.frequency) {
-      case "twice-daily": requiredTimes = 2; break;
-      case "three-times-daily": requiredTimes = 3; break;
-      case "weekly": requiredTimes = 1; break;
-      case "as-needed": requiredTimes = 1; break;
-      default: requiredTimes = 1;
-    }
-    
-    setFormData(prev => {
-      const newTimes = [...prev.times];
-      if (newTimes.length < requiredTimes) {
-        while (newTimes.length < requiredTimes) newTimes.push("");
-      } else if (newTimes.length > requiredTimes) {
-        newTimes.splice(requiredTimes);
-      }
-      return { ...prev, times: newTimes };
-    });
-  }, [formData.frequency]);
-
-  const handleTimeChange = (index: number, value: string) => {
-    setFormData(prev => {
-      const newTimes = [...prev.times];
-      newTimes[index] = value;
-      return { ...prev, times: newTimes };
-    });
-  };
 
   const handleMedicineSelect = (med: MedicineDBEntry) => {
     setFormData(prev => ({
@@ -101,11 +70,11 @@ const AddMedicine = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-20">
       <div className="max-w-2xl mx-auto px-4 py-6">
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center justify-between mb-8">
           <Link to="/dashboard" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors">
-            <ArrowLeft className="w-5 h-5" />
+            <ChevronLeft className="w-5 h-5" />
             <span className="font-medium">Back to Dashboard</span>
           </Link>
         </div>
@@ -116,8 +85,11 @@ const AddMedicine = () => {
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">Medication Details</CardTitle>
+          <CardHeader className="space-x-2">
+            <div className="flex items-center gap-2">
+              <Plus className="w-4 h-4 text-emerald-600" />
+              <CardTitle className="text-xl font-bold">New Medicine</CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -139,25 +111,13 @@ const AddMedicine = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                {familyMembers.length === 0 && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    <Link to="/family-members" className="text-emerald-600 hover:underline">Add family members</Link> to manage their medications
-                  </p>
-                )}
               </div>
 
               <div className="space-y-2">
                 <Label>Medicine Selection</Label>
-                {!isCustom ? (
+                <div className="space-y-2">
                   <MedicineSelector onSelect={handleMedicineSelect} onCustom={handleCustomToggle} />
-                ) : (
-                  <div className="flex gap-2">
-                    <Button type="button" variant="outline" onClick={() => setIsCustom(false)} className="flex-1 h-11">
-                      <Pill className="w-4 h-4 mr-2" />
-                      Select from Database
-                    </Button>
-                  </div>
-                )}
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -186,7 +146,10 @@ const AddMedicine = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="frequency">Frequency</Label>
-                <Select value={formData.frequency} onValueChange={(value) => setFormData({ ...formData, frequency: value })}>
+                <Select 
+                  value={formData.frequency} 
+                  onValueChange={(value) => setFormData({ ...formData, frequency: value })}
+                >
                   <SelectTrigger className="h-11">
                     <SelectValue placeholder="Select frequency" />
                   </SelectTrigger>
@@ -201,8 +164,8 @@ const AddMedicine = () => {
               </div>
 
               <div className="space-y-2">
-                <Label>Reminder Times *</Label>
-                <div className="space-y-3">
+                <Label htmlFor="times">Reminder Times *</Label>
+                <div className="space-y-2">
                   {formData.times.map((time, index) => (
                     <div key={index} className="flex items-center gap-3">
                       <span className="text-sm font-medium text-gray-700 w-24">
@@ -221,7 +184,7 @@ const AddMedicine = () => {
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 mt-1">
                   {formData.frequency === "twice-daily" && "Set two reminder times (e.g., morning and evening)"}
                   {formData.frequency === "three-times-daily" && "Set three reminder times (e.g., morning, afternoon, evening)"}
                   {formData.frequency === "weekly" && "Set the time for your weekly reminder"}
@@ -243,14 +206,11 @@ const AddMedicine = () => {
 
               <div className="flex gap-3 pt-4">
                 <Button type="submit" className="flex-1 h-11 text-base" disabled={isLoading}>
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-                  Set Reminder
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : "Set Reminder"}
                 </Button>
-                <Link to="/dashboard">
-                  <Button type="button" variant="outline" className="h-11 text-base">
-                    Cancel
-                  </Button>
-                </Link>
+                <Button type="button" variant="outline" className="h-11" onClick={() => navigate("/dashboard")}>
+                  Cancel
+                </Button>
               </div>
             </form>
           </CardContent>
