@@ -9,6 +9,7 @@ import AIButton from "./components/AIButton";
 import AddMedicine from "./pages/AddMedicine";
 import MedicationHistory from "./pages/MedicationHistory";
 import FamilyMembers from "./pages/FamilyMembers";
+import Progress from "./pages/Progress";
 
 const App = () => {
   return (
@@ -26,6 +27,7 @@ const App = () => {
         <Route path="/add-medicine" element={<AddMedicine />} />
         <Route path="/history" element={<MedicationHistory />} />
         <Route path="/family-members" element={<FamilyMembers />} />
+        <Route path="/progress" element={<Progress />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <BottomTabBar />

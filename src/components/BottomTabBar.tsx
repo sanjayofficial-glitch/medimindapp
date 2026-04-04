@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, History, PlusCircle, Users } from "lucide-react";
+import { Home, History, PlusCircle, Users, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const BottomTabBar = () => {
@@ -15,11 +15,12 @@ const BottomTabBar = () => {
     { name: "Home", path: "/dashboard", icon: Home },
     { name: "History", path: "/history", icon: History },
     { name: "Add", path: "/add-medicine", icon: PlusCircle, isMain: true },
+    { name: "Progress", path: "/progress", icon: BarChart3 },
     { name: "Family", path: "/family-members", icon: Users },
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 pb-4 pt-2 flex justify-around items-end z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] pr-20">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-2 pb-4 pt-2 flex justify-around items-end z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] pr-20">
       {tabs.map((tab) => {
         const isActive = location.pathname === tab.path;
         const Icon = tab.icon;
@@ -36,7 +37,7 @@ const BottomTabBar = () => {
             )}
           >
             <Icon className={cn("w-6 h-6", tab.isMain && "w-7 h-7")} />
-            {!tab.isMain && <span className="text-[11px] mt-1.5 font-medium">{tab.name}</span>}
+            {!tab.isMain && <span className="text-[10px] mt-1.5 font-medium">{tab.name}</span>}
           </button>
         );
       })}
