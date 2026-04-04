@@ -1,25 +1,9 @@
-...
-＜/dyad-write>
-<dyad-write path="src/components/AIButton.tsx" description="Updating AIButton to correctly import AIChatModal">
-...
-＜/dyad-write>
-<dyad-chat-summary>Fixing TypeScript errors in AI components＜/dyad-chat-summary>
-Done. 
-Let's generate. 
-(Self-Correction/Verification during thought)
-Wait, the prompt says "Fix these 1082 TypeScript compile-time errors". The errors are clearly due to the file containing conversational text instead of code. Replacing the file will fix it.
-I will make sure the code is exactly as intended.
-All good.
-Proceeds. 
-[Output Generation] -> *Proceeds*</think>The errors occurred because the `AIChatModal.tsx` file accidentally contained conversational text instead of valid code. I've completely rewritten both files with clean, correct TypeScript to resolve all 1082 errors.
-
-<dyad-write path="src/components/AIChatModal.tsx" description="Rewriting AIChatModal with clean TypeScript code">
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Send, Settings, Bot, User } from "lucide-react";
+import { Send, Settings, Bot, User, Loader2 } from "lucide-react";
 import { askAIAssistant, getAISettings, saveAISettings } from "@/utils/ai-assistant";
 import { toast } from "sonner";
 
@@ -28,7 +12,12 @@ interface Message {
   content: string;
 }
 
-const AIChatModal = ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => {
+interface AIChatModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+const AIChatModal = ({ open, onOpenChange }: AIChatModalProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -51,10 +40,17 @@ const AIChatModal = ({ open, onOpenChange }: { open: boolean; onOpenChange: (ope
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, isLoading]);
 
   const handleSend = async () => {
     if (!input.trim()) return;
+
+    const settings = getAISettings();
+    if (!settings?.apiKey) {
+      setShowSettings(true);
+      toast.error("Please configure your Gemini API key first.");
+      return;
+    }
 
     const userMessage: Message = { role: "user", content: input.trim() };
     setMessages(prev => [...prev, userMessage]);
@@ -66,8 +62,8 @@ const AIChatModal = ({ open, onOpenChange }: { open: boolean; onOpenChange: (ope
       const assistantMessage: Message = { role: "assistant", content: response };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error: any) {
-      toast.error(error.message || "Failed to get response");
-      setMessages(prev => [...prev, { role: "assistant", content: `Error: ${error.message}` }]);
+      toast.error(error.message || "Failed to get response from AI");
+      setMessages(prev => [...prev, { role: "assistant", content: `Sorry, I encountered an error: ${error.message}` }]);
     } finally {
       setIsLoading(false);
     }
@@ -75,72 +71,96 @@ const AIChatModal = ({ open, onOpenChange }: { open: boolean; onOpenChange: (ope
 
   const handleSaveApiKey = () => {
     if (!apiKey.trim()) {
-      toast.error("Please enter an API key");
+      toast.error("API key is required");
       return;
     }
     saveAISettings({ apiKey: apiKey.trim(), provider: "gemini" });
-    toast.success("API key saved");
+    toast.success("AI settings saved successfully");
     setShowSettings(false);
   };
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[500px] h-[600px] flex flex-col p-0">
-          <DialogHeader className="px-6 py-4 border-b">
+        <DialogContent className="sm:max-w-[500px] h-[600px] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="px-6 py-4 border-b bg-emerald-50/50">
             <div className="flex items-center justify-between">
-              <DialogTitle className="flex items-center gap-2">
-                <Bot className="w-5 h-5 text-emerald-600" />
-                MediMind AI
+              <DialogTitle className="flex items-center gap-2 text-emerald-800">
+                <Bot className="w-5 h-5" />
+                MediMind AI Assistant
               </DialogTitle>
-              <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)}>
+              <Button variant="ghost" size="icon" onClick={() => setShowSettings(true)} className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100">
                 <Settings className="w-5 h-5" />
               </Button>
             </div>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-white">
             {messages.length === 0 && (
-              <div className="text-center text-gray-500 mt-10">
-                <Bot className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p className="font-medium">Ask me anything about your medications!</p>
-                <p className="text-sm mt-1">I can help with dosage, timing, side effects, and more.</p>
+              <div className="text-center text-gray-500 mt-12 space-y-4">
+                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto">
+                  <Bot className="w-8 h-8 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">How can I help you today?</p>
+                  <p className="text-sm mt-1">Ask me about your medication schedule, potential side effects, or general health guidance.</p>
+                </div>
+                <div className="grid grid-cols-1 gap-2 max-w-xs mx-auto pt-4">
+                  <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => setInput("What are the side effects of Metformin?")}>
+                    "What are the side effects of Metformin?"
+                  </Button>
+                  <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => setInput("I missed my morning dose, what should I do?")}>
+                    "I missed my morning dose, what should I do?"
+                  </Button>
+                </div>
               </div>
             )}
+            
             {messages.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`flex items-start gap-2 max-w-[80%] ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === "user" ? "bg-emerald-100 text-emerald-600" : "bg-gray-100 text-gray-600"}`}>
+                <div className={`flex items-start gap-3 max-w-[85%] ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm ${
+                    msg.role === "user" ? "bg-emerald-600 text-white" : "bg-emerald-100 text-emerald-600"
+                  }`}>
                     {msg.role === "user" ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                   </div>
-                  <div className={`rounded-2xl px-4 py-2 ${msg.role === "user" ? "bg-emerald-600 text-white" : "bg-gray-100 text-gray-800"}`}>
-                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  <div className={`rounded-2xl px-4 py-2.5 text-sm shadow-sm ${
+                    msg.role === "user" 
+                      ? "bg-emerald-600 text-white rounded-tr-none" 
+                      : "bg-gray-100 text-gray-800 rounded-tl-none border border-gray-200"
+                  }`}>
+                    <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                   </div>
                 </div>
               </div>
             ))}
+            
             {isLoading && (
               <div className="flex justify-start">
-                <div className="flex items-center gap-2 bg-gray-100 rounded-2xl px-4 py-2">
-                  <Bot className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm text-gray-600">Thinking...</span>
+                <div className="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-2xl rounded-tl-none px-4 py-2.5 shadow-sm">
+                  <Loader2 className="w-4 h-4 text-emerald-600 animate-spin" />
+                  <span className="text-sm text-gray-500 italic">MediMind is thinking...</span>
                 </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          <DialogFooter className="px-6 py-4 border-t">
+          <DialogFooter className="px-6 py-4 border-t bg-gray-50">
             <div className="flex w-full gap-2">
               <Input
-                placeholder="Ask about your medications..."
+                placeholder="Type your question here..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSend())}
                 disabled={isLoading}
-                className="flex-1"
+                className="flex-1 bg-white border-gray-200 focus-visible:ring-emerald-500"
               />
-              <Button onClick={handleSend} disabled={isLoading || !input.trim()} className="bg-emerald-600 hover:bg-emerald-700">
+              <Button 
+                onClick={handleSend} 
+                disabled={isLoading || !input.trim()} 
+                className="bg-emerald-600 hover:bg-emerald-700 shadow-md transition-all active:scale-95"
+              >
                 <Send className="w-4 h-4" />
               </Button>
             </div>
@@ -148,33 +168,36 @@ const AIChatModal = ({ open, onOpenChange }: { open: boolean; onOpenChange: (ope
         </DialogContent>
       </Dialog>
 
-      {/* Settings Dialog */}
       <Dialog open={showSettings} onOpenChange={setShowSettings}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>AI Settings</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5 text-gray-600" />
+              AI Configuration
+            </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="apiKey" className="text-right">
-                Gemini API Key
-              </Label>
+            <div className="space-y-2">
+              <Label htmlFor="apiKey">Google Gemini API Key</Label>
               <Input
                 id="apiKey"
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                className="col-span-3"
-                placeholder="Enter your Gemini API key"
+                placeholder="Paste your API key here"
+                className="focus-visible:ring-emerald-500"
               />
+              <p className="text-[11px] text-gray-500 leading-tight">
+                Your key is stored locally on your device. Get one for free at the 
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline ml-1">
+                  Google AI Studio
+                </a>.
+              </p>
             </div>
-            <p className="text-xs text-gray-500 col-span-4">
-              Get your API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">Google AI Studio</a>.
-            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowSettings(false)}>Cancel</Button>
-            <Button onClick={handleSaveApiKey}>Save</Button>
+            <Button onClick={handleSaveApiKey} className="bg-emerald-600 hover:bg-emerald-700">Save Settings</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
