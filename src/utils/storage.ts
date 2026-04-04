@@ -1,22 +1,14 @@
-...
-＜/dyad-write>
-<dyad-write path="src/pages/FamilyMembers.tsx" description="Adding edit functionality to family members">
-...
-＜/dyad-write>
-<dyad-chat-summary>Adding edit functionality to family members</dyad-chat-summary>
-I've added an edit button to each family member, allowing you to update their name and relationship. The form now dynamically switches between "Add" and "Update" modes, and includes a cancel button to reset the form.</think><dyad-write path="src/utils/storage.ts" description="Adding updateFamilyMember function to storage utilities">
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Pill, Loader2, Eye, EyeOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
-export interface DoseLog {
-  id: string;
-  medicineId: string;
-  medicineName: string;
-  scheduledTime: string;
-  actualTime?: string;
-  date: string;
-  status: "taken" | "missed" | "partial";
-}
-
+// Family Members
 export interface FamilyMember {
   id: string;
   name: string;
@@ -28,9 +20,20 @@ export interface Medicine {
   familyMemberId: string;
   name: string;
   dosage: string;
-  times: string[];  // changed from single time to array of times
+  times: string[];  // Changed from single time to array of times
   frequency: string;
   additionalText?: string;
+}
+
+// Dose Logs
+export interface DoseLog {
+  id: string;
+  medicineId: string;
+  medicineName: string;
+  scheduledTime: string;
+  actualTime?: string;
+  date: string;
+  status: "taken" | "missed" | "partial";
 }
 
 const DOSE_LOGS_KEY = "medimind_dose_logs";
