@@ -1,11 +1,11 @@
 import React from "react";  
 import { Button } from "@/components/ui/button";  
-import { AI } from "lucide-react";  
+import { Ai } from "lucide-react";  
 
 const AIButton = () => {  
   return (  
     <Button size="lg" className="fixed bottom-4 right-4 z-50 bg-emerald-600 hover:bg-emerald-700 rounded-full shadow-lg p-2" onClick={() => console.log("AI Button clicked")}>  
-      <AI className="w-6 h-6" />  
+      <Ai className="w-6 h-6" />  
     </Button>  
   );  
 };  
