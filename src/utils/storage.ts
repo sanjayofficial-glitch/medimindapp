@@ -141,7 +141,9 @@ export const getFamilyMembers = (): FamilyMember[] => {
   try {
     const members = localStorage.getItem(FAMILY_MEMBERS_KEY);
     return members ? JSON.parse(members) : [];
-  } catch {
+  } catch (error) {
+    console.error("Failed to load family members:", error);
+    toast.error("Failed to load family members");
     return [];
   }
 };
@@ -170,14 +172,15 @@ export const getMedicines = (): Medicine[] => {
     const meds = localStorage.getItem(MEDICINES_KEY);
     if (!meds) return [];
     const parsed = JSON.parse(meds);
-    // Migrate old format (single time) to new format (times array)
     return parsed.map((med: { time?: string; times?: string[] } & Record<string, unknown>) => {
       if (med.time && !med.times) {
         return { ...med, times: [med.time] };
       }
       return med;
     });
-  } catch {
+  } catch (error) {
+    console.error("Failed to load medicines:", error);
+    toast.error("Failed to load medicines");
     return [];
   }
 };

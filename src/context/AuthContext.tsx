@@ -28,6 +28,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(false);
   }, []);
 
+  // DEMO MODE: Password is intentionally ignored - any credentials will work
+  // This is for demonstration purposes only. Replace with real Supabase auth.
   const login = async (email: string, _password: string): Promise<boolean> => {
     setIsLoading(true);
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -38,6 +40,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return true;
   };
 
+  // DEMO MODE: Password is intentionally ignored - any credentials will work
+  // This is for demonstration purposes only. Replace with real Supabase auth.
   const signup = async (name: string, email: string, _password: string): Promise<boolean> => {
     setIsLoading(true);
     await new Promise((resolve) => setTimeout(resolve, 500));
