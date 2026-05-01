@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getDoseLogs, DoseLog } from "@/utils/storage";
+import { getDoseLogs } from "@/utils/storage";
 import { CheckCircle, XCircle, AlertCircle, TrendingUp } from "lucide-react";
 
 const Progress = () => {

@@ -6,17 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
 import { getMedicines, getDoseLogsForDate, saveDoseLog, Medicine, DoseLog } from "@/utils/storage";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [todayLogs, setTodayLogs] = useState<DoseLog[]>([]);
-  const [today, setToday] = useState("");
 
   const loadData = async () => {
     const d = new Date();
     const dateStr = d.toISOString().split('T')[0];
-    setToday(dateStr);
     
     const allMeds = getMedicines();
     setMedicines(allMeds);
@@ -179,5 +178,4 @@ const Dashboard = () => {
   );
 };
 
-import { cn } from "@/lib/utils";
 export default Dashboard;

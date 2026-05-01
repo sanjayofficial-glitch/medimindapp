@@ -1,11 +1,3 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Pill, Loader2, Eye, EyeOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
 // Family Members
@@ -108,7 +100,7 @@ export const generateMockData = async (): Promise<void> => {
       med.times.forEach((time) => {
         const rand = Math.random();
         let status: "taken" | "missed" | "partial" = "taken";
-        let actualTime = time;
+        let actualTime: string | undefined = time;
         
         if (rand > 0.85) {
           status = "missed";
