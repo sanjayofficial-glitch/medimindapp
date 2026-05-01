@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Pill, Plus, Loader2, AlertCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Pill, Plus, Loader2, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { MedicineSelector } from "@/components/MedicineSelector";
 import { MedicineDBEntry } from "@/data/medicineDatabase";
@@ -25,21 +25,10 @@ const AddMedicine = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const frequencies = [
-    "Once daily",
-    "Twice daily",
-    "Three times daily",
-    "Four times daily",
-    "Every morning",
-    "Every night",
-    "With breakfast",
-    "With lunch",
-    "With dinner",
-    "As needed",
-    "Every 12 hours",
-    "Every 8 hours",
-    "Every 6 hours",
-    "Weekly",
-    "Monthly"
+    "Once daily", "Twice daily", "Three times daily", "Four times daily",
+    "Every morning", "Every night", "With breakfast", "With lunch",
+    "With dinner", "As needed", "Every 12 hours", "Every 8 hours",
+    "Every 6 hours", "Weekly", "Monthly"
   ];
 
   useEffect(() => {
@@ -58,14 +47,9 @@ const AddMedicine = () => {
     setDosage("");
   };
 
-  const addTimeField = () => {
-    setTimes([...times, ""]);
-  };
-
+  const addTimeField = () => setTimes([...times, ""]);
   const removeTimeField = (index: number) => {
-    if (times.length > 1) {
-      setTimes(times.filter((_, i) => i !== index));
-    }
+    if (times.length > 1) setTimes(times.filter((_, i) => i !== index));
   };
 
   const handleTimeChange = (index: number, value: string) => {
@@ -76,37 +60,21 @@ const AddMedicine = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!selectedMember) {
-      toast.error("Please select a family member");
-      return;
-    }
-    
-    if (!dosage.trim()) {
-      toast.error("Please enter a dosage");
-      return;
-    }
-    
-    if (!frequency) {
-      toast.error("Please select a frequency");
-      return;
-    }
+    if (!selectedMember) return toast.error("Please select a family member");
+    if (!dosage.trim()) return toast.error("Please enter a dosage");
+    if (!frequency) return toast.error("Please select a frequency");
     
     const validTimes = times.filter(t => t.trim());
-    if (validTimes.length === 0) {
-      toast.error("Please add at least one time");
-      return;
-    }
+    if (validTimes.length === 0) return toast.error("Please add at least one time");
 
     setIsSubmitting(true);
-
     try {
       const medicineName = selectedMed?.brand_name || "Custom Medicine";
       const today = new Date().toISOString().split('T')[0];
       
       for (const time of validTimes) {
         const medicineId = `med_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const medicine = {
+        addMedicine({
           id: medicineId,
           familyMemberId: selectedMember,
           name: medicineName,
@@ -114,25 +82,20 @@ const AddMedicine = () => {
           times: [time.trim()],
           frequency,
           additionalText: notes.trim() || undefined
-        };
-        
-        addMedicine(medicine);
+        });
 
-        // Create a dose log for today so it shows up in Dashboard/History immediately
         await saveDoseLog({
           id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           medicineId: medicineId,
           medicineName: medicineName,
           scheduledTime: time.trim(),
           date: today,
-          status: "partial" // "partial" means pending/scheduled in this app's logic
+          status: "partial"
         });
       }
-
       toast.success(`Added ${validTimes.length} dose schedule(s) for ${medicineName}`);
       navigate("/dashboard");
     } catch (error) {
-      console.error("Failed to add medicine:", error);
       toast.error("Failed to add medicine. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -140,115 +103,69 @@ const AddMedicine = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="min-h-screen bg-gray-50 pb-24"
+    >
       <div className="max-w-2xl mx-auto px-4 py-6">
         <div className="mb-6">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate(-1)}
-            className="mb-4"
-          >
-            ← Back
-          </Button>
+          <motion.div whileHover={{ x: -4 }}>
+            <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
+              <ChevronLeft className="w-4 h-4 mr-1" /> Back
+            </Button>
+          </motion.div>
           <h1 className="text-2xl font-bold text-gray-900">Add Medicine</h1>
           <p className="text-gray-600 mt-1">Schedule a new medication for a family member</p>
         </div>
 
-        <Card className="shadow-lg border-0">
+        <Card className="shadow-lg border-0 overflow-hidden">
           <CardHeader>
             <CardTitle>Medicine Details</CardTitle>
-            <CardDescription>
-              Search our database or add a custom medicine
-            </CardDescription>
+            <CardDescription>Search our database or add a custom medicine</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Family Member Selection */}
               <div className="space-y-2">
-                <Label htmlFor="family-member">Family Member</Label>
+                <Label>Family Member</Label>
                 <Select value={selectedMember} onValueChange={setSelectedMember}>
-                  <SelectTrigger id="family-member" className="h-11">
+                  <SelectTrigger className="h-11">
                     <SelectValue placeholder="Select a family member" />
                   </SelectTrigger>
                   <SelectContent>
-                    {familyMembers.length === 0 ? (
-                      <SelectItem value="none" disabled>
-                        No family members added
-                      </SelectItem>
-                    ) : (
-                      familyMembers.map((member) => (
-                        <SelectItem key={member.id} value={member.id}>
-                          {member.name} ({member.relationship})
-                        </SelectItem>
-                      ))
-                    )}
+                    {familyMembers.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-                {familyMembers.length === 0 && (
-                  <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
-                    <AlertCircle className="w-3 h-3" />
-                    Add family members first in the Family tab
-                  </p>
-                )}
               </div>
 
-              {/* Medicine Selector */}
               <div className="space-y-2">
                 <Label>Medicine</Label>
-                <MedicineSelector 
-                  onSelect={handleSelectMedicine}
-                  onCustom={handleCustomMedicine}
-                />
+                <MedicineSelector onSelect={handleSelectMedicine} onCustom={handleCustomMedicine} />
               </div>
 
-              {/* Custom Medicine Name (shown only when custom is selected) */}
-              {isCustom && (
-                <div className="space-y-2">
-                  <Label htmlFor="custom-name">Custom Medicine Name</Label>
-                  <Input
-                    id="custom-name"
-                    placeholder="e.g., My Special Pill"
-                    value={selectedMed?.brand_name || ""}
-                    onChange={(e) => setSelectedMed({
-                      brand_name: e.target.value,
-                      generic_name: "",
-                      disease: "",
-                      guidance: "",
-                      cautions: ""
-                    })}
-                    className="h-11"
-                  />
-                </div>
-              )}
+              <AnimatePresence mode="wait">
+                {selectedMed && !isCustom && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 space-y-2 overflow-hidden"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Pill className="w-4 h-4 text-emerald-600" />
+                      <span className="font-medium text-emerald-900">{selectedMed.brand_name}</span>
+                    </div>
+                    <p className="text-sm text-emerald-700">{selectedMed.generic_name}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-              {/* Selected Medicine Info */}
-              {selectedMed && !isCustom && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Pill className="w-4 h-4 text-emerald-600" />
-                    <span className="font-medium text-emerald-900">{selectedMed.brand_name}</span>
-                  </div>
-                  <p className="text-sm text-emerald-700">{selectedMed.generic_name}</p>
-                  <p className="text-xs text-emerald-600">
-                    <strong>Condition:</strong> {selectedMed.disease}
-                  </p>
-                  <details className="text-xs text-emerald-700">
-                    <summary className="cursor-pointer hover:text-emerald-900 font-medium">Guidance</summary>
-                    <p className="mt-1">{selectedMed.guidance}</p>
-                  </details>
-                  <details className="text-xs text-emerald-700">
-                    <summary className="cursor-pointer hover:text-emerald-900 font-medium">Cautions</summary>
-                    <p className="mt-1">{selectedMed.cautions}</p>
-                  </details>
-                </div>
-              )}
-
-              {/* Dosage */}
               <div className="space-y-2">
-                <Label htmlFor="dosage">Dosage</Label>
+                <Label>Dosage</Label>
                 <Input
-                  id="dosage"
-                  placeholder="e.g., 500mg, 1 tablet, 5ml"
+                  placeholder="e.g., 500mg, 1 tablet"
                   value={dosage}
                   onChange={(e) => setDosage(e.target.value)}
                   className="h-11"
@@ -256,75 +173,74 @@ const AddMedicine = () => {
                 />
               </div>
 
-              {/* Frequency */}
               <div className="space-y-2">
-                <Label htmlFor="frequency">Frequency</Label>
+                <Label>Frequency</Label>
                 <Select value={frequency} onValueChange={setFrequency}>
-                  <SelectTrigger id="frequency" className="h-11">
+                  <SelectTrigger className="h-11">
                     <SelectValue placeholder="Select frequency" />
                   </SelectTrigger>
                   <SelectContent>
-                    {frequencies.map((freq) => (
-                      <SelectItem key={freq} value={freq}>
-                        {freq}
-                      </SelectItem>
+                    {frequencies.map((f) => (
+                      <SelectItem key={f} value={f}>{f}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Times */}
               <div className="space-y-3">
                 <Label>Times</Label>
-                {times.map((time, index) => (
-                  <div key={index} className="flex gap-2">
-                    <Input
-                      type="time"
-                      value={time}
-                      onChange={(e) => handleTimeChange(index, e.target.value)}
-                      className="h-11 flex-1"
-                      required
-                    />
-                    {times.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => removeTimeField(index)}
-                        className="h-11 w-11 shrink-0"
-                      >
-                        ×
-                      </Button>
-                    )}
-                  </div>
-                ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={addTimeField}
-                  className="w-full h-11 border-dashed"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Another Time
-                </Button>
-                <p className="text-xs text-gray-500">
-                  Add all times when this medicine should be taken
-                </p>
+                <AnimatePresence mode="popLayout">
+                  {times.map((time, index) => (
+                    <motion.div 
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className="flex gap-2"
+                    >
+                      <Input
+                        type="time"
+                        value={time}
+                        onChange={(e) => handleTimeChange(index, e.target.value)}
+                        className="h-11 flex-1"
+                        required
+                      />
+                      {times.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => removeTimeField(index)}
+                          className="h-11 w-11 shrink-0"
+                        >
+                          ×
+                        </Button>
+                      )}
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+                <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addTimeField}
+                    className="w-full h-11 border-dashed"
+                  >
+                    <Plus className="w-4 h-4 mr-2" /> Add Another Time
+                  </Button>
+                </motion.div>
               </div>
 
-              {/* Notes */}
               <div className="space-y-2">
-                <Label htmlFor="notes">Additional Notes (Optional)</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="e.g., Take with food, avoid alcohol, etc."
+                <Label>Notes (Optional)</Label>
+                <Input
+                  placeholder="e.g., Take with food"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="min-h-[80px]"
+                  className="h-11"
                 />
               </div>
 
-              {/* Submit */}
               <div className="flex gap-3 pt-4">
                 <Button
                   type="button"
@@ -335,26 +251,21 @@ const AddMedicine = () => {
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-700"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Adding...
-                    </>
-                  ) : (
-                    "Add Medicine"
-                  )}
-                </Button>
+                <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button
+                    type="submit"
+                    className="w-full h-11 bg-emerald-600 hover:bg-emerald-700"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add Medicine"}
+                  </Button>
+                </motion.div>
               </div>
             </form>
           </CardContent>
         </Card>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
