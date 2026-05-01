@@ -1,17 +1,40 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Pill, History, Users, Plus, CheckCircle2, Clock, X, Calendar, ChevronRight, Bell } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { 
+  Pill, 
+  History, 
+  Users, 
+  Plus, 
+  CheckCircle2, 
+  Clock, 
+  X, 
+  Calendar, 
+  ChevronRight, 
+  Bell,
+  LogOut,
+  User as UserIcon,
+  Settings
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/AuthContext";
 import { getMedicines, getDoseLogsForDate, saveDoseLog, Medicine, DoseLog } from "@/utils/storage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [todayLogs, setTodayLogs] = useState<DoseLog[]>([]);
 
@@ -39,6 +62,18 @@ const Dashboard = () => {
     loadData();
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+    toast.success("Logged out successfully");
+  };
+
+  const showNotifications = () => {
+    toast.info("You have no new notifications", {
+      description: "We'll alert you when it's time for your next dose."
+    });
+  };
+
   const takenCount = todayLogs.filter((l) => l.status === "taken").length;
   const pendingCount = todayLogs.filter((l) => l.status === "partial").length;
   const totalToday = todayLogs.length;
@@ -49,22 +84,62 @@ const Dashboard = () => {
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <Link to="/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
               <Pill className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h1 className="font-bold text-slate-900">MediMind</h1>
+              <h1 className="font-bold text-slate-900 leading-tight">MediMind</h1>
               <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Clinical Dashboard</p>
             </div>
-          </div>
+          </Link>
+          
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="rounded-full text-slate-500">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="rounded-full text-slate-500 hover:bg-slate-100 relative"
+              onClick={showNotifications}
+            >
               <Bell className="w-5 h-5" />
+              {pendingCount > 0 && (
+                <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
+              )}
             </Button>
-            <div className="w-8 h-8 bg-slate-200 rounded-full overflow-hidden border border-slate-300">
-              <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name}`} alt="avatar" />
-            </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0 overflow-hidden border border-slate-200">
+                  <img 
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'default'}`} 
+                    alt="avatar" 
+                    className="h-full w-full object-cover"
+                  />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{user?.name || "Patient"}</p>
+                    <p className="text-xs leading-none text-muted-foreground">{user?.email || "patient@medimind.com"}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="cursor-pointer">
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-rose-600 cursor-pointer" onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
