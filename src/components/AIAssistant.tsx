@@ -50,8 +50,9 @@ const AIAssistant = () => {
     try {
       const response = await askAIAssistant(userMessage);
       setMessages(prev => [...prev, { role: "assistant", content: response }]);
-    } catch (error: any) {
-      setMessages(prev => [...prev, { role: "error", content: error.message || "An unexpected error occurred." }]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "An unexpected error occurred.";
+      setMessages(prev => [...prev, { role: "error", content: message }]);
     } finally {
       setIsLoading(false);
     }

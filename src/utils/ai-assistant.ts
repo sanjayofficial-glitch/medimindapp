@@ -87,11 +87,10 @@ export const askAIAssistant = async (query: string): Promise<string> => {
     }
     
     return text;
-  } catch (error: any) {
+  } catch (error) {
     console.error("AI Assistant Error:", error);
     
-    // Provide more helpful error messages based on common API issues
-    const errorMessage = error.message || "";
+    const errorMessage = error instanceof Error ? error.message : "";
     if (errorMessage.includes("API_KEY_INVALID") || errorMessage.includes("invalid api key")) {
       throw new Error("Invalid API Key. Please check your Gemini API key in settings.");
     } else if (errorMessage.includes("SAFETY")) {

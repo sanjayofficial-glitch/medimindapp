@@ -61,9 +61,10 @@ const AIChatModal = ({ open, onOpenChange }: AIChatModalProps) => {
       const response = await askAIAssistant(userMessage.content);
       const assistantMessage: Message = { role: "assistant", content: response };
       setMessages(prev => [...prev, assistantMessage]);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to get response from AI");
-      setMessages(prev => [...prev, { role: "assistant", content: `Sorry, I encountered an error: ${error.message}` }]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to get response from AI";
+      toast.error(message);
+      setMessages(prev => [...prev, { role: "assistant", content: `Sorry, I encountered an error: ${message}` }]);
     } finally {
       setIsLoading(false);
     }

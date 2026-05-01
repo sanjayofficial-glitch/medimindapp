@@ -33,7 +33,10 @@ const createNotification = (medicineId: string, medicineName: string, userName: 
     notif.close();
   };
 
-  notif.addEventListener("action", (e: any) => handleAction(e.action));
+  notif.addEventListener("action", (e: Event) => {
+    const action = (e as unknown as { action: string }).action;
+    handleAction(action);
+  });
   notif.onclick = () => handleAction("taken");
 };
 

@@ -171,7 +171,7 @@ export const getMedicines = (): Medicine[] => {
     if (!meds) return [];
     const parsed = JSON.parse(meds);
     // Migrate old format (single time) to new format (times array)
-    return parsed.map((med: any) => {
+    return parsed.map((med: { time?: string; times?: string[] } & Record<string, unknown>) => {
       if (med.time && !med.times) {
         return { ...med, times: [med.time] };
       }

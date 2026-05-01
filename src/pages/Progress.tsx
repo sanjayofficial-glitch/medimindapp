@@ -11,7 +11,7 @@ const Progress = () => {
     late: 0,
     rate: 0
   });
-  const [chartData, setChartData] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<{ name: string; rate: number; fullDate: string }[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
