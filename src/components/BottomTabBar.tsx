@@ -2,14 +2,13 @@
 
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, History, Plus, Users, BarChart3 } from "lucide-react";
+import { Home, History, Plus, BarChart3, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const BottomTabBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Hide on auth and landing pages
   if (["/", "/login", "/signup"].includes(location.pathname)) {
     return null;
   }
@@ -19,7 +18,7 @@ const BottomTabBar = () => {
     { name: "History", path: "/history", icon: History },
     { name: "Add", path: "/add-medicine", icon: Plus, isMain: true },
     { name: "Progress", path: "/progress", icon: BarChart3 },
-    { name: "Family", path: "/family-members", icon: Users },
+    { name: "More", path: "/more", icon: MoreHorizontal },
   ];
 
   return (
@@ -40,7 +39,7 @@ const BottomTabBar = () => {
                 whileHover={{ scale: 1.1, rotate: 90 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => navigate(tab.path)}
-                className="w-14 h-14 bg-primary text-white rounded-2xl shadow-lg shadow-primary/30 flex items-center justify-center transition-transform"
+                className="w-14 h-14 bg-emerald-600 text-white rounded-2xl shadow-lg shadow-emerald-200 flex items-center justify-center transition-transform"
               >
                 <Icon className="w-7 h-7" />
               </motion.button>
@@ -54,14 +53,14 @@ const BottomTabBar = () => {
               className={cn(
                 "relative flex flex-col items-center justify-center gap-1 px-3 py-1 rounded-xl transition-all",
                 isActive 
-                  ? "text-primary" 
+                  ? "text-emerald-600" 
                   : "text-slate-400 hover:text-slate-600"
               )}
             >
               {isActive && (
                 <motion.div 
                   layoutId="activeTab"
-                  className="absolute inset-0 bg-primary/5 rounded-xl -z-10"
+                  className="absolute inset-0 bg-emerald-50 rounded-xl -z-10"
                   transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                 />
               )}

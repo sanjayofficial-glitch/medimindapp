@@ -15,10 +15,17 @@ const Progress = lazy(() => import("./pages/Progress"));
 const VitalsTracker = lazy(() => import("./pages/VitalsTracker"));
 const RefillManagement = lazy(() => import("./pages/RefillManagement"));
 const SymptomLogger = lazy(() => import("./pages/SymptomLogger"));
+const EmergencyID = lazy(() => import("./pages/EmergencyID"));
+const Appointments = lazy(() => import("./pages/Appointments"));
+const LabResults = lazy(() => import("./pages/LabResults"));
+const MedicationWiki = lazy(() => import("./pages/MedicationWiki"));
+const MoodJournal = lazy(() => import("./pages/MoodJournal"));
+const PrescriptionWallet = lazy(() => import("./pages/PrescriptionWallet"));
+const More = lazy(() => import("./pages/More"));
 
 const Loading = () => (
   <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600" />
   </div>
 );
 
@@ -43,6 +50,13 @@ const App = () => {
           <Route path="/vitals" element={<VitalsTracker />} />
           <Route path="/refills" element={<RefillManagement />} />
           <Route path="/symptoms" element={<SymptomLogger />} />
+          <Route path="/emergency-id" element={<EmergencyID />} />
+          <Route path="/appointments" element={<Appointments />} />
+          <Route path="/lab-results" element={<LabResults />} />
+          <Route path="/wiki" element={<MedicationWiki />} />
+          <Route path="/mood" element={<MoodJournal />} />
+          <Route path="/wallet" element={<PrescriptionWallet />} />
+          <Route path="/more" element={<More />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
