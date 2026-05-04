@@ -1,11 +1,9 @@
-import { getMedicines, getFamilyMembers } from "./storage";
-
 export interface NotificationAction {
-  type: "taken" | "snooze-5" | "snooze-15" | "snooze-30";
+  type: 'taken' | 'snooze';
   medicineId: string;
 }
 
-const activeTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+const activeTimeouts = new Map<string, NodeJS.Timeout>();
 
 export const requestNotificationPermission = async (): Promise<boolean> => {
   if (!("Notification" in window)) return false;
@@ -17,93 +15,61 @@ const createNotification = (medicineId: string, medicineName: string, userName: 
   if (Notification.permission !== "granted") return;
 
   const options: NotificationOptions & { actions: { action: string; title: string }[] } = {
-    body: `Hey ${userName}, it's time for your ${medicineName}!`,
+    body: `Hey ${userName}, don't forget your ${medicineName}!`,
     icon: "/favicon.ico",
     tag: medicineId,
-    requireInteraction: true,
-    silent: false,
     actions: [
       { action: "taken", title: "✅ Taken" },
-      { action: "snooze-5", title: "⏰ Snooze (5m)" },
-      { action: "snooze-15", title: "⏰ Snooze (15m)" },
-      { action: "snooze-30", title: "⏰ Snooze (30m)" },
-    ],
+      { action: "snooze", title: "⏰ Snooze" }
+    ]
   };
 
-  const notif = new Notification("MediMind Reminder 💊", options);
+  const notif = new Notification("Time for your medicine 💊", options);
 
   const handleAction = (action: string) => {
-    window.dispatchEvent(
-      new CustomEvent("medimind_notification_action", {
-        detail: { type: action, medicineId } as NotificationAction,
-      })
-    );
+    window.dispatchEvent(new CustomEvent("medimind_notification_action", {
+      detail: { type: action, medicineId } as NotificationAction
+    }));
     notif.close();
   };
 
-  // Listen for click events (CustomEvent) and forward the action
-  notif.addEventListener("click", (e: Event) => {
-    const ce = e as CustomEvent;
-    handleAction(ce.detail.action);
+  notif.addEventListener("action", (e: Event) => {
+    const action = (e as unknown as { action: string }).action;
+    handleAction(action);
   });
-
-  notif.onclick = () => {
-    window.focus();
-    handleAction("taken");
-  };
-
-  return notif;
+  notif.onclick = () => handleAction("taken");
 };
 
-export const scheduleNotification = (medicineId: string, medicineName: string, time: string, userName: string) => {
+export const scheduleNotification = (
+  medicineId: string,
+  medicineName: string,
+  time: string,
+  userName: string
+) => {
   if (!("Notification" in window)) return;
-
-  const scheduleKey = `${medicineId}_${time}`;
-  cancelNotification(scheduleKey);
+  cancelNotification(medicineId);
 
   const [hours, minutes] = time.split(":").map(Number);
   const now = new Date();
   const target = new Date();
   target.setHours(hours, minutes, 0, 0);
-  if (target <= now) {
-    target.setDate(target.getDate() + 1);
-  }
+  if (target <= now) target.setDate(target.getDate() + 1);
+
   const delay = target.getTime() - now.getTime();
-  if (delay > 0) {
-    const timeoutId = setTimeout(() => {
-      createNotification(medicineId, medicineName, userName);
-      scheduleNotification(medicineId, medicineName, time, userName);
-    }, delay);
-    activeTimeouts.set(scheduleKey, timeoutId);
-  };
+  const timeoutId = setTimeout(() => createNotification(medicineId, medicineName, userName), delay);
+  activeTimeouts.set(medicineId, timeoutId);
 };
 
-export const snoozeNotification = (medicineId: string, medicineName: string, userName: string, durationMinutes: number) => {
-  const snoozeKey = `${medicineId}_snooze`;
-  cancelNotification(snoozeKey);
-  const timeoutId = setTimeout(() => {
-    createNotification(medicineId, medicineName, userName);
-  }, durationMinutes * 60 * 1000);
-  activeTimeouts.set(snoozeKey, timeoutId);
+export const snoozeNotification = (medicineId: string, medicineName: string, userName: string) => {
+  cancelNotification(medicineId);
+  const timeoutId = setTimeout(() => createNotification(medicineId, medicineName, userName), 10 * 60 * 1000);
+  activeTimeouts.set(medicineId, timeoutId);
 };
 
-export const cancelNotification = (key: string) => {
-  const timeout = activeTimeouts.get(key);
+export const cancelNotification = (medicineId: string) => {
+  const timeout = activeTimeouts.get(medicineId);
   if (timeout) {
     clearTimeout(timeout);
-    activeTimeouts.delete(key);
+    activeTimeouts.delete(medicineId);
   }
-};
-
-export const initializeNotifications = async () => {
-  const medicines = getMedicines();
-  const familyMembers = getFamilyMembers();
-
-  medicines.forEach((med) => {
-    const member = familyMembers.find((m) => m.id === med.familyMemberId);
-    const userName = member ? member.name : "User";
-    med.times.forEach((time) => {
-      scheduleNotification(med.id, med.name, time, userName);
-    });
-  });
 };

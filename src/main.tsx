@@ -1,13 +1,13 @@
-import { ErrorBoundary } from "./components/ErrorBoundary";
-import { initializeNotifications } from "./utils/notifications";
 import { createRoot } from "react-dom/client";
-import App from "./App";
+import App from "./App.tsx";
+import "./globals.css";
+import { AuthProvider } from "./context/AuthContext";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
-initializeNotifications().catch(console.error);
-
-const root = createRoot(document.getElementById("root") as HTMLElement);
-root.render(
+createRoot(document.getElementById("root")!).render(
   <ErrorBoundary>
-    <App />
+    <AuthProvider>
+      <App />
+    </AuthProvider>
   </ErrorBoundary>
 );

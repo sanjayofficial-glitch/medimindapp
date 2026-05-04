@@ -1,36 +1,48 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { NotificationHandler } from "./components/NotificationHandler";
-import Login from "./pages/Login";
-import SignUp from "./pages/SignUp";
-import Index from "./pages/Index";
-import Dashboard from "./pages/Dashboard";
-import AddMedicine from "./pages/AddMedicine";
-import FamilyMembers from "./pages/FamilyMembers";
-import History from "./pages/History";
-import Progress from "./pages/Progress";
-import MedicationHistory from "./pages/MedicationHistory";
-import NotFound from "./pages/NotFound";
-import { AuthProvider } from "./context/AuthContext";
+import { Suspense, lazy } from "react";
+import BottomTabBar from "./components/BottomTabBar";
+import AIButton from "./components/AIButton";
+
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Index = lazy(() => import("./pages/Index"));
+const Login = lazy(() => import("./pages/Login"));
+const SignUp = lazy(() => import("./pages/SignUp"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const AddMedicine = lazy(() => import("./pages/AddMedicine"));
+const MedicationHistory = lazy(() => import("./pages/MedicationHistory"));
+const FamilyMembers = lazy(() => import("./pages/FamilyMembers"));
+const Progress = lazy(() => import("./pages/Progress"));
+
+const Loading = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+  </div>
+);
 
 const App = () => {
   return (
-    <AuthProvider>
-      <BrowserRouter>
+    <BrowserRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
+      <Suspense fallback={<Loading />}>
         <Routes>
+          <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
-          <Route path="/" element={<Index />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/add-medicine" element={<AddMedicine />} />
-          <Route path="/family" element={<FamilyMembers />} />
-          <Route path="/history" element={<History />} />
+          <Route path="/history" element={<MedicationHistory />} />
+          <Route path="/family-members" element={<FamilyMembers />} />
           <Route path="/progress" element={<Progress />} />
-          <Route path="/medication-history" element={<MedicationHistory />} />
           <Route path="*" element={<NotFound />} />
-          <Route path="/notification" element={<NotificationHandler />} />
         </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+      </Suspense>
+      <BottomTabBar />
+      <AIButton />
+    </BrowserRouter>
   );
 };
 

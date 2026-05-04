@@ -1,6 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { getMedicines, getDoseLogs, DoseLog } from "@/utils/storage";
-import { Medicine } from "@/utils/storage";
+import { getMedicines, getDoseLogs } from "./storage";
 import { medicineDatabase } from "@/data/medicineDatabase";
 
 const SETTINGS_KEY = "medimind_ai_settings";
@@ -19,55 +18,44 @@ export const saveAISettings = (settings: AISettings) => {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 };
 
-export const getLocalDosageRules = (medicineName: string): string => {
-  const medicine = medicineDatabase.find(m => 
-    m.brand_name.toLowerCase().includes(medicineName.toLowerCase()) ||
-    medicineName.toLowerCase().includes(m.brand_name.toLowerCase())
-  );
-  
-  if (medicine) {
-    return `Dosage Instructions: ${medicine.guidance}\n\nCautions: ${medicine.cautions}`;
-  }
-  return `Please take ${medicineName} as prescribed by your doctor. Follow the dosage instructions on the medication label.`;
-};
-
-export const askAIAssistant = async (query: string, medicine?: Medicine): Promise<string> => {
+export const askAIAssistant = async (query: string): Promise<string> => {
   const settings = getAISettings();
   if (!settings || !settings.apiKey) {
-    if (medicine) {
-      return getLocalDosageRules(medicine.name);
-    }
-    return "Please configure your AI settings to get personalized dosage tips.";
+    throw new Error("API key not found. Please configure it in settings.");
   }
 
   try {
     const genAI = new GoogleGenerativeAI(settings.apiKey);
+    // Using gemini-1.5-flash as it's fast and reliable for this use case
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
+    const medicines = getMedicines();
     const doseLogs = await getDoseLogs();
     
+    // Prepare context for the AI - limit history to keep token count low
     const context = {
-      userMedicines: getMedicines().map(m => ({
+      userMedicines: medicines.map(m => ({
         name: m.name,
         dosage: m.dosage,
         frequency: m.frequency,
         times: m.times,
         notes: m.additionalText
       })),
-      recentHistory: doseLogs.slice(-15).map((l: DoseLog) => ({
+      recentHistory: doseLogs.slice(-15).map(l => ({
         name: l.medicineName,
         status: l.status,
         scheduled: l.scheduledTime,
         actual: l.actualTime,
         date: l.date
       })),
+      // Only include relevant database entries to save tokens
       referenceDatabase: medicineDatabase.filter(db => 
-        getMedicines().some(m => 
+        medicines.some(m => 
           m.name.toLowerCase().includes(db.brand_name.toLowerCase()) || 
           db.brand_name.toLowerCase().includes(m.name.toLowerCase()) ||
           m.dosage.toLowerCase().includes(db.generic_name.toLowerCase())
         )
-      ).slice(0, 5)
+      ).slice(0, 5) // Limit to top 5 matches
     };
 
     const prompt = `
@@ -77,7 +65,8 @@ export const askAIAssistant = async (query: string, medicine?: Medicine): Promis
       - Current Medications: ${JSON.stringify(context.userMedicines)}
       - Recent History: ${JSON.stringify(context.recentHistory)}
       - Reference Info: ${JSON.stringify(context.referenceDatabase)}
-            USER QUESTION: "${query}"
+      
+      USER QUESTION: "${query}"
       
       GUIDELINES:
       1. If the user missed a dose: Check the "Reference Info" for specific guidance. If not found, suggest taking it as soon as remembered unless it's nearly time for the next dose.
@@ -96,6 +85,7 @@ export const askAIAssistant = async (query: string, medicine?: Medicine): Promis
     if (!text) {
       throw new Error("The AI returned an empty response.");
     }
+    
     return text;
   } catch (error) {
     console.error("AI Assistant Error:", error);
@@ -106,11 +96,9 @@ export const askAIAssistant = async (query: string, medicine?: Medicine): Promis
     } else if (errorMessage.includes("SAFETY")) {
       throw new Error("I cannot answer this query due to safety filters. Please consult a doctor.");
     } else if (errorMessage.includes("quota") || errorMessage.includes("429")) {
-      throw new Error("API quota exceeded. Please consult local dosage guidelines.");
+      throw new Error("API quota exceeded. Please try again later.");
     }
-    if (medicine) {
-      return getLocalDosageRules(medicine.name);
-    }
+    
     throw new Error(`AI Error: ${errorMessage || "Failed to connect to the AI service."}`);
   }
 };
