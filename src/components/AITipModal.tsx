@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X, Lightbulb, AlertTriangle } from "lucide-react";
+import { Lightbulb, AlertTriangle } from "lucide-react";
 import { askAIAssistant, getLocalDosageRules } from "@/utils/ai-assistant";
 import { Medicine } from "@/utils/storage";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog"; // Added missing imports
 
 interface AITipModalProps {
   open: boolean;
@@ -24,8 +24,7 @@ export const AITipModal = ({ open, onOpenChange, medicine }: AITipModalProps) =>
       setTip(response);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch tip");
-      // Fallback to local rules
-      setTip(getLocalDosageRules(medicine.name));
+      setTip(getLocalDosageRules(medicine.name)); // Fallback
     } finally {
       setIsLoading(false);
     }
@@ -46,8 +45,7 @@ export const AITipModal = ({ open, onOpenChange, medicine }: AITipModalProps) =>
             Dosage Tips for {medicine.name}
           </DialogTitle>
         </DialogHeader>
-        
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {isLoading && (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
@@ -63,11 +61,10 @@ export const AITipModal = ({ open, onOpenChange, medicine }: AITipModalProps) =>
               <p className="text-sm text-amber-700 mt-1">{error}</p>
             </div>
           )}
-          
-          {tip && (
+                    {tip && (
             <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
               <div className="prose prose-sm max-w-none">
-                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{tip}</p>
+                <p className="text-gray-700 leading-relaxed">{tip}</p>
               </div>
               <div className="pt-4 border-t border-gray-100">
                 <p className="text-xs text-gray-500 italic">
