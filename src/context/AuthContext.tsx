@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { data: { session } } = await supabase.auth.getSession();
         setUser(session?.user ?? null);
       } catch (error) {
-        console.error("Error initializing auth:", error);
+        console.error("AuthContext: Error initializing auth:", error);
       } finally {
         setIsLoading(false);
       }
@@ -48,20 +48,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signup = async (name: string, email: string, pass: string) => {
-    const result = await supabase.auth.signUp({
-      email,
-      password: pass,
-      options: { 
-        data: { name },
-        emailRedirectTo: window.location.origin + '/login'
+    try {
+      const result = await supabase.auth.signUp({
+        email,
+        password: pass,
+        options: { 
+          data: { name },
+          emailRedirectTo: window.location.origin + '/login'
+        }
+      });
+      
+      if (result.error) {
+        console.error("AuthContext: Signup error:", result.error);
       }
-    });
-    
-    return { 
-      success: !result.error, 
-      error: result.error,
-      data: result.data
-    };
+
+      return { 
+        success: !result.error, 
+        error: result.error,
+        data: result.data
+      };
+    } catch (err) {
+      console.error("AuthContext: Unexpected signup error:", err);
+      return { 
+        success: false, 
+        error: err as AuthError 
+      };
+    }
   };
 
   const updateProfile = async (name: string, email: string) => {
