@@ -11,7 +11,7 @@ import {
   Users, 
   ChevronRight,
   Trophy,
-  Settings,
+  Settings as SettingsIcon,
   HelpCircle,
   Info
 } from "lucide-react";
@@ -64,19 +64,27 @@ const More = () => {
         <div className="mt-12 space-y-6">
           <h3 className="font-bold text-gray-900 px-2">Settings & Support</h3>
           <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
-            {[
-              { title: "Account Settings", icon: Settings },
-              { title: "Help & Support", icon: HelpCircle },
-              { title: "About MediMind", icon: Info }
-            ].map((item, i) => (
-              <button key={i} className="w-full flex items-center justify-between p-4 hover:bg-gray-50 border-b last:border-0">
-                <div className="flex items-center gap-3 text-gray-700">
-                  <item.icon className="w-5 h-5" />
-                  <span className="font-medium">{item.title}</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-300" />
-              </button>
-            ))}
+            <Link to="/settings" className="w-full flex items-center justify-between p-4 hover:bg-gray-50 border-b last:border-0">
+              <div className="flex items-center gap-3 text-gray-700">
+                <SettingsIcon className="w-5 h-5" />
+                <span className="font-medium">Account Settings</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300" />
+            </Link>
+            <button className="w-full flex items-center justify-between p-4 hover:bg-gray-50 border-b last:border-0">
+              <div className="flex items-center gap-3 text-gray-700">
+                <HelpCircle className="w-5 h-5" />
+                <span className="font-medium">Help & Support</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300" />
+            </button>
+            <button className="w-full flex items-center justify-between p-4 hover:bg-gray-50 border-b last:border-0">
+              <div className="flex items-center gap-3 text-gray-700">
+                <Info className="w-5 h-5" />
+                <span className="font-medium">About MediMind</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300" />
+            </button>
           </div>
         </div>
       </div>

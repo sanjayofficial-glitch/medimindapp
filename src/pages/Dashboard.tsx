@@ -16,7 +16,8 @@ import {
   Sparkles,
   Info,
   ShieldAlert,
-  Trophy
+  Trophy,
+  Settings as SettingsIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -133,6 +134,11 @@ const Dashboard = () => {
                     <p className="text-xs leading-none text-muted-foreground">{user?.email || "patient@medimind.com"}</p>
                   </div>
                 </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/settings")} className="cursor-pointer">
+                  <SettingsIcon className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-rose-600 cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
