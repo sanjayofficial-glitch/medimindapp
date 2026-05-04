@@ -26,7 +26,7 @@ const BottomTabBar = () => {
       <motion.div 
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="bg-white/80 backdrop-blur-xl border border-slate-200 shadow-2xl rounded-3xl px-4 py-3 flex justify-between items-center"
+        className="bg-card/80 backdrop-blur-xl border border-border shadow-2xl rounded-3xl px-4 py-3 flex justify-between items-center"
       >
         {tabs.map((tab) => {
           const isActive = location.pathname === tab.path;
@@ -39,7 +39,7 @@ const BottomTabBar = () => {
                 whileHover={{ scale: 1.1, rotate: 90 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => navigate(tab.path)}
-                className="w-14 h-14 bg-emerald-600 text-white rounded-2xl shadow-lg shadow-emerald-200 flex items-center justify-center transition-transform"
+                className="w-14 h-14 bg-primary text-primary-foreground rounded-2xl shadow-lg shadow-primary/20 flex items-center justify-center transition-transform"
               >
                 <Icon className="w-7 h-7" />
               </motion.button>
@@ -53,14 +53,14 @@ const BottomTabBar = () => {
               className={cn(
                 "relative flex flex-col items-center justify-center gap-1 px-3 py-1 rounded-xl transition-all",
                 isActive 
-                  ? "text-emerald-600" 
-                  : "text-slate-400 hover:text-slate-600"
+                  ? "text-primary" 
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               {isActive && (
                 <motion.div 
                   layoutId="activeTab"
-                  className="absolute inset-0 bg-emerald-50 rounded-xl -z-10"
+                  className="absolute inset-0 bg-primary/10 rounded-xl -z-10"
                   transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                 />
               )}
