@@ -12,9 +12,11 @@ export interface Medicine {
   familyMemberId: string;
   name: string;
   dosage: string;
-  times: string[];  // Changed from single time to array of times
+  times: string[];
   frequency: string;
   additionalText?: string;
+  stock?: number;
+  refillAt?: number;
 }
 
 // Dose Logs
@@ -28,9 +30,34 @@ export interface DoseLog {
   status: "taken" | "missed" | "partial";
 }
 
+// Vitals
+export interface VitalLog {
+  id: string;
+  familyMemberId: string;
+  type: "blood_pressure" | "blood_sugar" | "weight" | "heart_rate";
+  value: string; // e.g., "120/80" or "95"
+  unit: string;
+  date: string;
+  time: string;
+  notes?: string;
+}
+
+// Symptoms
+export interface SymptomLog {
+  id: string;
+  familyMemberId: string;
+  symptom: string;
+  severity: "mild" | "moderate" | "severe";
+  date: string;
+  time: string;
+  notes?: string;
+}
+
 const DOSE_LOGS_KEY = "medimind_dose_logs";
 const FAMILY_MEMBERS_KEY = "medimind_family_members";
 const MEDICINES_KEY = "medimind_medicines";
+const VITALS_KEY = "medimind_vitals";
+const SYMPTOMS_KEY = "medimind_symptoms";
 
 // Dose Logs
 export const getDoseLogs = async (): Promise<DoseLog[]> => {
@@ -57,6 +84,22 @@ export const saveDoseLog = async (log: DoseLog): Promise<void> => {
     }
     
     localStorage.setItem(DOSE_LOGS_KEY, JSON.stringify(logs));
+
+    // Update stock if medicine is taken
+    if (log.status === "taken") {
+      const meds = getMedicines();
+      const medIndex = meds.findIndex(m => m.id === log.medicineId);
+      if (medIndex >= 0 && meds[medIndex].stock !== undefined) {
+        meds[medIndex].stock = Math.max(0, (meds[medIndex].stock || 0) - 1);
+        localStorage.setItem(MEDICINES_KEY, JSON.stringify(meds));
+        
+        if (meds[medIndex].stock === meds[medIndex].refillAt) {
+          toast.warning(`Low stock alert: ${meds[medIndex].name}`, {
+            description: `Only ${meds[medIndex].stock} doses remaining.`
+          });
+        }
+      }
+    }
   } catch (error) {
     console.error("Failed to save dose log:", error);
     toast.error("Failed to save dose log");
@@ -68,13 +111,101 @@ export const getDoseLogsForDate = async (date: string): Promise<DoseLog[]> => {
   return logs.filter((log) => log.date === date);
 };
 
-export const getDoseLogsForMonth = async (
-  year: number,
-  month: number
-): Promise<DoseLog[]> => {
-  const logs = await getDoseLogs();
-  const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
-  return logs.filter((log) => log.date.startsWith(monthPrefix));
+// Family Members
+export const getFamilyMembers = (): FamilyMember[] => {
+  try {
+    const members = localStorage.getItem(FAMILY_MEMBERS_KEY);
+    return members ? JSON.parse(members) : [];
+  } catch (error) {
+    console.error("Failed to load family members:", error);
+    return [];
+  }
+};
+
+export const addFamilyMember = (member: FamilyMember): void => {
+  const members = getFamilyMembers();
+  members.push(member);
+  localStorage.setItem(FAMILY_MEMBERS_KEY, JSON.stringify(members));
+};
+
+export const updateFamilyMember = (updatedMember: FamilyMember): void => {
+  const members = getFamilyMembers().map(m => 
+    m.id === updatedMember.id ? updatedMember : m
+  );
+  localStorage.setItem(FAMILY_MEMBERS_KEY, JSON.stringify(members));
+};
+
+export const removeFamilyMember = (id: string): void => {
+  const members = getFamilyMembers().filter(m => m.id !== id);
+  localStorage.setItem(FAMILY_MEMBERS_KEY, JSON.stringify(members));
+};
+
+// Medicines
+export const getMedicines = (): Medicine[] => {
+  try {
+    const meds = localStorage.getItem(MEDICINES_KEY);
+    if (!meds) return [];
+    const parsed = JSON.parse(meds);
+    return parsed.map((med: any) => {
+      if (med.time && !med.times) {
+        return { ...med, times: [med.time] };
+      }
+      return med;
+    });
+  } catch (error) {
+    console.error("Failed to load medicines:", error);
+    return [];
+  }
+};
+
+export const addMedicine = (medicine: Medicine): void => {
+  const meds = getMedicines();
+  meds.push(medicine);
+  localStorage.setItem(MEDICINES_KEY, JSON.stringify(meds));
+};
+
+export const updateMedicine = (medicine: Medicine): void => {
+  const meds = getMedicines().map(m => m.id === medicine.id ? medicine : m);
+  localStorage.setItem(MEDICINES_KEY, JSON.stringify(meds));
+};
+
+export const removeMedicine = (id: string): void => {
+  const meds = getMedicines().filter(m => m.id !== id);
+  localStorage.setItem(MEDICINES_KEY, JSON.stringify(meds));
+};
+
+// Vitals
+export const getVitalLogs = (): VitalLog[] => {
+  try {
+    const logs = localStorage.getItem(VITALS_KEY);
+    return logs ? JSON.parse(logs) : [];
+  } catch (error) {
+    console.error("Failed to load vitals:", error);
+    return [];
+  }
+};
+
+export const addVitalLog = (log: VitalLog): void => {
+  const logs = getVitalLogs();
+  logs.push(log);
+  localStorage.setItem(VITALS_KEY, JSON.stringify(logs));
+};
+
+// Symptoms
+export const getSymptomLogs = (): SymptomLog[] => {
+  try {
+    const logs = localStorage.getItem(SYMPTOMS_KEY);
+    return logs ? JSON.parse(logs) : [];
+  } catch (error) {
+    console.error("Failed to load symptoms:", error);
+    return [];
+  }
+};
+
+export const addSymptomLog = (log: SymptomLog): void => {
+  const logs = getSymptomLogs();
+  logs.push(log);
+  localStorage.setItem(SYMPTOMS_KEY, JSON.stringify(logs));
 };
 
 export const generateMockData = async (): Promise<void> => {
@@ -126,64 +257,4 @@ export const generateMockData = async (): Promise<void> => {
   
   localStorage.setItem(DOSE_LOGS_KEY, JSON.stringify(mockLogs));
   toast.success("Mock data generated for testing");
-};
-
-// Family Members
-export const getFamilyMembers = (): FamilyMember[] => {
-  try {
-    const members = localStorage.getItem(FAMILY_MEMBERS_KEY);
-    return members ? JSON.parse(members) : [];
-  } catch (error) {
-    console.error("Failed to load family members:", error);
-    toast.error("Failed to load family members");
-    return [];
-  }
-};
-
-export const addFamilyMember = (member: FamilyMember): void => {
-  const members = getFamilyMembers();
-  members.push(member);
-  localStorage.setItem(FAMILY_MEMBERS_KEY, JSON.stringify(members));
-};
-
-export const updateFamilyMember = (updatedMember: FamilyMember): void => {
-  const members = getFamilyMembers().map(m => 
-    m.id === updatedMember.id ? updatedMember : m
-  );
-  localStorage.setItem(FAMILY_MEMBERS_KEY, JSON.stringify(members));
-};
-
-export const removeFamilyMember = (id: string): void => {
-  const members = getFamilyMembers().filter(m => m.id !== id);
-  localStorage.setItem(FAMILY_MEMBERS_KEY, JSON.stringify(members));
-};
-
-// Medicines
-export const getMedicines = (): Medicine[] => {
-  try {
-    const meds = localStorage.getItem(MEDICINES_KEY);
-    if (!meds) return [];
-    const parsed = JSON.parse(meds);
-    return parsed.map((med: { time?: string; times?: string[] } & Record<string, unknown>) => {
-      if (med.time && !med.times) {
-        return { ...med, times: [med.time] };
-      }
-      return med;
-    });
-  } catch (error) {
-    console.error("Failed to load medicines:", error);
-    toast.error("Failed to load medicines");
-    return [];
-  }
-};
-
-export const addMedicine = (medicine: Medicine): void => {
-  const meds = getMedicines();
-  meds.push(medicine);
-  localStorage.setItem(MEDICINES_KEY, JSON.stringify(meds));
-};
-
-export const removeMedicine = (id: string): void => {
-  const meds = getMedicines().filter(m => m.id !== id);
-  localStorage.setItem(MEDICINES_KEY, JSON.stringify(meds));
 };

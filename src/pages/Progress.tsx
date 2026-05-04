@@ -1,8 +1,11 @@
+"use client";
+
 import { useState, useEffect } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getDoseLogs } from "@/utils/storage";
-import { CheckCircle, XCircle, AlertCircle, TrendingUp } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getDoseLogs, getVitalLogs, getSymptomLogs } from "@/utils/storage";
+import { CheckCircle, XCircle, AlertCircle, TrendingUp, Activity, Thermometer } from "lucide-react";
 
 const Progress = () => {
   const [stats, setStats] = useState({
@@ -11,22 +14,25 @@ const Progress = () => {
     late: 0,
     rate: 0
   });
-  const [chartData, setChartData] = useState<{ name: string; rate: number; fullDate: string }[]>([]);
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [vitalData, setVitalData] = useState<any[]>([]);
+  const [symptomStats, setSymptomStats] = useState({ mild: 0, moderate: 0, severe: 0 });
 
   useEffect(() => {
     const loadData = async () => {
       const logs = await getDoseLogs();
+      const vitals = getVitalLogs();
+      const symptoms = getSymptomLogs();
       
-      // Calculate overall stats
+      // Medication Stats
       const taken = logs.filter(l => l.status === "taken").length;
       const missed = logs.filter(l => l.status === "missed").length;
       const late = logs.filter(l => l.status === "partial").length;
       const total = logs.length;
       const rate = total > 0 ? Math.round((taken / total) * 100) : 0;
-
       setStats({ taken, missed, late, rate });
 
-      // Prepare chart data for last 7 days
+      // Weekly Adherence Chart
       const last7Days = [...Array(7)].map((_, i) => {
         const d = new Date();
         d.setDate(d.getDate() - (6 - i));
@@ -37,117 +43,173 @@ const Progress = () => {
         const dayLogs = logs.filter(l => l.date === date);
         const dayTaken = dayLogs.filter(l => l.status === "taken").length;
         const dayTotal = dayLogs.length;
-        const dayRate = dayTotal > 0 ? Math.round((dayTaken / dayTotal) * 100) : 0;
-        
         return {
           name: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
-          rate: dayRate,
-          fullDate: date
+          rate: dayTotal > 0 ? Math.round((dayTaken / dayTotal) * 100) : 0,
         };
       });
-
       setChartData(dailyData);
+
+      // Vitals Chart (Weight trend for demo)
+      const weightLogs = vitals.filter(v => v.type === "weight");
+      const vData = weightLogs.slice(-7).map(v => ({
+        name: v.date.split('-').slice(1).join('/'),
+        value: parseFloat(v.value)
+      }));
+      setVitalData(vData);
+
+      // Symptom Stats
+      const sStats = {
+        mild: symptoms.filter(s => s.severity === "mild").length,
+        moderate: symptoms.filter(s => s.severity === "moderate").length,
+        severe: symptoms.filter(s => s.severity === "severe").length,
+      };
+      setSymptomStats(sStats);
     };
 
     loadData();
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24 p-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gray-50 pb-32 p-6">
+      <div className="max-w-5xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Your Progress</h1>
-          <p className="text-gray-600 mt-1">Track your medication adherence and health trends</p>
+          <h1 className="text-3xl font-bold text-gray-900">Health Progress</h1>
+          <p className="text-gray-600 mt-1">Comprehensive overview of your health journey</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card className="bg-emerald-50 border-emerald-100">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-emerald-800">Adherence Rate</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-emerald-600">{stats.rate}%</div>
-              <p className="text-xs text-emerald-600 mt-1 flex items-center">
-                <TrendingUp className="w-3 h-3 mr-1" /> Overall
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">Taken</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-600 flex items-center gap-2">
-                <CheckCircle className="w-5 h-5" /> {stats.taken}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">Missed</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-rose-600 flex items-center gap-2">
-                <XCircle className="w-5 h-5" /> {stats.missed}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">Late</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-600 flex items-center gap-2">
-                <AlertCircle className="w-5 h-5" /> {stats.late}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <Tabs defaultValue="medication" className="space-y-6">
+          <TabsList className="bg-white border p-1 rounded-xl">
+            <TabsTrigger value="medication" className="rounded-lg">Medication</TabsTrigger>
+            <TabsTrigger value="vitals" className="rounded-lg">Vitals</TabsTrigger>
+            <TabsTrigger value="symptoms" className="rounded-lg">Symptoms</TabsTrigger>
+          </TabsList>
 
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Weekly Adherence</CardTitle>
-            <CardDescription>Percentage of doses taken on time over the last 7 days</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} unit="%" />
-                <Tooltip 
-                  cursor={{fill: '#f3f4f6'}}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                />
-                <Bar dataKey="rate" radius={[4, 4, 0, 0]}>
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.rate >= 80 ? '#10b981' : entry.rate >= 50 ? '#fbbf24' : '#f43f5e'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Health Insights</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
-                <h4 className="font-semibold text-blue-900 mb-1">Consistency is Key</h4>
-                <p className="text-sm text-blue-700">You've taken {stats.taken} doses this month. Keeping a consistent schedule helps maintain the effectiveness of your medications.</p>
-              </div>
-              {stats.missed > 0 && (
-                <div className="p-4 bg-rose-50 rounded-xl border border-rose-100">
-                  <h4 className="font-semibold text-rose-900 mb-1">Missed Doses Alert</h4>
-                  <p className="text-sm text-rose-700">You missed {stats.missed} doses recently. Try setting up more frequent reminders or using the MediMind AI for tips on staying on track.</p>
-                </div>
-              )}
+          <TabsContent value="medication" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card className="bg-emerald-50 border-emerald-100">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-emerald-800">Adherence Rate</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-emerald-600">{stats.rate}%</div>
+                  <p className="text-xs text-emerald-600 mt-1 flex items-center">
+                    <TrendingUp className="w-3 h-3 mr-1" /> Overall
+                  </p>
+                </CardContent>
+              </Card>
+              <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-emerald-600 flex items-center gap-2"><CheckCircle className="w-5 h-5" /> {stats.taken} Taken</div></CardContent></Card>
+              <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-rose-600 flex items-center gap-2"><XCircle className="w-5 h-5" /> {stats.missed} Missed</div></CardContent></Card>
+              <Card><CardContent className="pt-6"><div className="text-2xl font-bold text-amber-600 flex items-center gap-2"><AlertCircle className="w-5 h-5" /> {stats.late} Late</div></CardContent></Card>
             </div>
-          </CardContent>
-        </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Weekly Adherence</CardTitle>
+                <CardDescription>Percentage of doses taken on time</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                    <YAxis axisLine={false} tickLine={false} unit="%" />
+                    <Tooltip cursor={{fill: '#f3f4f6'}} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                    <Bar dataKey="rate" radius={[4, 4, 0, 0]}>
+                      {chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.rate >= 80 ? '#10b981' : entry.rate >= 50 ? '#fbbf24' : '#f43f5e'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="vitals" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="w-5 h-5 text-emerald-600" />
+                    Weight Trend
+                  </CardTitle>
+                  <CardDescription>Your weight changes over the last 7 entries</CardDescription>
+                </CardHeader>
+                <CardContent className="h-[300px]">
+                  {vitalData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={vitalData}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                        <YAxis axisLine={false} tickLine={false} domain={['auto', 'auto']} />
+                        <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                        <Line type="monotone" dataKey="value" stroke="#10b981" strokeWidth={3} dot={{ r: 6, fill: '#10b981' }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-gray-500">No weight data to display.</div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-emerald-50 border-emerald-100">
+                <CardHeader>
+                  <CardTitle className="text-emerald-800">Health Insights</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm text-emerald-700">
+                  <p>• Your adherence rate is {stats.rate}%. Keep it up!</p>
+                  <p>• Regular vital monitoring helps your doctor adjust your treatment plan more effectively.</p>
+                  <p>• Try to log your vitals at the same time each day for the most accurate trends.</p>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="symptoms" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="bg-rose-50 border-rose-100">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-rose-800">Severe Symptoms</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-rose-600">{symptomStats.severe}</div>
+                </CardContent>
+              </Card>
+              <Card className="bg-amber-50 border-amber-100">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-amber-800">Moderate Symptoms</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-amber-600">{symptomStats.moderate}</div>
+                </CardContent>
+              </Card>
+              <Card className="bg-emerald-50 border-emerald-100">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-emerald-800">Mild Symptoms</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-emerald-600">{symptomStats.mild}</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Thermometer className="w-5 h-5 text-rose-500" />
+                  Symptom Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600">
+                  You have logged {symptomStats.mild + symptomStats.moderate + symptomStats.severe} symptoms this month. 
+                  Sharing this log with your doctor can help identify if any medications are causing side effects.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

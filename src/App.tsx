@@ -12,6 +12,9 @@ const AddMedicine = lazy(() => import("./pages/AddMedicine"));
 const MedicationHistory = lazy(() => import("./pages/MedicationHistory"));
 const FamilyMembers = lazy(() => import("./pages/FamilyMembers"));
 const Progress = lazy(() => import("./pages/Progress"));
+const VitalsTracker = lazy(() => import("./pages/VitalsTracker"));
+const RefillManagement = lazy(() => import("./pages/RefillManagement"));
+const SymptomLogger = lazy(() => import("./pages/SymptomLogger"));
 
 const Loading = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -37,6 +40,9 @@ const App = () => {
           <Route path="/history" element={<MedicationHistory />} />
           <Route path="/family-members" element={<FamilyMembers />} />
           <Route path="/progress" element={<Progress />} />
+          <Route path="/vitals" element={<VitalsTracker />} />
+          <Route path="/refills" element={<RefillManagement />} />
+          <Route path="/symptoms" element={<SymptomLogger />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
