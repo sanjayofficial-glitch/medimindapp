@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Suspense, lazy } from "react";
 import BottomTabBar from "./components/BottomTabBar";
 import AIButton from "./components/AIButton";
+import NotificationHandler from "./components/NotificationHandler";
 import { PageSkeleton } from "./components/LoadingSkeleton";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -39,6 +40,7 @@ const App = () => {
       </Suspense>
       <BottomTabBar />
       <AIButton />
+      <NotificationHandler />
     </BrowserRouter>
   );
 };

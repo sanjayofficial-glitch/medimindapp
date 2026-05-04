@@ -1,5 +1,5 @@
 export interface NotificationAction {
-  type: 'taken' | 'snooze';
+  type: 'taken' | 'snooze-5' | 'snooze-15' | 'snooze-30';
   medicineId: string;
 }
 
@@ -20,7 +20,9 @@ const createNotification = (medicineId: string, medicineName: string, userName: 
     tag: medicineId,
     actions: [
       { action: "taken", title: "✅ Taken" },
-      { action: "snooze", title: "⏰ Snooze" }
+      { action: "snooze-5", title: "⏰ Snooze (5min)" },
+      { action: "snooze-15", title: "⏰ Snooze (15min)" },
+      { action: "snooze-30", title: "⏰ Snooze (30min)" },
     ]
   };
 
@@ -60,9 +62,9 @@ export const scheduleNotification = (
   activeTimeouts.set(medicineId, timeoutId);
 };
 
-export const snoozeNotification = (medicineId: string, medicineName: string, userName: string) => {
+export const snoozeNotification = (medicineId: string, medicineName: string, userName: string, duration: number = 5) => {
   cancelNotification(medicineId);
-  const timeoutId = setTimeout(() => createNotification(medicineId, medicineName, userName), 10 * 60 * 1000);
+  const timeoutId = setTimeout(() => createNotification(medicineId, medicineName, userName), duration * 60 * 1000);
   activeTimeouts.set(medicineId, timeoutId);
 };
 
@@ -73,3 +75,12 @@ export const cancelNotification = (medicineId: string) => {
     activeTimeouts.delete(medicineId);
   }
 };
+
+// Handle notification actions globally
+window.addEventListener('medimind_notification_action', (event) => {
+  const action = event.detail as NotificationAction;
+  if (action.type.startsWith('snooze-')) {
+    const duration = parseInt(action.type.split('-')[1]);
+    snoozeNotification(action.medicineId, "Medicine", "User", duration);
+  }
+});

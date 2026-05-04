@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { getMedicines, getDoseLogs } from "./storage";
+import { getMedicines, getDoseLogs, Medicine } from "./storage";
 import { medicineDatabase } from "@/data/medicineDatabase";
 
 const SETTINGS_KEY = "medimind_ai_settings";
@@ -14,25 +14,40 @@ export const getAISettings = (): AISettings | null => {
   return settings ? JSON.parse(settings) : null;
 };
 
-export const saveAISettings = (settings: AISettings) => {
+export const saveAISettings = (settings: AISSettings) => {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 };
 
-export const askAIAssistant = async (query: string): Promise<string> => {
+export const getLocalDosageRules = (medicineName: string): string => {
+  const medicine = medicineDatabase.find(m => 
+    m.brand_name.toLowerCase().includes(medicineName.toLowerCase()) ||
+    medicineName.toLowerCase().includes(m.brand_name.toLowerCase())
+  );
+  
+  if (medicine) {
+    return `Dosage Instructions: ${medicine.guidance}\n\nCautions: ${medicine.cautions}`;
+  }
+  
+  return `Please take ${medicineName} as prescribed by your doctor. Follow the dosage instructions on the medication label.`;
+};
+
+export const askAIAssistant = async (query: string, medicine?: Medicine): Promise<string> => {
   const settings = getAISettings();
   if (!settings || !settings.apiKey) {
-    throw new Error("API key not found. Please configure it in settings.");
+    // Fallback to local rules if no API key
+    if (medicine) {
+      return getLocalDosageRules(medicine.name);
+    }
+    return "Please configure your AI settings to get personalized dosage tips.";
   }
 
   try {
     const genAI = new GoogleGenerativeAI(settings.apiKey);
-    // Using gemini-1.5-flash as it's fast and reliable for this use case
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const medicines = getMedicines();
     const doseLogs = await getDoseLogs();
     
-    // Prepare context for the AI - limit history to keep token count low
     const context = {
       userMedicines: medicines.map(m => ({
         name: m.name,
@@ -48,14 +63,13 @@ export const askAIAssistant = async (query: string): Promise<string> => {
         actual: l.actualTime,
         date: l.date
       })),
-      // Only include relevant database entries to save tokens
       referenceDatabase: medicineDatabase.filter(db => 
         medicines.some(m => 
           m.name.toLowerCase().includes(db.brand_name.toLowerCase()) || 
           db.brand_name.toLowerCase().includes(m.name.toLowerCase()) ||
           m.dosage.toLowerCase().includes(db.generic_name.toLowerCase())
         )
-      ).slice(0, 5) // Limit to top 5 matches
+      ).slice(0, 5)
     };
 
     const prompt = `
@@ -96,9 +110,13 @@ export const askAIAssistant = async (query: string): Promise<string> => {
     } else if (errorMessage.includes("SAFETY")) {
       throw new Error("I cannot answer this query due to safety filters. Please consult a doctor.");
     } else if (errorMessage.includes("quota") || errorMessage.includes("429")) {
-      throw new Error("API quota exceeded. Please try again later.");
+      throw new Error("API quota exceeded. Please consult local dosage guidelines.");
     }
     
+    // Fallback to local rules
+    if (medicine) {
+      return getLocalDosageRules(medicine.name);
+    }
     throw new Error(`AI Error: ${errorMessage || "Failed to connect to the AI service."}`);
   }
 };
