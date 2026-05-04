@@ -15,7 +15,8 @@ import {
   Info,
   ShieldAlert,
   Trophy,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,10 +35,10 @@ import { cn } from "@/lib/utils";
 import InteractionChecker from "@/components/InteractionChecker";
 
 const Dashboard = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
   const [todayLogs, setTodayLogs] = useState<DoseLog[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(true);
 
   const loadData = async () => {
     try {
@@ -48,17 +49,19 @@ const Dashboard = () => {
     } catch (error) {
       console.error("Error loading dashboard data:", error);
     } finally {
-      setIsLoading(false);
+      setIsDataLoading(false);
     }
   };
 
   useEffect(() => {
-    if (user) {
-      loadData();
-    } else {
-      navigate("/login");
+    if (!isAuthLoading) {
+      if (user) {
+        loadData();
+      } else {
+        navigate("/login");
+      }
     }
-  }, [user, navigate]);
+  }, [user, isAuthLoading, navigate]);
 
   const handleStatusUpdate = async (log: DoseLog, status: "taken" | "missed") => {
     try {
@@ -103,13 +106,16 @@ const Dashboard = () => {
     }
   };
 
-  if (isLoading) {
+  if (isAuthLoading || (user && isDataLoading)) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+        <p className="text-sm text-muted-foreground font-medium">Loading your health dashboard...</p>
       </div>
     );
   }
+
+  if (!user) return null;
 
   return (
     <motion.div 

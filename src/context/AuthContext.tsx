@@ -1,11 +1,11 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { User } from "@supabase/supabase-js";
+import { User, AuthError } from "@supabase/supabase-js";
 
 interface AuthContextType {
   user: User | null;
   logout: () => Promise<void>;
-  signup: (name: string, email: string, pass: string) => Promise<boolean>;
+  signup: (name: string, email: string, pass: string) => Promise<{ success: boolean; error?: AuthError | null; data?: any }>;
   updateProfile: (name: string, email: string) => Promise<boolean>;
   isLoading: boolean;
 }
@@ -17,11 +17,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    });
+    // Check active sessions and sets the user
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
+    initAuth();
+
+    // Listen for changes on auth state (sign in, sign out, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setIsLoading(false);
@@ -31,12 +41,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signup = async (name: string, email: string, pass: string) => {
-    const { error } = await supabase.auth.signUp({
+    const result = await supabase.auth.signUp({
       email,
       password: pass,
-      options: { data: { name } }
+      options: { 
+        data: { name },
+        emailRedirectTo: window.location.origin + '/login'
+      }
     });
-    return !error;
+    
+    return { 
+      success: !result.error, 
+      error: result.error,
+      data: result.data
+    };
   };
 
   const updateProfile = async (name: string, email: string) => {
@@ -48,7 +66,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
+    setIsLoading(true);
     await supabase.auth.signOut();
+    setUser(null);
+    setIsLoading(false);
   };
 
   return (
