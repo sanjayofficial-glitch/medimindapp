@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { BookOpen, Search, Pill, AlertTriangle, Info, ChevronLeft, Coffee, Wine } from "lucide-react";

@@ -360,5 +360,80 @@ export const saveEmergencyProfile = async (p: EmergencyProfile) => {
 };
 
 export const generateMockData = async () => {
-  // Implementation for mock data generation if needed
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  // 1. Create a family member if none exist
+  const members = await getFamilyMembers();
+  let memberId = members[0]?.id;
+  
+  if (!memberId) {
+    const { data: newMember, error: memberError } = await supabase
+      .from('family_members')
+      .insert([{ name: "Self", relationship: "Self", user_id: user.id }])
+      .select()
+      .single();
+    if (memberError) throw memberError;
+    memberId = newMember.id;
+  }
+
+  // 2. Create a medicine if none exist
+  const medicines = await getMedicines();
+  let medId = medicines[0]?.id;
+  let medName = medicines[0]?.name || "Metformin";
+
+  if (!medId) {
+    const { data: newMed, error: medError } = await supabase
+      .from('medicines')
+      .insert([{
+        family_member_id: memberId,
+        name: "Metformin",
+        dosage: "500mg",
+        times: ["08:00", "20:00"],
+        frequency: "Twice daily",
+        user_id: user.id
+      }])
+      .select()
+      .single();
+    if (medError) throw medError;
+    medId = newMed.id;
+    medName = newMed.name;
+  }
+
+  // 3. Generate logs for the last 30 days
+  const today = new Date();
+  const logs = [];
+  
+  for (let i = 0; i < 30; i++) {
+    const date = new Date();
+    date.setDate(today.getDate() - i);
+    const dateStr = date.toISOString().split('T')[0];
+    
+    // Morning dose
+    logs.push({
+      medicine_id: medId,
+      medicine_name: medName,
+      scheduled_time: '08:00',
+      actual_time: Math.random() > 0.1 ? '08:15' : undefined,
+      date: dateStr,
+      status: Math.random() > 0.1 ? 'taken' : 'missed',
+      user_id: user.id,
+      family_member_id: memberId
+    });
+
+    // Evening dose
+    logs.push({
+      medicine_id: medId,
+      medicine_name: medName,
+      scheduled_time: '20:00',
+      actual_time: Math.random() > 0.15 ? '20:10' : undefined,
+      date: dateStr,
+      status: Math.random() > 0.15 ? 'taken' : 'missed',
+      user_id: user.id,
+      family_member_id: memberId
+    });
+  }
+  
+  const { error: logError } = await supabase.from('dose_logs').insert(logs);
+  if (logError) throw logError;
 };
