@@ -32,25 +32,55 @@ import { useAuth } from "@/context/AuthContext";
 import { getMedicines, getDoseLogsForDate, saveDoseLog, Medicine, DoseLog } from "@/utils/storage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { PageSkeleton, StatsSkeleton, CardSkeleton } from "@/components/LoadingSkeleton";
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [todayLogs, setTodayLogs] = useState<DoseLog[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadData = async () => {
-    const d = new Date();
-    const dateStr = d.toISOString().split('T')[0];
-    const allMeds = getMedicines();
-    setMedicines(allMeds);
-    const logs = await getDoseLogsForDate(dateStr);
-    setTodayLogs(logs);
+    setIsLoading(true);
+    try {
+      const d = new Date();
+      const dateStr = d.toISOString().split('T')[0];
+      const allMeds = getMedicines();
+      setMedicines(allMeds);
+      const logs = await getDoseLogsForDate(dateStr);
+      setTodayLogs(logs);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
     loadData();
   }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <Skeleton className="h-16 w-full bg-white border-b border-slate-200" />
+        <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+          <Skeleton className="h-24 w-full bg-white rounded-2xl" />
+          <StatsSkeleton />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-4">
+              <Skeleton className="h-8 w-40" />
+              <CardSkeleton count={3} />
+            </div>
+            <div className="space-y-4">
+              <Skeleton className="h-8 w-32" />
+              <Skeleton className="h-20 bg-white rounded-2xl" />
+              <Skeleton className="h-32 bg-primary/10 rounded-2xl" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleStatusUpdate = async (log: DoseLog, status: "taken" | "missed") => {
     const updatedLog: DoseLog = {

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Suspense, lazy } from "react";
 import BottomTabBar from "./components/BottomTabBar";
 import AIButton from "./components/AIButton";
+import { PageSkeleton } from "./components/LoadingSkeleton";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Index = lazy(() => import("./pages/Index"));
@@ -13,11 +14,7 @@ const MedicationHistory = lazy(() => import("./pages/MedicationHistory"));
 const FamilyMembers = lazy(() => import("./pages/FamilyMembers"));
 const Progress = lazy(() => import("./pages/Progress"));
 
-const Loading = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-  </div>
-);
+const Loading = () => <PageSkeleton />;
 
 const App = () => {
   return (
