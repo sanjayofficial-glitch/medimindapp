@@ -1,5 +1,3 @@
-"use client";
-
 import { Link } from "react-router-dom";
 import { motion, Variants } from "framer-motion";
 import { Pill, ArrowRight, Shield, Clock, Activity, Heart, CheckCircle2, Users2 } from "lucide-react";
