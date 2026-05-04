@@ -138,6 +138,12 @@ const saveLocal = (key: string, data: any) => {
 // --- EXPORTED FUNCTIONS ---
 
 export const getDoseLogs = async (): Promise<DoseLog[]> => getLocal(DOSE_LOGS_KEY, []);
+
+export const getDoseLogsForDate = async (date: string): Promise<DoseLog[]> => {
+  const logs = await getDoseLogs();
+  return logs.filter(l => l.date === date);
+};
+
 export const saveDoseLog = async (log: DoseLog): Promise<void> => {
   const logs = await getDoseLogs();
   const idx = logs.findIndex(l => l.id === log.id);
@@ -147,6 +153,8 @@ export const saveDoseLog = async (log: DoseLog): Promise<void> => {
 
 export const getFamilyMembers = (): FamilyMember[] => getLocal(FAMILY_MEMBERS_KEY, []);
 export const addFamilyMember = (m: FamilyMember) => saveLocal(FAMILY_MEMBERS_KEY, [...getFamilyMembers(), m]);
+export const updateFamilyMember = (m: FamilyMember) => saveLocal(FAMILY_MEMBERS_KEY, getFamilyMembers().map(item => item.id === m.id ? m : item));
+export const removeFamilyMember = (id: string) => saveLocal(FAMILY_MEMBERS_KEY, getFamilyMembers().filter(item => item.id !== id));
 
 export const getMedicines = (): Medicine[] => getLocal(MEDICINES_KEY, []);
 export const addMedicine = (m: Medicine) => saveLocal(MEDICINES_KEY, [...getMedicines(), m]);
@@ -164,7 +172,7 @@ export const getEmergencyProfile = (): EmergencyProfile => getLocal(EMERGENCY_KE
 export const saveEmergencyProfile = (p: EmergencyProfile) => saveLocal(EMERGENCY_KEY, p);
 
 export const getLabResults = (): LabResult[] => getLocal(LAB_RESULTS_KEY, []);
-export const addLabResult = (r: LabResult) => saveLocal(LAB_RESULTS_KEY, [...getLabResults(), r]);
+export const addLabResult = (r: LabResult) => saveLocal(LAB_RESULTS_KEY, [...[...getLabResults()], r]);
 
 export const getMoodLogs = (): MoodLog[] => getLocal(MOOD_LOGS_KEY, []);
 export const addMoodLog = (l: MoodLog) => saveLocal(MOOD_LOGS_KEY, [...getMoodLogs(), l]);

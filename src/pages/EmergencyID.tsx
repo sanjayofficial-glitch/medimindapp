@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { ShieldAlert, Phone, Droplets, AlertCircle, ChevronLeft, Download, QrCode } from "lucide-react";
+import { ShieldAlert, Phone, Droplets, AlertCircle, ChevronLeft, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Smile, Meh, Frown, Angry, Heart, ChevronLeft, Plus, Sparkles, Brain } from "lucide-react";
+import { Smile, Meh, Frown, Angry, ChevronLeft, Sparkles, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";

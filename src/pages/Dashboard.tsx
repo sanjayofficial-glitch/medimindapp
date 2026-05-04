@@ -5,18 +5,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion, Variants } from "framer-motion";
 import { 
   Pill, 
-  History, 
-  Users, 
   Plus, 
   CheckCircle2, 
   Clock, 
   Calendar, 
   ChevronRight, 
-  Bell,
   LogOut,
   Activity,
   Package,
-  Thermometer,
   Sparkles,
   Info,
   ShieldAlert,
@@ -33,7 +29,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/AuthContext";
-import { getMedicines, getDoseLogsForDate, saveDoseLog, Medicine, DoseLog } from "@/utils/storage";
+import { getDoseLogsForDate, saveDoseLog, DoseLog } from "@/utils/storage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import InteractionChecker from "@/components/InteractionChecker";
@@ -41,14 +37,11 @@ import InteractionChecker from "@/components/InteractionChecker";
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [todayLogs, setTodayLogs] = useState<DoseLog[]>([]);
 
   const loadData = async () => {
     const d = new Date();
     const dateStr = d.toISOString().split('T')[0];
-    const allMeds = getMedicines();
-    setMedicines(allMeds);
     const logs = await getDoseLogsForDate(dateStr);
     setTodayLogs(logs);
   };
