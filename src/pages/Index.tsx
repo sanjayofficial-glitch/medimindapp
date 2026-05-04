@@ -5,6 +5,7 @@ import { motion, Variants } from "framer-motion";
 import { Pill, ArrowRight, Shield, Clock, Activity, Heart, CheckCircle2, Users2 } from "lucide-react";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { Button } from "@/components/ui/button";
+import AIButton from "@/components/AIButton";
 
 const Index = () => {
   const features = [
@@ -212,6 +213,7 @@ const Index = () => {
           </div>
         </div>
       </footer>
+      <AIButton />
     </div>
   );
 };
