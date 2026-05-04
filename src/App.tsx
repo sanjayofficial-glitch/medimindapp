@@ -1,15 +1,15 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { NotificationHandler } from "./components/NotificationHandler";
-import { Login } from "./pages/Login";
-import { SignUp } from "./pages/SignUp";
-import { Index } from "./pages/Index";
-import { Dashboard } from "./pages/Dashboard";
-import { AddMedicine } from "./pages/AddMedicine";
-import { FamilyMembers } from "./pages/FamilyMembers";
-import { History } from "./pages/History";
-import { Progress } from "./pages/Progress";
-import { MedicationHistory } from "./pages/MedicationHistory";
-import { NotFound } from "./pages/NotFound";
+import Login from "./pages/Login";
+import SignUp from "./pages/SignUp";
+import Index from "./pages/Index";
+import Dashboard from "./pages/Dashboard";
+import AddMedicine from "./pages/AddMedicine";
+import FamilyMembers from "./pages/FamilyMembers";
+import History from "./pages/History";
+import Progress from "./pages/Progress";
+import MedicationHistory from "./pages/MedicationHistory";
+import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./context/AuthContext";
 
 const App = () => {
