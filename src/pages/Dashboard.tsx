@@ -16,7 +16,9 @@ import {
   LogOut,
   Activity,
   Package,
-  Thermometer
+  Thermometer,
+  Sparkles,
+  Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -281,12 +283,27 @@ const Dashboard = () => {
               </div>
             </section>
 
-            <Card className="bg-primary text-white border-none shadow-lg shadow-primary/20">
-              <CardHeader><CardTitle className="text-lg">Health Tip</CardTitle></CardHeader>
-              <CardContent>
-                <p className="text-sm text-primary-foreground/80 leading-relaxed">
-                  Consistency is key to effective treatment. Try to take your medications at the same time every day.
+            {/* AI Advice Card */}
+            <Card className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-none shadow-xl shadow-emerald-200 overflow-hidden relative">
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                <Sparkles className="w-24 h-24" />
+              </div>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Sparkles className="w-5 h-5" />
+                  AI Health Insight
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-emerald-50 leading-relaxed">
+                  {medicines.length > 0 
+                    ? `You're managing ${medicines.length} medications. Remember to stay hydrated, especially when taking ${medicines[0].name}.`
+                    : "Start by adding your medications to get personalized health insights and reminders."}
                 </p>
+                <div className="flex items-center gap-2 bg-white/10 p-2 rounded-lg text-[10px] font-medium">
+                  <Info className="w-3 h-3" />
+                  <span>Tip: Consistency improves treatment efficacy by 40%.</span>
+                </div>
               </CardContent>
             </Card>
           </div>

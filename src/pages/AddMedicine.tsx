@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Pill, Plus, Loader2, ChevronLeft } from "lucide-react";
+import { Pill, Plus, Loader2, ChevronLeft, Thermometer, Droplets, Activity, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { MedicineSelector } from "@/components/MedicineSelector";
 import { MedicineDBEntry } from "@/data/medicineDatabase";
 import { addMedicine, getFamilyMembers, FamilyMember, saveDoseLog } from "@/utils/storage";
+import { cn } from "@/lib/utils";
 
 const AddMedicine = () => {
   const navigate = useNavigate();
@@ -23,6 +24,15 @@ const AddMedicine = () => {
   const [times, setTimes] = useState<string[]>([""]);
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedIcon, setSelectedIcon] = useState("pill");
+
+  const icons = [
+    { id: "pill", icon: Pill },
+    { id: "liquid", icon: Droplets },
+    { id: "injection", icon: Activity },
+    { id: "heart", icon: Heart },
+    { id: "temp", icon: Thermometer }
+  ];
 
   const frequencies = [
     "Once daily", "Twice daily", "Three times daily", "Four times daily",
@@ -143,6 +153,27 @@ const AddMedicine = () => {
               <div className="space-y-2">
                 <Label>Medicine</Label>
                 <MedicineSelector onSelect={handleSelectMedicine} onCustom={handleCustomMedicine} />
+              </div>
+
+              <div className="space-y-3">
+                <Label>Medication Type Icon</Label>
+                <div className="flex gap-3">
+                  {icons.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setSelectedIcon(item.id)}
+                      className={cn(
+                        "w-12 h-12 rounded-xl flex items-center justify-center transition-all border-2",
+                        selectedIcon === item.id 
+                          ? "bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-200" 
+                          : "bg-white border-gray-100 text-gray-400 hover:border-emerald-200"
+                      )}
+                    >
+                      <item.icon className="w-6 h-6" />
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <AnimatePresence mode="wait">

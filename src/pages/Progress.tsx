@@ -5,7 +5,10 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getDoseLogs, getVitalLogs, getSymptomLogs } from "@/utils/storage";
-import { CheckCircle, XCircle, AlertCircle, TrendingUp, Activity, Thermometer } from "lucide-react";
+import { CheckCircle, XCircle, AlertCircle, TrendingUp, Activity, Thermometer, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { generateHealthReport } from "@/utils/report-generator";
+import { toast } from "sonner";
 
 const Progress = () => {
   const [stats, setStats] = useState({
@@ -17,6 +20,7 @@ const Progress = () => {
   const [chartData, setChartData] = useState<any[]>([]);
   const [vitalData, setVitalData] = useState<any[]>([]);
   const [symptomStats, setSymptomStats] = useState({ mild: 0, moderate: 0, severe: 0 });
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -70,12 +74,34 @@ const Progress = () => {
     loadData();
   }, []);
 
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      await generateHealthReport();
+      toast.success("Report generated successfully!");
+    } catch (error) {
+      toast.error("Failed to generate report.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pb-32 p-6">
       <div className="max-w-5xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Health Progress</h1>
-          <p className="text-gray-600 mt-1">Comprehensive overview of your health journey</p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Health Progress</h1>
+            <p className="text-gray-600 mt-1">Comprehensive overview of your health journey</p>
+          </div>
+          <Button 
+            onClick={handleExport} 
+            disabled={isExporting}
+            className="bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-200"
+          >
+            {isExporting ? <Activity className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+            Export Health Report
+          </Button>
         </div>
 
         <Tabs defaultValue="medication" className="space-y-6">
