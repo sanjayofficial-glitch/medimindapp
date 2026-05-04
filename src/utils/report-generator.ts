@@ -1,11 +1,11 @@
-import { getDoseLogs, getVitalLogs, getSymptomLogs, getMedicines, getFamilyMembers } from "./storage";
+import { getDoseLogs, getVitalLogs, getSymptomLogs, getMedicines, getFamilyMembers, DoseLog, VitalLog, SymptomLog, Medicine, FamilyMember } from "./storage";
 
 export const generateHealthReport = async () => {
-  const logs = await getDoseLogs();
-  const vitals = getVitalLogs();
-  const symptoms = getSymptomLogs();
-  const medicines = getMedicines();
-  const members = getFamilyMembers();
+  const logs: DoseLog[] = await getDoseLogs();
+  const vitals: VitalLog[] = await getVitalLogs();
+  const symptoms: SymptomLog[] = await getSymptomLogs();
+  const medicines: Medicine[] = await getMedicines();
+  const members: FamilyMember[] = await getFamilyMembers();
 
   let report = `MEDIMIND HEALTH REPORT\n`;
   report += `Generated on: ${new Date().toLocaleString()}\n`;
@@ -53,7 +53,7 @@ export const generateHealthReport = async () => {
     report += `No symptoms recorded.\n`;
   } else {
     symptoms.slice(-10).forEach(s => {
-      const member = members.find(m => m.id === s.familyMemberId)?.name || "Unknown";
+      const member = members.find(m => m.id === s.family_member_id || m.id === s.familyMemberId)?.name || "Unknown";
       report += `${s.date} ${s.time} - ${member}: ${s.symptom} (${s.severity})\n`;
       if (s.notes) report += `  Notes: ${s.notes}\n`;
     });
@@ -62,7 +62,6 @@ export const generateHealthReport = async () => {
   report += `\n==========================================\n`;
   report += `Disclaimer: This report is for informational purposes only. Please consult a healthcare professional.`;
 
-  // Create a blob and download it
   const blob = new Blob([report], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');

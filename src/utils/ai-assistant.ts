@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { getMedicines, getDoseLogs } from "./storage";
+import { getMedicines, getDoseLogs, Medicine, DoseLog } from "./storage";
 import { medicineDatabase } from "@/data/medicineDatabase";
 
 const SETTINGS_KEY = "medimind_ai_settings";
@@ -26,13 +26,11 @@ export const askAIAssistant = async (query: string): Promise<string> => {
 
   try {
     const genAI = new GoogleGenerativeAI(settings.apiKey);
-    // Using gemini-1.5-flash as it's fast and reliable for this use case
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    const medicines = getMedicines();
-    const doseLogs = await getDoseLogs();
+    const medicines: Medicine[] = await getMedicines();
+    const doseLogs: DoseLog[] = await getDoseLogs();
     
-    // Prepare context for the AI - limit history to keep token count low
     const context = {
       userMedicines: medicines.map(m => ({
         name: m.name,
@@ -48,14 +46,13 @@ export const askAIAssistant = async (query: string): Promise<string> => {
         actual: l.actualTime,
         date: l.date
       })),
-      // Only include relevant database entries to save tokens
       referenceDatabase: medicineDatabase.filter(db => 
         medicines.some(m => 
           m.name.toLowerCase().includes(db.brand_name.toLowerCase()) || 
           db.brand_name.toLowerCase().includes(m.name.toLowerCase()) ||
           m.dosage.toLowerCase().includes(db.generic_name.toLowerCase())
         )
-      ).slice(0, 5) // Limit to top 5 matches
+      ).slice(0, 5)
     };
 
     const prompt = `
@@ -89,16 +86,6 @@ export const askAIAssistant = async (query: string): Promise<string> => {
     return text;
   } catch (error) {
     console.error("AI Assistant Error:", error);
-    
-    const errorMessage = error instanceof Error ? error.message : "";
-    if (errorMessage.includes("API_KEY_INVALID") || errorMessage.includes("invalid api key")) {
-      throw new Error("Invalid API Key. Please check your Gemini API key in settings.");
-    } else if (errorMessage.includes("SAFETY")) {
-      throw new Error("I cannot answer this query due to safety filters. Please consult a doctor.");
-    } else if (errorMessage.includes("quota") || errorMessage.includes("429")) {
-      throw new Error("API quota exceeded. Please try again later.");
-    }
-    
-    throw new Error(`AI Error: ${errorMessage || "Failed to connect to the AI service."}`);
+    throw error;
   }
 };

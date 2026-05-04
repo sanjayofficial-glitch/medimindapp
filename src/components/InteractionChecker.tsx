@@ -5,7 +5,7 @@ import { ShieldAlert, ShieldCheck, Info, Search, Pill } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { medicineDatabase, MedicineDBEntry } from "@/data/medicineDatabase";
-import { getMedicines } from "@/utils/storage";
+import { getMedicines, Medicine } from "@/utils/storage";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const InteractionChecker = () => {
@@ -15,12 +15,15 @@ const InteractionChecker = () => {
   const [interactions, setInteractions] = useState<{ type: 'warning' | 'info', message: string }[]>([]);
 
   useEffect(() => {
-    // Auto-load current user meds for checking
-    const currentMeds = getMedicines();
-    const dbMeds = medicineDatabase.filter(db => 
-      currentMeds.some(m => m.name.toLowerCase().includes(db.brand_name.toLowerCase()))
-    );
-    setSelectedMeds(dbMeds);
+    const loadMeds = async () => {
+      const currentMeds: Medicine[] = await getMedicines();
+      const dbMeds = medicineDatabase.filter(db => 
+        currentMeds.some(m => m.name.toLowerCase().includes(db.brand_name.toLowerCase()))
+      );
+      setSelectedMeds(dbMeds);
+      checkInteractions(dbMeds);
+    };
+    loadMeds();
   }, []);
 
   const handleSearch = (val: string) => {
@@ -38,11 +41,12 @@ const InteractionChecker = () => {
 
   const addMed = (med: MedicineDBEntry) => {
     if (!selectedMeds.find(m => m.brand_name === med.brand_name)) {
-      setSelectedMeds([...selectedMeds, med]);
+      const updated = [...selectedMeds, med];
+      setSelectedMeds(updated);
+      checkInteractions(updated);
     }
     setSearch("");
     setResults([]);
-    checkInteractions([...selectedMeds, med]);
   };
 
   const removeMed = (name: string) => {
@@ -53,29 +57,19 @@ const InteractionChecker = () => {
 
   const checkInteractions = (meds: MedicineDBEntry[]) => {
     const newInteractions: { type: 'warning' | 'info', message: string }[] = [];
-    
-    // Simple rule-based interaction check for demo
-    // In a real app, this would use a professional API
     const generics = meds.map(m => m.generic_name.toLowerCase());
 
     if (generics.some(g => g.includes("aspirin")) && generics.some(g => g.includes("clopidogrel"))) {
       newInteractions.push({ 
         type: 'info', 
-        message: "Aspirin + Clopidogrel: This combination (DAPT) is often prescribed after heart procedures but increases bleeding risk. Ensure your doctor is monitoring you." 
+        message: "Aspirin + Clopidogrel: This combination (DAPT) is often prescribed after heart procedures but increases bleeding risk." 
       });
     }
 
     if (generics.some(g => g.includes("metformin")) && generics.some(g => g.includes("glimepiride"))) {
       newInteractions.push({ 
         type: 'warning', 
-        message: "Metformin + Glimepiride: Increased risk of hypoglycemia (low blood sugar). Monitor your levels closely." 
-      });
-    }
-
-    if (generics.some(g => g.includes("telmisartan")) && generics.some(g => g.includes("hydrochlorothiazide"))) {
-      newInteractions.push({ 
-        type: 'info', 
-        message: "Telmisartan + HCTZ: Common combination for blood pressure. Monitor for dehydration or electrolyte imbalance." 
+        message: "Metformin + Glimepiride: Increased risk of hypoglycemia (low blood sugar)." 
       });
     }
 
@@ -131,12 +125,12 @@ const InteractionChecker = () => {
             {interactions.length === 0 ? (
               <div className="text-center py-6 bg-gray-50 rounded-xl border border-dashed">
                 <ShieldCheck className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">No major interactions detected between selected medicines.</p>
+                <p className="text-sm text-gray-500">No major interactions detected.</p>
               </div>
             ) : (
               interactions.map((inter, i) => (
-                <Alert key={i} variant={inter.type === 'warning' ? 'destructive' : 'default'} className={inter.type === 'info' ? 'bg-blue-50 border-blue-100 text-blue-800' : ''}>
-                  {inter.type === 'warning' ? <ShieldAlert className="h-4 w-4" /> : <Info className="h-4 w-4 text-blue-600" />}
+                <Alert key={i} variant={inter.type === 'warning' ? 'destructive' : 'default'}>
+                  {inter.type === 'warning' ? <ShieldAlert className="h-4 w-4" /> : <Info className="h-4 w-4" />}
                   <AlertTitle>{inter.type === 'warning' ? 'Warning' : 'Clinical Note'}</AlertTitle>
                   <AlertDescription className="text-xs">
                     {inter.message}

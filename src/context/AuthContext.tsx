@@ -5,6 +5,8 @@ import { User } from "@supabase/supabase-js";
 interface AuthContextType {
   user: User | null;
   logout: () => Promise<void>;
+  signup: (name: string, email: string, pass: string) => Promise<boolean>;
+  updateProfile: (name: string, email: string) => Promise<boolean>;
   isLoading: boolean;
 }
 
@@ -15,13 +17,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setIsLoading(false);
     });
 
-    // Listen for changes on auth state (sign in, sign out, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setIsLoading(false);
@@ -30,12 +30,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
+  const signup = async (name: string, email: string, pass: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password: pass,
+      options: { data: { name } }
+    });
+    return !error;
+  };
+
+  const updateProfile = async (name: string, email: string) => {
+    const { error } = await supabase.auth.updateUser({
+      email,
+      data: { name }
+    });
+    return !error;
+  };
+
   const logout = async () => {
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, logout, signup, updateProfile, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

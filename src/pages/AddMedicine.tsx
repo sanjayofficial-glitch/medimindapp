@@ -42,7 +42,11 @@ const AddMedicine = () => {
   ];
 
   useEffect(() => {
-    setFamilyMembers(getFamilyMembers());
+    const loadMembers = async () => {
+      const members = await getFamilyMembers();
+      setFamilyMembers(members);
+    };
+    loadMembers();
   }, []);
 
   const handleSelectMedicine = (med: MedicineDBEntry) => {
@@ -84,8 +88,7 @@ const AddMedicine = () => {
       
       for (const time of validTimes) {
         const medicineId = `med_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        addMedicine({
-          id: medicineId,
+        await addMedicine({
           familyMemberId: selectedMember,
           name: medicineName,
           dosage: dosage.trim(),
@@ -120,19 +123,15 @@ const AddMedicine = () => {
     >
       <div className="max-w-2xl mx-auto px-4 py-6">
         <div className="mb-6">
-          <motion.div whileHover={{ x: -4 }}>
-            <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
-              <ChevronLeft className="w-4 h-4 mr-1" /> Back
-            </Button>
-          </motion.div>
+          <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
+            <ChevronLeft className="w-4 h-4 mr-1" /> Back
+          </Button>
           <h1 className="text-2xl font-bold text-gray-900">Add Medicine</h1>
-          <p className="text-gray-600 mt-1">Schedule a new medication for a family member</p>
         </div>
 
-        <Card className="shadow-lg border-0 overflow-hidden">
+        <Card className="shadow-lg border-0">
           <CardHeader>
             <CardTitle>Medicine Details</CardTitle>
-            <CardDescription>Search our database or add a custom medicine</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -155,48 +154,10 @@ const AddMedicine = () => {
                 <MedicineSelector onSelect={handleSelectMedicine} onCustom={handleCustomMedicine} />
               </div>
 
-              <div className="space-y-3">
-                <Label>Medication Type Icon</Label>
-                <div className="flex gap-3">
-                  {icons.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setSelectedIcon(item.id)}
-                      className={cn(
-                        "w-12 h-12 rounded-xl flex items-center justify-center transition-all border-2",
-                        selectedIcon === item.id 
-                          ? "bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-200" 
-                          : "bg-white border-gray-100 text-gray-400 hover:border-emerald-200"
-                      )}
-                    >
-                      <item.icon className="w-6 h-6" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <AnimatePresence mode="wait">
-                {selectedMed && !isCustom && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 space-y-2 overflow-hidden"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Pill className="w-4 h-4 text-emerald-600" />
-                      <span className="font-medium text-emerald-900">{selectedMed.brand_name}</span>
-                    </div>
-                    <p className="text-sm text-emerald-700">{selectedMed.generic_name}</p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
               <div className="space-y-2">
                 <Label>Dosage</Label>
                 <Input
-                  placeholder="e.g., 500mg, 1 tablet"
+                  placeholder="e.g., 500mg"
                   value={dosage}
                   onChange={(e) => setDosage(e.target.value)}
                   className="h-11"
@@ -220,78 +181,44 @@ const AddMedicine = () => {
 
               <div className="space-y-3">
                 <Label>Times</Label>
-                <AnimatePresence mode="popLayout">
-                  {times.map((time, index) => (
-                    <motion.div 
-                      key={index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      className="flex gap-2"
-                    >
-                      <Input
-                        type="time"
-                        value={time}
-                        onChange={(e) => handleTimeChange(index, e.target.value)}
-                        className="h-11 flex-1"
-                        required
-                      />
-                      {times.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          onClick={() => removeTimeField(index)}
-                          className="h-11 w-11 shrink-0"
-                        >
-                          ×
-                        </Button>
-                      )}
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-                <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={addTimeField}
-                    className="w-full h-11 border-dashed"
-                  >
-                    <Plus className="w-4 h-4 mr-2" /> Add Another Time
-                  </Button>
-                </motion.div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Notes (Optional)</Label>
-                <Input
-                  placeholder="e.g., Take with food"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="h-11"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
+                {times.map((time, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      type="time"
+                      value={time}
+                      onChange={(e) => handleTimeChange(index, e.target.value)}
+                      className="h-11 flex-1"
+                      required
+                    />
+                    {times.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => removeTimeField(index)}
+                        className="h-11 w-11"
+                      >
+                        ×
+                      </Button>
+                    )}
+                  </div>
+                ))}
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate(-1)}
-                  className="flex-1 h-11"
-                  disabled={isSubmitting}
+                  onClick={addTimeField}
+                  className="w-full h-11 border-dashed"
                 >
-                  Cancel
+                  <Plus className="w-4 h-4 mr-2" /> Add Another Time
                 </Button>
-                <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button
-                    type="submit"
-                    className="w-full h-11 bg-emerald-600 hover:bg-emerald-700"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add Medicine"}
-                  </Button>
-                </motion.div>
               </div>
+
+              <Button
+                type="submit"
+                className="w-full h-11 bg-emerald-600 hover:bg-emerald-700"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add Medicine"}
+              </Button>
             </form>
           </CardContent>
         </Card>

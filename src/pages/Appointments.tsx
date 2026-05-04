@@ -29,24 +29,25 @@ const Appointments = () => {
     familyMemberId: ""
   });
 
+  const loadData = async () => {
+    const appts = await getAppointments();
+    const members = await getFamilyMembers();
+    setAppointments(appts);
+    setFamilyMembers(members);
+  };
+
   useEffect(() => {
-    setAppointments(getAppointments());
-    setFamilyMembers(getFamilyMembers());
+    loadData();
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.doctorName || !formData.date || !formData.familyMemberId) {
       return toast.error("Please fill in required fields");
     }
 
-    const newAppt: Appointment = {
-      ...formData,
-      id: `appt_${Date.now()}`
-    };
-
-    addAppointment(newAppt);
-    setAppointments(getAppointments());
+    await addAppointment(formData);
+    await loadData();
     setShowAdd(false);
     toast.success("Appointment scheduled!");
   };
@@ -64,18 +65,15 @@ const Appointments = () => {
               <ChevronLeft className="w-4 h-4 mr-1" /> Back
             </Button>
             <h1 className="text-3xl font-bold text-gray-900">Appointments</h1>
-            <p className="text-gray-600 mt-1">Manage your medical visits and doctor notes</p>
           </div>
-          <Button onClick={() => setShowAdd(!showAdd)} className="bg-emerald-600 hover:bg-emerald-700">
+          <Button onClick={() => setShowAdd(!showAdd)} className="bg-emerald-600">
             {showAdd ? "Cancel" : <><Plus className="w-4 h-4 mr-2" /> New Visit</>}
           </Button>
         </div>
 
         {showAdd && (
-          <Card className="mb-8 shadow-lg border-emerald-100">
-            <CardHeader>
-              <CardTitle>Schedule Appointment</CardTitle>
-            </CardHeader>
+          <Card className="mb-8">
+            <CardHeader><CardTitle>Schedule Appointment</CardTitle></CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -89,27 +87,7 @@ const Appointments = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Doctor Name</Label>
-                  <Input value={formData.doctorName} onChange={e => setFormData({...formData, doctorName: e.target.value})} placeholder="Dr. Smith" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Specialty</Label>
-                  <Input value={formData.specialty} onChange={e => setFormData({...formData, specialty: e.target.value})} placeholder="Cardiologist" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Date</Label>
-                  <Input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Time</Label>
-                  <Input type="time" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Clinic Address</Label>
-                  <Input value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} placeholder="123 Medical Way" />
-                </div>
-                <div className="md:col-span-2 space-y-2">
-                  <Label>Notes for Doctor (Questions/Symptoms)</Label>
-                  <Textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder="Ask about the new dosage..." />
+                  <Input value={formData.doctorName} onChange={e => setFormData({...formData, doctorName: e.target.value})} />
                 </div>
                 <Button type="submit" className="md:col-span-2 bg-emerald-600">Save Appointment</Button>
               </form>
@@ -118,48 +96,15 @@ const Appointments = () => {
         )}
 
         <div className="space-y-4">
-          {appointments.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-2xl border-2 border-dashed">
-              <Calendar className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-              <p className="text-gray-500">No upcoming appointments.</p>
-            </div>
-          ) : (
-            appointments.sort((a, b) => a.date.localeCompare(b.date)).map(appt => (
-              <Card key={appt.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row justify-between gap-4">
-                    <div className="flex gap-4">
-                      <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex flex-col items-center justify-center text-emerald-600 shrink-0">
-                        <span className="text-[10px] font-bold uppercase">{new Date(appt.date).toLocaleDateString('en-US', { month: 'short' })}</span>
-                        <span className="text-xl font-bold">{new Date(appt.date).getDate()}</span>
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-gray-900 text-lg">{appt.doctorName}</h3>
-                        <p className="text-sm text-emerald-600 font-medium">{appt.specialty}</p>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                          <span className="flex items-center gap-1"><User className="w-3 h-3" /> {familyMembers.find(m => m.id === appt.familyMemberId)?.name}</span>
-                          <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {appt.time}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      {appt.location && (
-                        <Button variant="outline" size="sm" className="text-xs" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(appt.location)}`, '_blank')}>
-                          <MapPin className="w-3 h-3 mr-1" /> Open in Maps
-                        </Button>
-                      )}
-                      {appt.notes && (
-                        <div className="p-3 bg-gray-50 rounded-lg text-xs text-gray-600 border border-gray-100">
-                          <p className="font-bold mb-1 flex items-center gap-1"><MessageSquare className="w-3 h-3" /> Notes:</p>
-                          {appt.notes}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
+          {appointments.map(appt => (
+            <Card key={appt.id}>
+              <CardContent className="p-6">
+                <h3 className="font-bold text-gray-900">{appt.doctorName}</h3>
+                <p className="text-sm text-emerald-600">{appt.specialty}</p>
+                <p className="text-xs text-gray-500">{appt.date} at {appt.time}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     </motion.div>
