@@ -1,38 +1,26 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { Pill, Plus, Loader2, ChevronLeft, Thermometer, Droplets, Activity, Heart } from "lucide-react";
+import { motion } from "framer-motion";
+import { Plus, Loader2, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { MedicineSelector } from "@/components/MedicineSelector";
 import { MedicineDBEntry } from "@/data/medicineDatabase";
 import { addMedicine, getFamilyMembers, FamilyMember, saveDoseLog } from "@/utils/storage";
-import { cn } from "@/lib/utils";
 
 const AddMedicine = () => {
   const navigate = useNavigate();
   const [selectedMed, setSelectedMed] = useState<MedicineDBEntry | null>(null);
-  const [isCustom, setIsCustom] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [selectedMember, setSelectedMember] = useState<string>("");
   const [dosage, setDosage] = useState("");
   const [frequency, setFrequency] = useState("");
   const [times, setTimes] = useState<string[]>([""]);
-  const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedIcon, setSelectedIcon] = useState("pill");
-
-  const icons = [
-    { id: "pill", icon: Pill },
-    { id: "liquid", icon: Droplets },
-    { id: "injection", icon: Activity },
-    { id: "heart", icon: Heart },
-    { id: "temp", icon: Thermometer }
-  ];
 
   const frequencies = [
     "Once daily", "Twice daily", "Three times daily", "Four times daily",
@@ -51,13 +39,11 @@ const AddMedicine = () => {
 
   const handleSelectMedicine = (med: MedicineDBEntry) => {
     setSelectedMed(med);
-    setIsCustom(false);
     setDosage(med.generic_name);
   };
 
   const handleCustomMedicine = () => {
     setSelectedMed(null);
-    setIsCustom(true);
     setDosage("");
   };
 
@@ -93,8 +79,7 @@ const AddMedicine = () => {
           name: medicineName,
           dosage: dosage.trim(),
           times: [time.trim()],
-          frequency,
-          additionalText: notes.trim() || undefined
+          frequency
         });
 
         await saveDoseLog({

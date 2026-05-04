@@ -2,26 +2,22 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { User, Bell, Shield, ChevronLeft, Save, LogOut, Trash2 } from "lucide-react";
+import { User, ChevronLeft, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { useTheme } from "next-themes";
 import { toast } from "sonner";
 
 const Settings = () => {
   const navigate = useNavigate();
   const { user, updateProfile, logout } = useAuth();
-  const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   
   const [name, setName] = useState(user?.user_metadata?.name || "");
   const [email, setEmail] = useState(user?.email || "");
-  const [notifications, setNotifications] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {

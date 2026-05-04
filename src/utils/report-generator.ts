@@ -53,7 +53,7 @@ export const generateHealthReport = async () => {
     report += `No symptoms recorded.\n`;
   } else {
     symptoms.slice(-10).forEach(s => {
-      const member = members.find(m => m.id === s.family_member_id || m.id === s.familyMemberId)?.name || "Unknown";
+      const member = members.find(m => m.id === s.familyMemberId)?.name || "Unknown";
       report += `${s.date} ${s.time} - ${member}: ${s.symptom} (${s.severity})\n`;
       if (s.notes) report += `  Notes: ${s.notes}\n`;
     });

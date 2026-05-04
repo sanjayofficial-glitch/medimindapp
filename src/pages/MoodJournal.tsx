@@ -2,22 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Smile, Meh, Frown, Angry, ChevronLeft, Sparkles, Brain } from "lucide-react";
+import { Smile, Meh, Frown, Angry, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { getMoodLogs, addMoodLog, getFamilyMembers, FamilyMember, MoodLog } from "@/utils/storage";
 import { toast } from "sonner";
 
 const MoodJournal = () => {
   const navigate = useNavigate();
-  const [logs, setLogs] = useState<MoodLog[]>([]);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [selectedMember, setSelectedMember] = useState("");
   const [selectedMood, setSelectedMood] = useState<MoodLog["mood"] | null>(null);
-  const [notes, setNotes] = useState("");
+  const [notes] = useState("");
 
   const moods: { type: MoodLog["mood"], icon: any, color: string, label: string }[] = [
     { type: "great", icon: Smile, color: "text-emerald-500 bg-emerald-50", label: "Great" },
@@ -28,9 +25,8 @@ const MoodJournal = () => {
   ];
 
   const loadData = async () => {
-    const moodLogs = await getMoodLogs();
+    await getMoodLogs();
     const members = await getFamilyMembers();
-    setLogs(moodLogs);
     setFamilyMembers(members);
   };
 
@@ -50,7 +46,6 @@ const MoodJournal = () => {
 
     await loadData();
     setSelectedMood(null);
-    setNotes("");
     toast.success("Mood logged!");
   };
 

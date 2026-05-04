@@ -2,53 +2,29 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Beaker, TrendingUp, Plus, ChevronLeft, Info } from "lucide-react";
+import { Plus, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { getLabResults, addLabResult, getFamilyMembers, FamilyMember, LabResult } from "@/utils/storage";
-import { toast } from "sonner";
+import { getLabResults, getFamilyMembers, LabResult } from "@/utils/storage";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const LabResults = () => {
   const navigate = useNavigate();
   const [results, setResults] = useState<LabResult[]>([]);
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [selectedTest, setSelectedTest] = useState<string>("Cholesterol (LDL)");
 
-  const [formData, setFormData] = useState({
-    testName: "Cholesterol (LDL)",
-    value: "",
-    unit: "mg/dL",
-    date: new Date().toISOString().split('T')[0],
-    normalRange: "70-130",
-    familyMemberId: ""
-  });
-
   const loadData = async () => {
     const res = await getLabResults();
-    const members = await getFamilyMembers();
+    await getFamilyMembers();
     setResults(res);
-    setFamilyMembers(members);
   };
 
   useEffect(() => {
     loadData();
   }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.value || !formData.familyMemberId) return toast.error("Please fill in all fields");
-
-    await addLabResult(formData);
-    await loadData();
-    setShowAdd(false);
-    toast.success("Lab result recorded!");
-  };
 
   const chartData = results
     .filter(r => r.testName === selectedTest)

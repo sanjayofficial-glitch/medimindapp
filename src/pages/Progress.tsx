@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line } from 'recharts';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getDoseLogs, getVitalLogs, getSymptomLogs, DoseLog, VitalLog, SymptomLog } from "@/utils/storage";
-import { CheckCircle, XCircle, AlertCircle, TrendingUp, Activity, Thermometer, Download } from "lucide-react";
+import { CheckCircle, XCircle, AlertCircle, Activity, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateHealthReport } from "@/utils/report-generator";
 import { toast } from "sonner";

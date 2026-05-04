@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Thermometer, Plus, ChevronLeft, MessageSquare } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
 import { getFamilyMembers, FamilyMember, addSymptomLog, getSymptomLogs, SymptomLog } from "@/utils/storage";
 import { toast } from "sonner";
@@ -19,7 +18,6 @@ const SymptomLogger = () => {
   const [logs, setLogs] = useState<SymptomLog[]>([]);
   const [selectedMember, setSelectedMember] = useState("");
   const [symptom, setSymptom] = useState("");
-  const [severity, setSeverity] = useState<SymptomLog["severity"]>("mild");
   const [notes, setNotes] = useState("");
 
   const loadData = async () => {
@@ -40,7 +38,7 @@ const SymptomLogger = () => {
     await addSymptomLog({
       familyMemberId: selectedMember,
       symptom,
-      severity,
+      severity: "mild",
       date: new Date().toISOString().split('T')[0],
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
       notes
