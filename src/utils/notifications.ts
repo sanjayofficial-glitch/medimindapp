@@ -1,5 +1,4 @@
 import { getMedicines, getFamilyMembers, saveDoseLog, DoseLog } from "./storage";
-import { Medicine } from "@/utils/storage"; // Fixed import path
 
 export interface NotificationAction {
   type: 'taken' | 'snooze-5' | 'snooze-15' | 'snooze-30';
@@ -8,17 +7,12 @@ export interface NotificationAction {
 
 const activeTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
-/**
- * Request permission to show desktop notifications */
 export const requestNotificationPermission = async (): Promise<boolean> => {
   if (!("Notification" in window)) return false;
   const permission = await Notification.requestPermission();
   return permission === "granted";
 };
 
-/**
- * Creates and displays a browser notification
- */
 const createNotification = (medicineId: string, medicineName: string, userName: string) => {
   if (Notification.permission !== "granted") return;
 
@@ -40,12 +34,13 @@ const createNotification = (medicineId: string, medicineName: string, userName: 
 
   const handleAction = (action: string) => {
     window.dispatchEvent(new CustomEvent("medimind_notification_action", {
-      detail: { type: action, medicineId } as NotificationAction    }));
+      detail: { type: action, medicineId } as NotificationAction
+    }));
     notif.close();
   };
 
-  notif.addEventListener("action", (e: Event) => { // Fixed type    const customEvent = e as any; // Cast to any to access detail
-    handleAction(customEvent.detail.action); // Access action from detail
+  notif.addEventListener("action", (e: CustomEvent) => {
+    handleAction(e.detail.action);
   });
 
   notif.onclick = () => {
@@ -54,15 +49,13 @@ const createNotification = (medicineId: string, medicineName: string, userName: 
   };
 };
 
-/**
- * Schedules a notification for a specific medicine time */
 export const scheduleNotification = (
   medicineId: string,
   medicineName: string,
   time: string,
-  userName: string) => {
-  if (!("Notification" in window)) return;
-  
+  userName: string
+) => {
+  if (!("Notification" in window)) return;  
   const scheduleKey = `${medicineId}_${time}`;
   cancelNotification(scheduleKey);
 
@@ -75,8 +68,7 @@ export const scheduleNotification = (
     target.setDate(target.getDate() + 1);
   }
 
-  const delay = target.getTime() - now.getTime();
-  
+  const delay = target.getTime() - now.getTime();  
   if (delay > 0) {
     const timeoutId = setTimeout(() => {
       createNotification(medicineId, medicineName, userName);
@@ -87,8 +79,6 @@ export const scheduleNotification = (
   }
 };
 
-/**
- * Snoozes a notification for a set duration */
 export const snoozeNotification = (medicineId: string, medicineName: string, userName: string, durationMinutes: number) => {
   const snoozeKey = `${medicineId}_snooze`;
   cancelNotification(snoozeKey);
@@ -100,9 +90,6 @@ export const snoozeNotification = (medicineId: string, medicineName: string, use
   activeTimeouts.set(snoozeKey, timeoutId);
 };
 
-/**
- * Cancels a scheduled notification
- */
 export const cancelNotification = (key: string) => {
   const timeout = activeTimeouts.get(key);
   if (timeout) {
@@ -111,29 +98,23 @@ export const cancelNotification = (key: string) => {
   }
 };
 
-/**
- * Initializes all notifications for all medicines in storage
- */
 export const initializeNotifications = async () => {
   const medicines = getMedicines();
-  const familyMembers = getFamilyMembers();
-  
+  const familyMembers = getFamilyMembers();  
   medicines.forEach(med => {
     const member = familyMembers.find(m => m.id === med.familyMemberId);
     const userName = member ? member.name : "User";
-        med.times.forEach(time => {
+    med.times.forEach(time => {
       scheduleNotification(med.id, med.name, time, userName);
     });
   });
 };
 
-// Global listener for notification actions to handle storage updates
-window.addEventListener('medimind_notification_action', (event: Event) => { // Fixed type
-  const customEvent = event as any; // Cast to any
-  const action = customEvent.detail.type as NotificationAction['type']; // Extract type safely
+window.addEventListener('medimind_notification_action', (event: CustomEvent) => {
+  const detail = event.detail as NotificationAction;
+  const action = detail.type;
   const medicines = getMedicines();
-  const medicine = medicines.find(m => m.id === customEvent.detail.medicineId);
-  
+  const medicine = medicines.find(m => m.id === detail.medicineId);  
   if (!medicine) return;
 
   if (action === 'taken') {
@@ -149,7 +130,7 @@ window.addEventListener('medimind_notification_action', (event: Event) => { // F
       date: today,
       status: "taken"
     };
-        saveDoseLog(log); // Removed await to avoid TS error
+    saveDoseLog(log);
   } else if (action.startsWith('snooze-')) {
     const duration = parseInt(action.split('-')[1], 10);
     const familyMembers = getFamilyMembers();

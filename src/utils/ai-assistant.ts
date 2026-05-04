@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { getMedicines, getDoseLogs } from "@/utils/storage";
+import { getMedicines, getDoseLogs, DoseLog } from "@/utils/storage";
+import { Medicine } from "@/utils/storage";
 import { medicineDatabase } from "@/data/medicineDatabase";
-import { Medicine } from "@/utils/storage"; // Fixed import path
 
 const SETTINGS_KEY = "medimind_ai_settings";
 
@@ -44,7 +44,6 @@ export const askAIAssistant = async (query: string, medicine?: Medicine): Promis
     const genAI = new GoogleGenerativeAI(settings.apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    // Await the async getDoseLogs call
     const doseLogs = await getDoseLogs();
     
     const context = {
@@ -55,7 +54,7 @@ export const askAIAssistant = async (query: string, medicine?: Medicine): Promis
         times: m.times,
         notes: m.additionalText
       })),
-      recentHistory: doseLogs.slice(-15).map((l: DoseLog) => ({ // Type l as DoseLog
+      recentHistory: doseLogs.slice(-15).map((l: DoseLog) => ({
         name: l.medicineName,
         status: l.status,
         scheduled: l.scheduledTime,
