@@ -39,31 +39,46 @@ const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [todayLogs, setTodayLogs] = useState<DoseLog[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadData = async () => {
-    const d = new Date();
-    const dateStr = d.toISOString().split('T')[0];
-    const logs = await getDoseLogsForDate(dateStr);
-    setTodayLogs(logs);
+    try {
+      const d = new Date();
+      const dateStr = d.toISOString().split('T')[0];
+      const logs = await getDoseLogsForDate(dateStr);
+      setTodayLogs(logs);
+    } catch (error) {
+      console.error("Error loading dashboard data:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (user) {
+      loadData();
+    } else {
+      navigate("/login");
+    }
+  }, [user, navigate]);
 
   const handleStatusUpdate = async (log: DoseLog, status: "taken" | "missed") => {
-    const updatedLog: DoseLog = {
-      ...log,
-      status,
-      actualTime: status === "taken" ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : undefined
-    };
-    await saveDoseLog(updatedLog);
-    toast.success(`Marked ${log.medicineName} as ${status}`);
-    loadData();
+    try {
+      const updatedLog: DoseLog = {
+        ...log,
+        status,
+        actualTime: status === "taken" ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : undefined
+      };
+      await saveDoseLog(updatedLog);
+      toast.success(`Marked ${log.medicineName} as ${status}`);
+      loadData();
+    } catch (error) {
+      toast.error("Failed to update status");
+    }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate("/");
     toast.success("Logged out successfully");
   };
@@ -89,6 +104,14 @@ const Dashboard = () => {
       transition: { type: "spring", stiffness: 300, damping: 24 }
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <motion.div 
@@ -124,13 +147,13 @@ const Dashboard = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="relative h-8 w-8 rounded-full p-0 overflow-hidden border border-border">
-                  <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'default'}`} alt="avatar" className="h-full w-full object-cover" />
+                  <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'default'}`} alt="avatar" className="h-full w-full object-cover" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user?.name || "Patient"}</p>
+                    <p className="text-sm font-medium leading-none">{user?.user_metadata?.name || "Patient"}</p>
                     <p className="text-xs leading-none text-muted-foreground">{user?.email || "patient@medimind.com"}</p>
                   </div>
                 </DropdownMenuLabel>
@@ -155,7 +178,7 @@ const Dashboard = () => {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
               <p className="text-sm font-medium text-primary mb-1">Good morning,</p>
-              <h2 className="text-3xl font-bold text-foreground">{user?.name || "Patient"}</h2>
+              <h2 className="text-3xl font-bold text-foreground">{user?.user_metadata?.name || "Patient"}</h2>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground bg-card px-4 py-2 rounded-full border border-border shadow-sm">
               <Calendar className="w-4 h-4" />

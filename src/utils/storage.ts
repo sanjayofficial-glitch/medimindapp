@@ -1,6 +1,5 @@
-import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
-// Existing Interfaces
 export interface FamilyMember {
   id: string;
   name: string;
@@ -50,146 +49,126 @@ export interface SymptomLog {
   notes?: string;
 }
 
-// --- NEW INTERFACES ---
-
-export interface Appointment {
-  id: string;
-  doctorName: string;
-  specialty: string;
-  date: string;
-  time: string;
-  location: string;
-  notes: string;
-  familyMemberId: string;
-}
-
-export interface EmergencyProfile {
-  bloodType: string;
-  allergies: string[];
-  conditions: string[];
-  emergencyContacts: { name: string; phone: string; relationship: string }[];
-}
-
-export interface LabResult {
-  id: string;
-  familyMemberId: string;
-  testName: string;
-  value: string;
-  unit: string;
-  date: string;
-  normalRange?: string;
-}
-
-export interface MoodLog {
-  id: string;
-  familyMemberId: string;
-  mood: "great" | "good" | "okay" | "bad" | "awful";
-  date: string;
-  notes?: string;
-}
-
-export interface HealthGoal {
-  id: string;
-  title: string;
-  target: number;
-  current: number;
-  unit: string;
-  type: "water" | "steps" | "sleep" | "custom";
-}
-
-export interface Prescription {
-  id: string;
-  familyMemberId: string;
-  title: string;
-  imageUrl: string;
-  pharmacyName?: string;
-  pharmacyPhone?: string;
-  expiryDate?: string;
-}
-
-// Storage Keys
-const DOSE_LOGS_KEY = "medimind_dose_logs";
-const FAMILY_MEMBERS_KEY = "medimind_family_members";
-const MEDICINES_KEY = "medimind_medicines";
-const VITALS_KEY = "medimind_vitals";
-const SYMPTOMS_KEY = "medimind_symptoms";
-const APPOINTMENTS_KEY = "medimind_appointments";
-const EMERGENCY_KEY = "medimind_emergency_id";
-const LAB_RESULTS_KEY = "medimind_lab_results";
-const MOOD_LOGS_KEY = "medimind_mood_logs";
-const GOALS_KEY = "medimind_goals";
-const PRESCRIPTIONS_KEY = "medimind_prescriptions";
-
-// Helper to get from localStorage
-const getLocal = <T>(key: string, fallback: T): T => {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : fallback;
-  } catch {
-    return fallback;
-  }
+// --- FAMILY MEMBERS ---
+export const getFamilyMembers = async (): Promise<FamilyMember[]> => {
+  const { data, error } = await supabase.from('family_members').select('*');
+  if (error) throw error;
+  return data || [];
 };
 
-// Helper to save to localStorage
-const saveLocal = (key: string, data: any) => {
-  localStorage.setItem(key, JSON.stringify(data));
+export const addFamilyMember = async (m: Omit<FamilyMember, 'id'>) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { error } = await supabase.from('family_members').insert([{ ...m, user_id: user?.id }]);
+  if (error) throw error;
 };
 
-// --- EXPORTED FUNCTIONS ---
+// --- MEDICINES ---
+export const getMedicines = async (): Promise<Medicine[]> => {
+  const { data, error } = await supabase.from('medicines').select('*');
+  if (error) throw error;
+  return data?.map(m => ({
+    ...m,
+    familyMemberId: m.family_member_id,
+    additionalText: m.additional_text,
+    refillAt: m.refill_at
+  })) || [];
+};
 
-export const getDoseLogs = async (): Promise<DoseLog[]> => getLocal(DOSE_LOGS_KEY, []);
+export const addMedicine = async (m: Omit<Medicine, 'id'>) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { error } = await supabase.from('medicines').insert([{
+    family_member_id: m.familyMemberId,
+    name: m.name,
+    dosage: m.dosage,
+    times: m.times,
+    frequency: m.frequency,
+    additional_text: m.additionalText,
+    stock: m.stock,
+    refill_at: m.refillAt,
+    user_id: user?.id
+  }]);
+  if (error) throw error;
+};
+
+// --- DOSE LOGS ---
+export const getDoseLogs = async (): Promise<DoseLog[]> => {
+  const { data, error } = await supabase.from('dose_logs').select('*');
+  if (error) throw error;
+  return data?.map(l => ({
+    ...l,
+    medicineId: l.medicine_id,
+    medicineName: l.medicine_name,
+    scheduledTime: l.scheduled_time,
+    actualTime: l.actual_time
+  })) || [];
+};
 
 export const getDoseLogsForDate = async (date: string): Promise<DoseLog[]> => {
-  const logs = await getDoseLogs();
-  return logs.filter(l => l.date === date);
+  const { data, error } = await supabase.from('dose_logs').select('*').eq('date', date);
+  if (error) throw error;
+  return data?.map(l => ({
+    ...l,
+    medicineId: l.medicine_id,
+    medicineName: l.medicine_name,
+    scheduledTime: l.scheduled_time,
+    actualTime: l.actual_time
+  })) || [];
 };
 
 export const saveDoseLog = async (log: DoseLog): Promise<void> => {
-  const logs = await getDoseLogs();
-  const idx = logs.findIndex(l => l.id === log.id);
-  if (idx >= 0) logs[idx] = log; else logs.push(log);
-  saveLocal(DOSE_LOGS_KEY, logs);
+  const { data: { user } } = await supabase.auth.getUser();
+  const { error } = await supabase.from('dose_logs').upsert({
+    id: log.id.includes('log_') ? undefined : log.id, // Handle local IDs
+    medicine_id: log.medicineId,
+    medicine_name: log.medicineName,
+    scheduled_time: log.scheduledTime,
+    actual_time: log.actualTime,
+    date: log.date,
+    status: log.status,
+    user_id: user?.id
+  });
+  if (error) throw error;
 };
 
-export const getFamilyMembers = (): FamilyMember[] => getLocal(FAMILY_MEMBERS_KEY, []);
-export const addFamilyMember = (m: FamilyMember) => saveLocal(FAMILY_MEMBERS_KEY, [...getFamilyMembers(), m]);
-export const updateFamilyMember = (m: FamilyMember) => saveLocal(FAMILY_MEMBERS_KEY, getFamilyMembers().map(item => item.id === m.id ? m : item));
-export const removeFamilyMember = (id: string) => saveLocal(FAMILY_MEMBERS_KEY, getFamilyMembers().filter(item => item.id !== id));
+// --- VITALS ---
+export const getVitalLogs = async (): Promise<VitalLog[]> => {
+  const { data, error } = await supabase.from('vitals').select('*');
+  if (error) throw error;
+  return data?.map(v => ({ ...v, familyMemberId: v.family_member_id })) || [];
+};
 
-export const getMedicines = (): Medicine[] => getLocal(MEDICINES_KEY, []);
-export const addMedicine = (m: Medicine) => saveLocal(MEDICINES_KEY, [...getMedicines(), m]);
-export const updateMedicine = (m: Medicine) => saveLocal(MEDICINES_KEY, getMedicines().map(item => item.id === m.id ? m : item));
+export const addVitalLog = async (l: Omit<VitalLog, 'id'>) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { error } = await supabase.from('vitals').insert([{
+    family_member_id: l.familyMemberId,
+    type: l.type,
+    value: l.value,
+    unit: l.unit,
+    date: l.date,
+    time: l.time,
+    notes: l.notes,
+    user_id: user?.id
+  }]);
+  if (error) throw error;
+};
 
-export const getAppointments = (): Appointment[] => getLocal(APPOINTMENTS_KEY, []);
-export const addAppointment = (a: Appointment) => saveLocal(APPOINTMENTS_KEY, [...getAppointments(), a]);
+// --- SYMPTOMS ---
+export const getSymptomLogs = async (): Promise<SymptomLog[]> => {
+  const { data, error } = await supabase.from('symptoms').select('*');
+  if (error) throw error;
+  return data?.map(s => ({ ...s, familyMemberId: s.family_member_id })) || [];
+};
 
-export const getEmergencyProfile = (): EmergencyProfile => getLocal(EMERGENCY_KEY, {
-  bloodType: "",
-  allergies: [],
-  conditions: [],
-  emergencyContacts: []
-});
-export const saveEmergencyProfile = (p: EmergencyProfile) => saveLocal(EMERGENCY_KEY, p);
-
-export const getLabResults = (): LabResult[] => getLocal(LAB_RESULTS_KEY, []);
-export const addLabResult = (r: LabResult) => saveLocal(LAB_RESULTS_KEY, [...[...getLabResults()], r]);
-
-export const getMoodLogs = (): MoodLog[] => getLocal(MOOD_LOGS_KEY, []);
-export const addMoodLog = (l: MoodLog) => saveLocal(MOOD_LOGS_KEY, [...getMoodLogs(), l]);
-
-export const getHealthGoals = (): HealthGoal[] => getLocal(GOALS_KEY, []);
-export const updateHealthGoal = (g: HealthGoal) => saveLocal(GOALS_KEY, getHealthGoals().map(item => item.id === g.id ? g : item));
-
-export const getPrescriptions = (): Prescription[] => getLocal(PRESCRIPTIONS_KEY, []);
-export const addPrescription = (p: Prescription) => saveLocal(PRESCRIPTIONS_KEY, [...getPrescriptions(), p]);
-
-export const getVitalLogs = (): VitalLog[] => getLocal(VITALS_KEY, []);
-export const addVitalLog = (l: VitalLog) => saveLocal(VITALS_KEY, [...getVitalLogs(), l]);
-
-export const getSymptomLogs = (): SymptomLog[] => getLocal(SYMPTOMS_KEY, []);
-export const addSymptomLog = (l: SymptomLog) => saveLocal(SYMPTOMS_KEY, [...getSymptomLogs(), l]);
-
-export const generateMockData = async () => {
-  // Simplified mock generation for brevity
-  toast.success("Mock data generated");
+export const addSymptomLog = async (l: Omit<SymptomLog, 'id'>) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { error } = await supabase.from('symptoms').insert([{
+    family_member_id: l.familyMemberId,
+    symptom: l.symptom,
+    severity: l.severity,
+    date: l.date,
+    time: l.time,
+    notes: l.notes,
+    user_id: user?.id
+  }]);
+  if (error) throw error;
 };

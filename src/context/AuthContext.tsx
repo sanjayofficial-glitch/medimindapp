@@ -1,17 +1,10 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
+import { supabase } from "@/integrations/supabase/client";
+import { User } from "@supabase/supabase-js";
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  signup: (name: string, email: string, password: string) => Promise<boolean>;
-  updateProfile: (name: string, email: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -22,52 +15,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("medimind_user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+    // Check active sessions and sets the user
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
+
+    // Listen for changes on auth state (sign in, sign out, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, _password: string): Promise<boolean> => {
-    setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const mockUser = { id: "1", name: email.split("@")[0], email };
-    setUser(mockUser);
-    localStorage.setItem("medimind_user", JSON.stringify(mockUser));
-    setIsLoading(false);
-    return true;
-  };
-
-  const signup = async (name: string, email: string, _password: string): Promise<boolean> => {
-    setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const mockUser = { id: Date.now().toString(), name, email };
-    setUser(mockUser);
-    localStorage.setItem("medimind_user", JSON.stringify(mockUser));
-    setIsLoading(false);
-    return true;
-  };
-
-  const updateProfile = async (name: string, email: string): Promise<boolean> => {
-    setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    if (user) {
-      const updatedUser = { ...user, name, email };
-      setUser(updatedUser);
-      localStorage.setItem("medimind_user", JSON.stringify(updatedUser));
-    }
-    setIsLoading(false);
-    return true;
-  };
-
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("medimind_user");
+  const logout = async () => {
+    await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, updateProfile, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
