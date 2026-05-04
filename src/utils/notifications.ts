@@ -1,9 +1,11 @@
+import { Medicine } from "@/utils/storage";
+
 export interface NotificationAction {
   type: 'taken' | 'snooze-5' | 'snooze-15' | 'snooze-30';
   medicineId: string;
 }
 
-const activeTimeouts = new Map<string, NodeJS.Timeout>();
+const activeTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
 export const requestNotificationPermission = async (): Promise<boolean> => {
   if (!("Notification" in window)) return false;
@@ -77,10 +79,10 @@ export const cancelNotification = (medicineId: string) => {
 };
 
 // Handle notification actions globally
-window.addEventListener('medimind_notification_action', (event) => {
+window.addEventListener('medimind_notification_action', ((event: CustomEvent) => {
   const action = event.detail as NotificationAction;
   if (action.type.startsWith('snooze-')) {
-    const duration = parseInt(action.type.split('-')[1]);
+    const duration = parseInt(action.type.split('-')[1], 10);
     snoozeNotification(action.medicineId, "Medicine", "User", duration);
   }
-});
+}) as EventListener);

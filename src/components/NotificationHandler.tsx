@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { AITipModal } from "./AITipModal";
 import { Medicine } from "@/utils/storage";
@@ -13,14 +12,12 @@ interface NotificationAction {
 export const NotificationHandler = () => {
   const [showAITip, setShowAITip] = useState(false);
   const [currentMedicine, setCurrentMedicine] = useState<Medicine | null>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const handleNotificationAction = (event: CustomEvent) => {
       const action = event.detail as NotificationAction;
       
       if (action.type === 'taken') {
-        // Mark as taken in storage
         const medicines = getMedicines();
         const medicine = medicines.find(m => m.id === action.medicineId);
         if (medicine) {
@@ -29,13 +26,16 @@ export const NotificationHandler = () => {
           toast.success(`Marked ${medicine.name} as taken!`);
         }
       } else if (action.type.startsWith('snooze-')) {
-        const duration = parseInt(action.type.split('-')[1]);
+        const duration = parseInt(action.type.split('-')[1], 10);
         toast.info(`Snoozed for ${duration} minutes`);
       }
     };
 
-    window.addEventListener('medimind_notification_action', handleNotificationAction);
-    return () => window.removeEventListener('medimind_notification_action', handleNotificationAction);
+    window.addEventListener('medimind_notification_action', handleNotificationAction as EventListener);
+    
+    return () => {
+      window.removeEventListener('medimind_notification_action', handleNotificationAction as EventListener);
+    };
   }, []);
 
   return (
