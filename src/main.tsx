@@ -1,21 +1,13 @@
-import { createRoot } from "react-dom/client";
-import App from "./App.tsx";
-import "./globals.css";
-import { AuthProvider } from "./context/AuthContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { initializeNotifications, requestNotificationPermission } from "./utils/notifications";
+import { initializeNotifications } from "./utils/notifications";
+import { createRoot } from "react-dom/client";
+import App from "./App";
 
-// Initialize notifications and request permissions
-requestNotificationPermission().then((granted) => {
-  if (granted) {
-    initializeNotifications();
-  }
-});
+initializeNotifications().catch(console.error);
 
-createRoot(document.getElementById("root")!).render(
+const root = createRoot(document.getElementById("root") as HTMLElement);
+root.render(
   <ErrorBoundary>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
+    <App />
   </ErrorBoundary>
 );

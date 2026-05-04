@@ -1,7 +1,7 @@
 import { getMedicines, getFamilyMembers, saveDoseLog, DoseLog } from "./storage";
 
 export interface NotificationAction {
-  type: 'taken' | 'snooze-5' | 'snooze-15' | 'snooze-30';
+  type: "taken" | "snooze-5" | "snooze-15" | "snooze-30";
   medicineId: string;
 }
 
@@ -27,35 +27,37 @@ const createNotification = (medicineId: string, medicineName: string, userName: 
       { action: "snooze-5", title: "⏰ Snooze (5m)" },
       { action: "snooze-15", title: "⏰ Snooze (15m)" },
       { action: "snooze-30", title: "⏰ Snooze (30m)" },
-    ]
+    ],
   };
 
   const notif = new Notification("MediMind Reminder 💊", options);
 
   const handleAction = (action: string) => {
-    window.dispatchEvent(new CustomEvent("medimind_notification_action", {
-      detail: { type: action, medicineId } as NotificationAction
-    }));
+    window.dispatchEvent(
+      new CustomEvent("medimind_notification_action", {
+        detail: { type: action, medicineId } as NotificationAction,
+      })
+    );
     notif.close();
   };
 
-  notif.addEventListener("action", ((e: Event) => {
-    handleAction((e as CustomEvent).detail.action);
-  }) as EventListener);
+  // Listen for click events (CustomEvent) and forward the action
+  notif.addEventListener("click", (e: Event) => {
+    const ce = e as CustomEvent;
+    handleAction(ce.detail.action);
+  });
 
   notif.onclick = () => {
     window.focus();
     handleAction("taken");
   };
+
+  return notif;
 };
 
-export const scheduleNotification = (
-  medicineId: string,
-  medicineName: string,
-  time: string,
-  userName: string
-) => {
-  if (!("Notification" in window)) return;  
+export const scheduleNotification = (medicineId: string, medicineName: string, time: string, userName: string) => {
+  if (!("Notification" in window)) return;
+
   const scheduleKey = `${medicineId}_${time}`;
   cancelNotification(scheduleKey);
 
@@ -63,30 +65,25 @@ export const scheduleNotification = (
   const now = new Date();
   const target = new Date();
   target.setHours(hours, minutes, 0, 0);
-
   if (target <= now) {
     target.setDate(target.getDate() + 1);
   }
-
-  const delay = target.getTime() - now.getTime();  
+  const delay = target.getTime() - now.getTime();
   if (delay > 0) {
     const timeoutId = setTimeout(() => {
       createNotification(medicineId, medicineName, userName);
       scheduleNotification(medicineId, medicineName, time, userName);
     }, delay);
-    
     activeTimeouts.set(scheduleKey, timeoutId);
-  }
+  };
 };
 
 export const snoozeNotification = (medicineId: string, medicineName: string, userName: string, durationMinutes: number) => {
   const snoozeKey = `${medicineId}_snooze`;
   cancelNotification(snoozeKey);
-
   const timeoutId = setTimeout(() => {
     createNotification(medicineId, medicineName, userName);
   }, durationMinutes * 60 * 1000);
-
   activeTimeouts.set(snoozeKey, timeoutId);
 };
 
@@ -100,41 +97,13 @@ export const cancelNotification = (key: string) => {
 
 export const initializeNotifications = async () => {
   const medicines = getMedicines();
-  const familyMembers = getFamilyMembers();  
-  medicines.forEach(med => {
-    const member = familyMembers.find(m => m.id === med.familyMemberId);
+  const familyMembers = getFamilyMembers();
+
+  medicines.forEach((med) => {
+    const member = familyMembers.find((m) => m.id === med.familyMemberId);
     const userName = member ? member.name : "User";
-    med.times.forEach(time => {
+    med.times.forEach((time) => {
       scheduleNotification(med.id, med.name, time, userName);
     });
   });
 };
-
-window.addEventListener('medimind_notification_action', (((event: Event) => {
-  const detail = (event as CustomEvent).detail as NotificationAction;
-  const action = detail.type;
-  const medicines = getMedicines();
-  const medicine = medicines.find(m => m.id === detail.medicineId);  
-  if (!medicine) return;
-
-  if (action === 'taken') {
-    const today = new Date().toISOString().split('T')[0];
-    const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-    
-    const log: DoseLog = {
-      id: `log_${Date.now()}`,
-      medicineId: medicine.id,
-      medicineName: medicine.name,
-      scheduledTime: medicine.times[0],
-      actualTime: nowTime,
-      date: today,
-      status: "taken"
-    };
-    saveDoseLog(log);
-  } else if (action.startsWith('snooze-')) {
-    const duration = parseInt(action.split('-')[1], 10);
-    const familyMembers = getFamilyMembers();
-    const member = familyMembers.find(m => m.id === medicine.familyMemberId);
-    snoozeNotification(medicine.id, medicine.name, member?.name || "User", duration);
-  }
-}) as EventListener));
