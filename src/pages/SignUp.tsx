@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Pill, Loader2, Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Pill, Loader2, Eye, EyeOff, AlertCircle, CheckCircle2, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ const SignUp = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isVerificationSent, setIsVerificationSent] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isRateLimited, setIsRateLimited] = useState(false);
   const { signup } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ const SignUp = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+    setIsRateLimited(false);
 
     if (!name.trim() || !email.trim() || !password.trim()) {
       toast.error("Please fill in all fields");
@@ -39,25 +41,28 @@ const SignUp = () => {
       const { success, error, data } = await signup(name.trim(), email.trim(), password);
       
       if (success) {
-        // If email confirmation is disabled, we get a session immediately
         if (data?.session) {
           toast.success("Account created successfully!");
           navigate("/dashboard");
         } else {
-          // If email confirmation is enabled, we need to wait for verification
           setIsVerificationSent(true);
           toast.success("Verification email sent!");
         }
       } else {
         const msg = error?.message || "An error occurred during account creation.";
         setErrorMessage(msg);
-        toast.error(msg);
+        
+        if (msg.toLowerCase().includes("rate limit")) {
+          setIsRateLimited(true);
+          toast.error("Email rate limit exceeded. Please wait a moment.");
+        } else {
+          toast.error(msg);
+        }
       }
     } catch (err) {
       const msg = "An unexpected error occurred. Please try again.";
       setErrorMessage(msg);
       toast.error(msg);
-      console.error("SignUp: Submit error:", err);
     } finally {
       setIsLoading(false);
     }
@@ -79,9 +84,7 @@ const SignUp = () => {
           </CardHeader>
           <CardContent className="space-y-4 pb-8">
             <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
-              <p className="text-sm text-emerald-800 font-medium">
-                Verification link sent to:
-              </p>
+              <p className="text-sm text-emerald-800 font-medium">Verification link sent to:</p>
               <p className="text-lg font-bold text-emerald-900 mt-1">{email}</p>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
@@ -121,6 +124,16 @@ const SignUp = () => {
                   {errorMessage}
                 </AlertDescription>
               </Alert>
+            )}
+
+            {isRateLimited && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex gap-3 items-start">
+                <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-xs text-amber-800">
+                  <p className="font-bold mb-1">Rate Limit Exceeded</p>
+                  <p>Supabase limits how many emails can be sent per hour. Please wait a few minutes or try a different email address.</p>
+                </div>
+              </div>
             )}
             
             <div className="space-y-2">
