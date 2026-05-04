@@ -39,9 +39,9 @@ const createNotification = (medicineId: string, medicineName: string, userName: 
     notif.close();
   };
 
-  notif.addEventListener("action", (e: CustomEvent) => {
-    handleAction(e.detail.action);
-  });
+  notif.addEventListener("action", ((e: Event) => {
+    handleAction((e as CustomEvent).detail.action);
+  }) as EventListener);
 
   notif.onclick = () => {
     window.focus();
@@ -110,8 +110,8 @@ export const initializeNotifications = async () => {
   });
 };
 
-window.addEventListener('medimind_notification_action', (event: CustomEvent) => {
-  const detail = event.detail as NotificationAction;
+window.addEventListener('medimind_notification_action', (((event: Event) => {
+  const detail = (event as CustomEvent).detail as NotificationAction;
   const action = detail.type;
   const medicines = getMedicines();
   const medicine = medicines.find(m => m.id === detail.medicineId);  
@@ -137,4 +137,4 @@ window.addEventListener('medimind_notification_action', (event: CustomEvent) => 
     const member = familyMembers.find(m => m.id === medicine.familyMemberId);
     snoozeNotification(medicine.id, medicine.name, member?.name || "User", duration);
   }
-});
+}) as EventListener));
