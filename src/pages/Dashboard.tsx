@@ -32,7 +32,8 @@ import { useAuth } from "@/context/AuthContext";
 import { getMedicines, getDoseLogsForDate, saveDoseLog, Medicine, DoseLog } from "@/utils/storage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { PageSkeleton, StatsSkeleton, CardSkeleton } from "@/components/LoadingSkeleton";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatsSkeleton, CardSkeleton } from "@/components/LoadingSkeleton";
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
