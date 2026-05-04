@@ -25,18 +25,18 @@ const MedicationHistory = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24 p-6">
+    <div className="min-h-screen bg-background pb-24 p-6">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Medication History</h1>
-            <p className="text-gray-600 mt-1">Review your past adherence and scheduled doses</p>
+            <h1 className="text-3xl font-bold text-foreground">Medication History</h1>
+            <p className="text-muted-foreground mt-1">Review your past adherence and scheduled doses</p>
           </div>
           <Button 
             variant="outline" 
             size="sm" 
             onClick={handleGenerateMock}
-            className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+            className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
           >
             <Sparkles className="w-4 h-4 mr-2" />
             Generate Mock Data

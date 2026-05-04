@@ -27,6 +27,7 @@ const FamilyMembers = () => {
     addFamilyMember({ id: `member_${Date.now()}`, name: formData.name.trim(), relationship: formData.relationship });
     setFamilyMembers(getFamilyMembers());
     setIsDialogOpen(false);
+    setFormData({ name: "", relationship: "" });
     toast.success("Family member added!");
   };
 
@@ -35,6 +36,8 @@ const FamilyMembers = () => {
     updateFamilyMember({ ...editingMember, name: formData.name.trim(), relationship: formData.relationship });
     setFamilyMembers(getFamilyMembers());
     setIsDialogOpen(false);
+    setEditingMember(null);
+    setFormData({ name: "", relationship: "" });
     toast.success("Updated successfully!");
   };
 
@@ -50,16 +53,22 @@ const FamilyMembers = () => {
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="min-h-screen bg-gray-50 p-6 pb-32"
+      className="min-h-screen bg-background p-6 pb-32"
     >
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Family Members</h1>
-            <p className="text-gray-600 mt-1">Manage your family members and their medications</p>
+            <h1 className="text-3xl font-bold text-foreground">Family Members</h1>
+            <p className="text-muted-foreground mt-1">Manage your family members and their medications</p>
           </div>
           
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) {
+              setEditingMember(null);
+              setFormData({ name: "", relationship: "" });
+            }
+          }}>
             <DialogTrigger asChild>
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Button className="bg-emerald-600 hover:bg-emerald-700">
@@ -67,19 +76,19 @@ const FamilyMembers = () => {
                 </Button>
               </motion.div>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="bg-card text-foreground">
               <DialogHeader>
                 <DialogTitle>{editingMember ? "Edit Member" : "Add Member"}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label>Name</Label>
-                  <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+                  <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="bg-background" />
                 </div>
                 <div className="space-y-2">
                   <Label>Relationship</Label>
                   <Select value={formData.relationship} onValueChange={(v) => setFormData({ ...formData, relationship: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectTrigger className="bg-background"><SelectValue placeholder="Select" /></SelectTrigger>
                     <SelectContent>
                       {relationships.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                     </SelectContent>
@@ -87,7 +96,7 @@ const FamilyMembers = () => {
                 </div>
               </div>
               <DialogFooter>
-                <Button onClick={editingMember ? handleUpdateMember : handleAddMember}>
+                <Button onClick={editingMember ? handleUpdateMember : handleAddMember} className="bg-emerald-600 hover:bg-emerald-700">
                   {editingMember ? "Update" : "Add"}
                 </Button>
               </DialogFooter>
@@ -109,23 +118,23 @@ const FamilyMembers = () => {
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ delay: i * 0.05 }}
               >
-                <Card className="hover:shadow-lg transition-shadow">
+                <Card className="hover:shadow-lg transition-shadow bg-card border-border">
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
+                        <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
                           <User className="w-6 h-6 text-emerald-600" />
                         </div>
                         <div>
-                          <CardTitle className="text-lg">{member.name}</CardTitle>
-                          <CardDescription>{member.relationship}</CardDescription>
+                          <CardTitle className="text-lg text-foreground">{member.name}</CardTitle>
+                          <CardDescription className="text-muted-foreground">{member.relationship}</CardDescription>
                         </div>
                       </div>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="icon" onClick={() => { setEditingMember(member); setFormData({ name: member.name, relationship: member.relationship }); setIsDialogOpen(true); }}>
                           <Edit2 className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeleteMember(member.id)}>
+                        <Button variant="ghost" size="icon" className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30" onClick={() => handleDeleteMember(member.id)}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
