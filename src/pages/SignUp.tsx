@@ -17,8 +17,8 @@ const SignUp = () => {
   const [isVerificationSent, setIsVerificationSent] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRateLimited, setIsRateLimited] = useState(false);
-  const { signup } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const { signup } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,11 +42,13 @@ const SignUp = () => {
       
       if (success) {
         if (data?.session) {
+          // User is immediately signed in (email verification disabled)
           toast.success("Account created successfully!");
-          navigate("/dashboard");
+          navigate("/dashboard", { replace: true });
         } else {
+          // Email verification required
           setIsVerificationSent(true);
-          toast.success("Verification email sent!");
+          toast.success("Verification email sent! Check your inbox.");
         }
       } else {
         const msg = error?.message || "An error occurred during account creation.";
@@ -54,7 +56,10 @@ const SignUp = () => {
         
         if (msg.toLowerCase().includes("rate limit")) {
           setIsRateLimited(true);
-          toast.error("Email rate limit exceeded. Please wait a moment.");
+          toast.error("Too many requests. Please wait a few minutes.");
+        } else if (msg.toLowerCase().includes("already registered")) {
+          toast.error("This email is already registered. Please sign in.");
+          navigate("/login");
         } else {
           toast.error(msg);
         }
@@ -63,6 +68,7 @@ const SignUp = () => {
       const msg = "An unexpected error occurred. Please try again.";
       setErrorMessage(msg);
       toast.error(msg);
+      console.error("Signup error:", err);
     } finally {
       setIsLoading(false);
     }
@@ -80,7 +86,7 @@ const SignUp = () => {
               </div>
             </div>
             <CardTitle className="text-2xl font-bold">Check your email</CardTitle>
-            <CardDescription>We've sent a link to activate your account</CardDescription>
+            <CardDescription>We've sent a verification link to activate your account</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 pb-8">
             <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
@@ -131,7 +137,7 @@ const SignUp = () => {
                 <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <div className="text-xs text-amber-800">
                   <p className="font-bold mb-1">Rate Limit Exceeded</p>
-                  <p>Supabase limits how many emails can be sent per hour. Please wait a few minutes or try a different email address.</p>
+                  <p>Too many signup attempts. Please wait a few minutes or use a different email address.</p>
                 </div>
               </div>
             )}
@@ -145,6 +151,7 @@ const SignUp = () => {
                 value={name} 
                 onChange={(e) => setName(e.target.value)} 
                 required 
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -157,6 +164,7 @@ const SignUp = () => {
                 value={email} 
                 onChange={(e) => setEmail(e.target.value)} 
                 required 
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -170,11 +178,13 @@ const SignUp = () => {
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)} 
                   required 
+                  disabled={isLoading}
                 />
                 <button 
                   type="button" 
                   className="absolute right-3 top-3 text-gray-400 hover:text-gray-600" 
                   onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>

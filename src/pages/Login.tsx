@@ -16,45 +16,52 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Redirect if already logged in
   useEffect(() => {
     if (!isAuthLoading && user) {
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     }
   }, [user, isAuthLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
+    if (isAuthLoading || isSubmitting) return; // Prevent double submission
+    if (!email.trim() || !password.trim()) {
       toast.error("Please enter both email and password");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const { success, error } = await login(email, password);
+      const { success, error } = await login(email.trim(), password);
       if (success) {
         toast.success("Welcome back!");
-        navigate("/dashboard");
+        navigate("/dashboard", { replace: true });
       } else {
-        toast.error(error?.message || "Invalid login credentials");
+        toast.error(error?.message || "Invalid login credentials. Please try again.");
       }
     } catch (err) {
-      toast.error("An unexpected error occurred");
+      toast.error("An unexpected error occurred. Please try again.");
+      console.error("Login submit error:", err);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Show loader while checking auth state
   if (isAuthLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
-          <p className="text-sm text-muted-foreground font-medium">Checking session...</p>
+          <p className="text-sm text-muted-foreground font-medium">Loading your session...</p>
         </div>
       </div>
     );
   }
+
+  // Don't render form if user is already logged in
+  if (user) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100 flex items-center justify-center p-4">
@@ -83,13 +90,16 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <Link to="#" className="text-xs text-emerald-600 hover:underline">Forgot password?</Link>
+                <Link to="/forgot-password" className="text-xs text-emerald-600 hover:underline">
+                  Forgot password?
+                </Link>
               </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -101,11 +111,13 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={isSubmitting}
                 />
                 <button 
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                  disabled={isSubmitting}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -116,7 +128,7 @@ const Login = () => {
             <Button 
               type="submit" 
               className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-lg shadow-emerald-100 transition-all active:scale-[0.98]"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isAuthLoading}
             >
               {isSubmitting ? (
                 <>

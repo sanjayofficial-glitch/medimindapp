@@ -11,6 +11,7 @@ interface AuthContextType {
   isLoading: boolean;
 }
 
+// Initialize with undefined to enforce provider usage
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -18,81 +19,96 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true; // Prevent state updates if component unmounts
+
     const initAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setUser(session?.user ?? null);
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        if (isMounted) setUser(session?.user ?? null);
       } catch (error) {
-        console.error("AuthContext: Error initializing auth:", error);
+        console.error("AuthContext: Session init error:", error);
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setIsLoading(false);
+      if (isMounted) {
+        setUser(session?.user ?? null);
+        setIsLoading(false);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, pass: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: pass,
-    });
-    return { success: !error, error };
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: pass,
+      });
+      return { success: !error, error, data };
+    } catch (err) {
+      console.error("AuthContext: Login error:", err);
+      return { success: false, error: err as AuthError };
+    }
   };
 
   const signup = async (name: string, email: string, pass: string) => {
     try {
-      const result = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password: pass,
         options: { 
           data: { name },
-          emailRedirectTo: window.location.origin + '/login'
+          emailRedirectTo: `${window.location.origin}/login`
         }
       });
       
-      if (result.error) {
-        console.error("AuthContext: Signup error:", result.error);
-      }
-
-      return { 
-        success: !result.error, 
-        error: result.error,
-        data: result.data
-      };
+      if (error) throw error;
+      return { success: true, error: null, data };
     } catch (err) {
-      console.error("AuthContext: Unexpected signup error:", err);
-      return { 
-        success: false, 
-        error: err as AuthError 
-      };
+      console.error("AuthContext: Signup error:", err);
+      return { success: false, error: err as AuthError };
     }
   };
 
   const updateProfile = async (name: string, email: string) => {
-    const { error } = await supabase.auth.updateUser({
-      email,
-      data: { name }
-    });
-    return !error;
+    try {
+      const { error } = await supabase.auth.updateUser({
+        email,
+        data: { name }
+      });
+      return !error;
+    } catch (err) {
+      console.error("AuthContext: Profile update error:", err);
+      return false;
+    }
   };
 
   const logout = async () => {
-    setIsLoading(true);
-    await supabase.auth.signOut();
-    setUser(null);
-    setIsLoading(false);
+    try {
+      setIsLoading(true);
+      await supabase.auth.signOut();
+      setUser(null);
+    } catch (err) {
+      console.error("AuthContext: Logout error:", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  const value = { user, login, logout, signup, updateProfile, isLoading };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, signup, updateProfile, isLoading }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
@@ -100,6 +116,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used within AuthProvider");
+  if (!context) {
+    throw new Error("useAuth must be used within a valid AuthProvider");
+  }
   return context;
 };
