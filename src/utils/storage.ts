@@ -68,6 +68,7 @@ export interface LabResult {
   unit: string;
   date: string;
   normalRange: string;
+  file_url?: string;
 }
 
 export interface MoodLog {
@@ -111,15 +112,14 @@ export const addFamilyMember = async (m: Omit<FamilyMember, 'id'>) => {
 export const updateFamilyMember = async (m: FamilyMember) => {
   const { error } = await supabase.from('family_members').update({
     name: m.name,
-    relationship: m.relationship
-  }).eq('id', m.id);
+    relationship: m.relationship  }).eq('id', m.id);
   if (error) throw error;
 };
 
 export const removeFamilyMember = async (id: string) => {
   const { error } = await supabase.from('family_members').delete().eq('id', id);
   if (error) throw error;
-};
+}
 
 // --- MEDICINES ---
 export const getMedicines = async (): Promise<Medicine[]> => {
@@ -160,7 +160,7 @@ export const updateMedicine = async (m: Medicine) => {
     refill_at: m.refillAt
   }).eq('id', m.id);
   if (error) throw error;
-};
+}
 
 // --- DOSE LOGS ---
 export const getDoseLogs = async (): Promise<DoseLog[]> => {
@@ -171,8 +171,7 @@ export const getDoseLogs = async (): Promise<DoseLog[]> => {
     medicineId: l.medicine_id,
     medicineName: l.medicine_name,
     scheduledTime: l.scheduled_time,
-    actualTime: l.actual_time
-  })) || [];
+    actualTime: l.actual_time  })) || [];
 };
 
 export const getDoseLogsForDate = async (date: string): Promise<DoseLog[]> => {
@@ -240,8 +239,7 @@ export const addSymptomLog = async (l: Omit<SymptomLog, 'id'>) => {
     date: l.date,
     time: l.time,
     notes: l.notes,
-    user_id: user?.id
-  }]);
+    user_id: user?.id  }]);
   if (error) throw error;
 };
 
@@ -262,8 +260,7 @@ export const addAppointment = async (a: Omit<Appointment, 'id'>) => {
     time: a.time,
     location: a.location,
     notes: a.notes,
-    user_id: user?.id
-  }]);
+    user_id: user?.id  }]);
   if (error) throw error;
 };
 
@@ -271,19 +268,21 @@ export const addAppointment = async (a: Omit<Appointment, 'id'>) => {
 export const getLabResults = async (): Promise<LabResult[]> => {
   const { data, error } = await supabase.from('lab_results').select('*');
   if (error) throw error;
-  return data?.map(r => ({ ...r, familyMemberId: r.family_member_id, testName: r.test_name, normalRange: r.normal_range })) || [];
-};
-
-export const addLabResult = async (r: Omit<LabResult, 'id'>) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  const { error } = await supabase.from('lab_results').insert([{
-    family_member_id: r.familyMemberId,
-    test_name: r.testName,
+  return data?.map(r => ({
+    ...r,
+    familyMemberId: r.family_member_id,
+    testName: r.test_name,
     value: r.value,
     unit: r.unit,
     date: r.date,
-    normal_range: r.normalRange,
-    user_id: user?.id
+    normalRange: r.normal_range,
+    file_url: r.file_url
+  })) || [];
+};
+
+export const addLabResult = async (l: Omit<LabResult, 'id'> & { file_url?: string }) => {
+  const { error } = await supabase.from('lab_results').insert([{
+    ...l
   }]);
   if (error) throw error;
 };
@@ -317,20 +316,17 @@ export const getPrescriptions = async (): Promise<Prescription[]> => {
     imageUrl: p.image_url,
     pharmacyName: p.pharmacy_name,
     pharmacyPhone: p.pharmacy_phone,
-    expiryDate: p.expiry_date
-  })) || [];
+    expiryDate: p.expiry_date  })) || [];
 };
 
 export const addPrescription = async (p: Omit<Prescription, 'id'>) => {
-  const { data: { user } } = await supabase.auth.getUser();
   const { error } = await supabase.from('prescriptions').insert([{
     family_member_id: p.familyMemberId,
     title: p.title,
     image_url: p.imageUrl,
     pharmacy_name: p.pharmacyName,
     pharmacy_phone: p.pharmacyPhone,
-    expiry_date: p.expiryDate,
-    user_id: user?.id
+    expiry_date: p.expiryDate
   }]);
   if (error) throw error;
 };
@@ -430,10 +426,31 @@ export const generateMockData = async () => {
       date: dateStr,
       status: Math.random() > 0.15 ? 'taken' : 'missed',
       user_id: user.id,
-      family_member_id: memberId
-    });
+      family_member_id: memberId    });
   }
   
   const { error: logError } = await supabase.from('dose_logs').insert(logs);
   if (logError) throw logError;
+};
+
+// --- FILE UPLOAD HELPER ---
+export const uploadFile = async (file: File): Promise<string> => {
+  if (!file) return "";
+  
+  // Validate file type
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
+  if (!allowedTypes.includes(file.type)) {
+    throw new Error("Only JPEG, PNG, GIF, and PDF files are allowed");
+  }
+
+  // Generate unique file name
+  const fileName = `${Date.now()}-${file.name}`;
+  
+  // Upload to Supabase storage
+  const { error } = await supabase.storage.from('lab-results').upload(fileName, file);
+  if (error) throw error;
+  
+  // Get public URL
+  const { data: publicUrlResponse } = await supabase.storage.from('lab-results').getPublicUrl(fileName);
+  return publicUrlResponse.publicUrl;
 };

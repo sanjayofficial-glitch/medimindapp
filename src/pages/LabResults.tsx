@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { getLabResults, getFamilyMembers, LabResult, FamilyMember, addLabResult } from "@/utils/storage";
 import { toast } from "sonner";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { uploadFile } from "@/utils/storage";
 
 const LabResults = () => {
   const navigate = useNavigate();
@@ -26,7 +27,8 @@ const LabResults = () => {
     value: "",
     unit: "",
     date: new Date().toISOString().split('T')[0],
-    normalRange: ""
+    normalRange: "",
+    attachment: null as any // File | null
   });
 
   const loadData = async () => {
@@ -40,24 +42,44 @@ const LabResults = () => {
     loadData();
   }, []);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setFormData(prev => ({ ...prev, attachment: file }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.familyMemberId || !formData.testName || !formData.value) {
       return toast.error("Please fill in required fields");
     }
 
-    await addLabResult(formData);
-    await loadData();
-    setShowAdd(false);
-    setFormData({
-      familyMemberId: "",
-      testName: "",
-      value: "",
-      unit: "",
-      date: new Date().toISOString().split('T')[0],
-      normalRange: ""
-    });
-    toast.success("Lab result added!");
+    try {
+      // Upload attachment if exists
+      let fileUrl = "";
+      if (formData.attachment) {
+        fileUrl = await uploadFile(formData.attachment);
+      }
+
+      await addLabResult({
+        ...formData,
+        file_url: fileUrl // Use file_url to match the type
+      });
+      await loadData();
+      setShowAdd(false);
+      setFormData({
+        familyMemberId: "",
+        testName: "",
+        value: "",
+        unit: "",
+        date: new Date().toISOString().split('T')[0],
+        normalRange: "",
+        attachment: null
+      });
+      toast.success("Lab result added with file!");
+    } catch (error) {
+      toast.error("Failed to add lab result");
+      console.error("Error adding lab result:", error);
+    }
   };
 
   const chartData = results
@@ -133,8 +155,7 @@ const LabResults = () => {
                 <div className="space-y-2">
                   <Label>Value</Label>
                   <Input 
-                    type="number" 
-                    step="0.01"
+                    type="number"                     step="0.01"
                     placeholder="e.g., 120"
                     value={formData.value}
                     onChange={e => setFormData({...formData, value: e.target.value})}
@@ -163,6 +184,20 @@ const LabResults = () => {
                     value={formData.normalRange}
                     onChange={e => setFormData({...formData, normalRange: e.target.value})}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label>Attachment (Image/PDF)</Label>
+                  <Input 
+                    type="file" 
+                    accept=".pdf,.jpg,.jpeg,.png,.gif" 
+                    onChange={handleFileChange}
+                    className="w-full"
+                  />
+                  {formData.attachment && (
+                    <p className="text-xs text-gray-500 flex items-center gap-1">
+                      Selected: {formData.attachment.name}
+                    </p>
+                  )}
                 </div>
                 <Button type="submit" className="md:col-span-2 bg-emerald-600">Add Result</Button>
               </form>
@@ -228,6 +263,18 @@ const LabResults = () => {
                           <p className="text-xs text-gray-500">{result.date}</p>
                         </div>
                       </div>
+                      {result.file_url && (
+                        <div className="mt-2 flex gap-2">
+                          <a 
+                            href={result.file_url}                             target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm text-primary hover:underline"
+                          >
+                            {result.file_url.includes('.pdf') ? '📄 View PDF' : '🖼️ View Image'}
+                          </a>
+                          <span className="text-xs text-gray-500">({result.file_url.split('/').pop()})</span>
+                        </div>
+                      )}
                     </div>
                   ))}
                   {results.length === 0 && (
