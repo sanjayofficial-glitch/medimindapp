@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, AuthError } from "@supabase/supabase-js";
+import { queryClient } from "@/lib/query-client";
+import { QUERY_KEYS } from "@/lib/query-client";
 
 interface AuthContextType {
   user: User | null;
@@ -54,10 +56,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         email,
         password: pass,
       });
+      if (!error && data?.user) {
+        prefetchInitialData();
+      }
       return { success: !error, error, data };
     } catch (err) {
       console.error("AuthContext: Login error:", err);
       return { success: false, error: err as AuthError };
+    }
+  };
+
+  const prefetchInitialData = async () => {
+    try {
+      await Promise.all([
+        queryClient.prefetchQuery({
+          queryKey: QUERY_KEYS.familyMembers,
+          queryFn: async () => {
+            const { data } = await supabase.from('family_members').select('*');
+            return data || [];
+          },
+        }),
+        queryClient.prefetchQuery({
+          queryKey: QUERY_KEYS.medicines,
+          queryFn: async () => {
+            const { data } = await supabase.from('medicines').select('*');
+            return data || [];
+          },
+        }),
+        queryClient.prefetchQuery({
+          queryKey: QUERY_KEYS.doseLogs,
+          queryFn: async () => {
+            const { data } = await supabase.from('dose_logs').select('*');
+            return data || [];
+          },
+        }),
+      ]);
+    } catch (e) {
+      console.error("Prefetch error:", e);
     }
   };
 

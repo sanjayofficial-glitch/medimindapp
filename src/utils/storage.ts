@@ -232,17 +232,37 @@ export const getLabResults = async (): Promise<LabResult[]> => {
 
 export const addLabResult = async (l: Omit<LabResult, 'id'> & { file_url?: string }) => {
   const { data: { user } } = await supabase.auth.getUser();
-  const { error } = await supabase.from('lab_results').insert([{
+  
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
+  
+  const numericValue = parseFloat(l.value);
+  if (isNaN(numericValue)) {
+    throw new Error(`Invalid value "${l.value}". Please enter a numeric value.`);
+  }
+
+  const { data, error } = await supabase.from('lab_results').insert([{
     family_member_id: l.familyMemberId,
     test_name: l.testName,
-    value: parseFloat(l.value),
+    value: numericValue,
     unit: l.unit,
     date: l.date,
     normal_range: l.normalRange,
     file_url: l.file_url,
-    user_id: user?.id
-  }]);
-  if (error) throw error;
+    user_id: user.id
+  }]).select();
+
+  if (error) {
+    console.error("Supabase error adding lab result:", error);
+    throw new Error(`Failed to save lab result: ${error.message}`);
+  }
+  
+  if (!data || data.length === 0) {
+    throw new Error("Failed to save lab result: No data returned");
+  }
+  
+  return data[0];
 };
 
 export const uploadFile = async (file: File): Promise<string> => {

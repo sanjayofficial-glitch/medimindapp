@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, Variants } from "framer-motion";
 import { 
@@ -29,7 +29,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/AuthContext";
-import { getDoseLogsForDate, saveDoseLog, DoseLog } from "@/utils/storage";
+import { useDoseLogsForDate, useSaveDoseLog } from "@/hooks/use-queries";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import InteractionChecker from "@/components/InteractionChecker";
@@ -37,42 +37,27 @@ import InteractionChecker from "@/components/InteractionChecker";
 const Dashboard = () => {
   const { user, logout, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
-  const [todayLogs, setTodayLogs] = useState<DoseLog[]>([]);
-  const [isDataLoading, setIsDataLoading] = useState(true);
-
-  const loadData = async () => {
-    try {
-      const d = new Date();
-      const dateStr = d.toISOString().split('T')[0];
-      const logs = await getDoseLogsForDate(dateStr);
-      setTodayLogs(logs);
-    } catch (error) {
-      console.error("Error loading dashboard data:", error);
-    } finally {
-      setIsDataLoading(false);
-    }
-  };
+  
+  const today = new Date().toISOString().split('T')[0];
+  const { data: todayLogs = [], isLoading: isDataLoading, refetch } = useDoseLogsForDate(today);
+  const saveDoseLog = useSaveDoseLog();
 
   useEffect(() => {
-    if (!isAuthLoading) {
-      if (user) {
-        loadData();
-      } else {
-        navigate("/login");
-      }
+    if (!isAuthLoading && !user) {
+      navigate("/login");
     }
   }, [user, isAuthLoading, navigate]);
 
-  const handleStatusUpdate = async (log: DoseLog, status: "taken" | "missed") => {
+  const handleStatusUpdate = async (log: any, status: "taken" | "missed") => {
     try {
-      const updatedLog: DoseLog = {
+      const updatedLog: any = {
         ...log,
         status,
         actualTime: status === "taken" ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : undefined
       };
-      await saveDoseLog(updatedLog);
+      await saveDoseLog.mutateAsync(updatedLog);
       toast.success(`Marked ${log.medicineName} as ${status}`);
-      loadData();
+      refetch();
     } catch (error) {
       toast.error("Failed to update status");
     }
@@ -84,18 +69,10 @@ const Dashboard = () => {
     toast.success("Logged out successfully");
   };
 
-  const takenCount = todayLogs.filter((l) => l.status === "taken").length;
-  const pendingCount = todayLogs.filter((l) => l.status === "partial").length;
+  const takenCount = todayLogs.filter((l: any) => l.status === "taken").length;
+  const pendingCount = todayLogs.filter((l: any) => l.status === "partial").length;
   const totalToday = todayLogs.length;
   const progress = totalToday > 0 ? (takenCount / totalToday) * 100 : 0;
-
-  const containerVariants: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
-    }
-  };
 
   const itemVariants: Variants = {
     hidden: { y: 20, opacity: 0 },
@@ -119,9 +96,8 @@ const Dashboard = () => {
 
   return (
     <motion.div 
-      initial="hidden"
-      animate="visible"
-      variants={containerVariants}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       className="min-h-screen bg-background pb-32"
     >
       <header className="bg-card border-b border-border sticky top-0 z-40">
@@ -226,7 +202,7 @@ const Dashboard = () => {
               <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Next Dose</CardTitle></CardHeader>
               <CardContent>
                 <div className={cn("text-3xl font-bold", pendingCount > 0 ? "text-foreground" : "text-primary")}>
-                  {pendingCount > 0 ? todayLogs.find(l => l.status === "partial")?.scheduledTime : "All Clear"}
+                  {pendingCount > 0 ? todayLogs.find((l: any) => l.status === "partial")?.scheduledTime : "All Clear"}
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">Stay on schedule</p>
               </CardContent>
@@ -236,7 +212,6 @@ const Dashboard = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
-            {/* Schedule */}
             <section className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-foreground">Today's Schedule</h3>
@@ -250,8 +225,12 @@ const Dashboard = () => {
                     <Link to="/add-medicine"><Button variant="outline" className="rounded-full">Get Started</Button></Link>
                   </div>
                 ) : (
-                  todayLogs.sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime)).map((log) => (
-                    <div key={log.id} className={cn("flex items-center justify-between p-4 bg-card rounded-2xl border border-border shadow-sm", log.status === "taken" && "opacity-70")}>
+                  todayLogs.sort((a: any, b: any) => a.scheduledTime.localeCompare(b.scheduledTime)).map((log: any) => (
+                    <motion.div 
+                      key={log.id} 
+                      layout
+                      className={cn("flex items-center justify-between p-4 bg-card rounded-2xl border border-border shadow-sm", log.status === "taken" && "opacity-70")}
+                    >
                       <div className="flex items-center gap-4">
                         <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center", log.status === "taken" ? "bg-primary/20 text-primary" : "bg-primary/10 text-primary")}>
                           <Pill className="w-6 h-6" />
@@ -266,27 +245,31 @@ const Dashboard = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         {log.status === "partial" ? (
-                          <Button className="h-10 px-6 rounded-full bg-primary text-primary-foreground" onClick={() => handleStatusUpdate(log, "taken")}>Take Now</Button>
+                          <Button 
+                            className="h-10 px-6 rounded-full bg-primary text-primary-foreground" 
+                            onClick={() => handleStatusUpdate(log, "taken")}
+                            disabled={saveDoseLog.isPending}
+                          >
+                            {saveDoseLog.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Take Now"}
+                          </Button>
                         ) : (
                           <div className={cn("px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest", log.status === "taken" ? "bg-primary/20 text-primary" : "bg-destructive/20 text-destructive")}>
                             {log.status}
                           </div>
                         )}
                       </div>
-                    </div>
+                    </motion.div>
                   ))
                 )}
               </div>
             </section>
 
-            {/* Interaction Checker */}
             <section>
               <InteractionChecker />
             </section>
           </div>
 
           <div className="space-y-8">
-            {/* Health Hub Quick Links */}
             <section className="space-y-4">
               <h3 className="text-xl font-bold text-foreground">Quick Actions</h3>
               <div className="grid grid-cols-1 gap-3">
@@ -316,7 +299,6 @@ const Dashboard = () => {
               </div>
             </section>
 
-            {/* AI Advice Card */}
             <Card className="bg-primary text-primary-foreground border-none shadow-xl shadow-primary/20 overflow-hidden relative">
               <div className="absolute top-0 right-0 p-4 opacity-10">
                 <Sparkles className="w-24 h-24" />

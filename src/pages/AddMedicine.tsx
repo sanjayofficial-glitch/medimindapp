@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,26 +6,21 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { getFamilyMembers, FamilyMember, addMedicine, saveDoseLog } from "@/utils/storage";
+import { useFamilyMembers, useAddMedicine, useSaveDoseLog } from "@/hooks/use-queries";
 import { medicineDatabase, MedicineDBEntry } from "@/data/medicineDatabase";
+import { Loader2 } from "lucide-react";
 
 const AddMedicine = () => {
   const navigate = useNavigate();
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [selectedMember, setSelectedMember] = useState("");
   const [selectedMed, setSelectedMed] = useState<MedicineDBEntry | null>(null);
   const [dosage, setDosage] = useState("");
   const [frequency, setFrequency] = useState("");
   const [times, setTimes] = useState<string[]>([""]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    const loadMembers = async () => {
-      const members = await getFamilyMembers();
-      setFamilyMembers(members);
-    };
-    loadMembers();
-  }, []);
+  const { data: familyMembers = [], isLoading: membersLoading } = useFamilyMembers();
+  const addMedicine = useAddMedicine();
+  const saveDoseLog = useSaveDoseLog();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,10 +30,9 @@ const AddMedicine = () => {
     const validTimes = times.filter(t => t.trim());
     if (validTimes.length === 0) return toast.error("Please add at least one time");
 
-    setIsSubmitting(true);
     try {
       const medicineName = selectedMed?.brand_name || "Custom Medicine";
-      const newMedicine = await addMedicine({
+      const newMedicine = await addMedicine.mutateAsync({
         familyMemberId: selectedMember,
         name: medicineName,
         dosage: dosage.trim(),
@@ -48,7 +42,7 @@ const AddMedicine = () => {
 
       const today = new Date().toISOString().split('T')[0];
       for (const time of validTimes) {
-        await saveDoseLog({
+        await saveDoseLog.mutateAsync({
           id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           medicineId: newMedicine.id,
           medicineName: newMedicine.name,
@@ -64,8 +58,6 @@ const AddMedicine = () => {
     } catch (error) {
       console.error("Error adding medicine:", error);
       toast.error("Failed to add medicine. Please try again.");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -76,6 +68,8 @@ const AddMedicine = () => {
     newTimes[index] = value;
     setTimes(newTimes);
   };
+
+  const isPending = addMedicine.isPending || saveDoseLog.isPending;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-32 p-6">
@@ -179,8 +173,8 @@ const AddMedicine = () => {
                 </Button>
               </div>
 
-              <Button type="submit" className="w-full bg-emerald-600" disabled={isSubmitting}>
-                {isSubmitting ? "Adding..." : "Add Medicine"}
+              <Button type="submit" className="w-full bg-emerald-600" disabled={isPending || membersLoading}>
+                {isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Adding...</> : "Add Medicine"}
               </Button>
             </form>
           </CardContent>

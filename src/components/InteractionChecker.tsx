@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ShieldAlert, ShieldCheck, Info, Search, Pill } from "lucide-react";
+import { ShieldAlert, ShieldCheck, Info, Search, Pill, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { medicineDatabase, MedicineDBEntry } from "@/data/medicineDatabase";
-import { getMedicines, Medicine } from "@/utils/storage";
+import { useMedicines } from "@/hooks/use-queries";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const InteractionChecker = () => {
@@ -14,17 +14,17 @@ const InteractionChecker = () => {
   const [selectedMeds, setSelectedMeds] = useState<MedicineDBEntry[]>([]);
   const [interactions, setInteractions] = useState<{ type: 'warning' | 'info', message: string }[]>([]);
 
+  const { data: medicines = [], isLoading } = useMedicines();
+
   useEffect(() => {
-    const loadMeds = async () => {
-      const currentMeds: Medicine[] = await getMedicines();
+    if (medicines.length > 0) {
       const dbMeds = medicineDatabase.filter(db => 
-        currentMeds.some(m => m.name.toLowerCase().includes(db.brand_name.toLowerCase()))
+        medicines.some(m => m.name.toLowerCase().includes(db.brand_name.toLowerCase()))
       );
       setSelectedMeds(dbMeds);
       checkInteractions(dbMeds);
-    };
-    loadMeds();
-  }, []);
+    }
+  }, [medicines]);
 
   const handleSearch = (val: string) => {
     setSearch(val);
@@ -111,34 +111,42 @@ const InteractionChecker = () => {
             )}
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {selectedMeds.map(med => (
-              <div key={med.brand_name} className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full text-xs font-medium border border-emerald-100">
-                <Pill className="w-3 h-3" />
-                {med.brand_name}
-                <button onClick={() => removeMed(med.brand_name)} className="hover:text-emerald-900">×</button>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {selectedMeds.map(med => (
+                  <div key={med.brand_name} className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full text-xs font-medium border border-emerald-100">
+                    <Pill className="w-3 h-3" />
+                    {med.brand_name}
+                    <button onClick={() => removeMed(med.brand_name)} className="hover:text-emerald-900">×</button>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          <div className="space-y-3 pt-4">
-            {interactions.length === 0 ? (
-              <div className="text-center py-6 bg-gray-50 rounded-xl border border-dashed">
-                <ShieldCheck className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">No major interactions detected.</p>
+              <div className="space-y-3 pt-4">
+                {interactions.length === 0 ? (
+                  <div className="text-center py-6 bg-gray-50 rounded-xl border border-dashed">
+                    <ShieldCheck className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">No major interactions detected.</p>
+                  </div>
+                ) : (
+                  interactions.map((inter, i) => (
+                    <Alert key={i} variant={inter.type === 'warning' ? 'destructive' : 'default'}>
+                      {inter.type === 'warning' ? <ShieldAlert className="h-4 w-4" /> : <Info className="h-4 w-4" />}
+                      <AlertTitle>{inter.type === 'warning' ? 'Warning' : 'Clinical Note'}</AlertTitle>
+                      <AlertDescription className="text-xs">
+                        {inter.message}
+                      </AlertDescription>
+                    </Alert>
+                  ))
+                )}
               </div>
-            ) : (
-              interactions.map((inter, i) => (
-                <Alert key={i} variant={inter.type === 'warning' ? 'destructive' : 'default'}>
-                  {inter.type === 'warning' ? <ShieldAlert className="h-4 w-4" /> : <Info className="h-4 w-4" />}
-                  <AlertTitle>{inter.type === 'warning' ? 'Warning' : 'Clinical Note'}</AlertTitle>
-                  <AlertDescription className="text-xs">
-                    {inter.message}
-                  </AlertDescription>
-                </Alert>
-              ))
-            )}
-          </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

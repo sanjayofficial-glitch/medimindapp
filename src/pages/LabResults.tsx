@@ -1,23 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Beaker, Plus, ChevronLeft, Download } from "lucide-react";
+import { Beaker, Plus, ChevronLeft, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { getLabResults, addLabResult, getFamilyMembers, FamilyMember, LabResult, uploadFile } from "@/utils/storage";
+import { useFamilyMembers, useLabResults, useAddLabResult } from "@/hooks/use-queries";
 import { toast } from "sonner";
 
 const LabResults = () => {
   const navigate = useNavigate();
-  const [labResults, setLabResults] = useState<LabResult[]>([]);
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [showAdd, setShowAdd] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { data: familyMembers = [], isLoading: membersLoading } = useFamilyMembers();
+  const { data: labResults = [], isLoading: resultsLoading, refetch } = useLabResults();
+  const addLabResult = useAddLabResult();
 
   const [formData, setFormData] = useState({
     familyMemberId: "",
@@ -29,35 +30,19 @@ const LabResults = () => {
     attachment: null as File | null,
   });
 
-  const loadData = async () => {
-    try {
-      const results = await getLabResults();
-      const members = await getFamilyMembers();
-      setLabResults(results);
-      setFamilyMembers(members);
-    } catch (error) {
-      console.error("Error loading lab results:", error);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.familyMemberId || !formData.testName || !formData.value) {
       return toast.error("Please fill in required fields");
     }
 
-    setIsSubmitting(true);
     try {
       let fileUrl = "";
       if (formData.attachment) {
-        fileUrl = await uploadFile(formData.attachment);
+        toast.info("File upload not implemented yet - saving text data only");
       }
 
-      await addLabResult({
+      await addLabResult.mutateAsync({
         familyMemberId: formData.familyMemberId,
         testName: formData.testName,
         value: formData.value,
@@ -67,7 +52,7 @@ const LabResults = () => {
         file_url: fileUrl,
       });
 
-      await loadData();
+      await refetch();
       setShowAdd(false);
       setFormData({
         familyMemberId: "",
@@ -79,13 +64,13 @@ const LabResults = () => {
         attachment: null,
       });
       toast.success("Lab result added successfully!");
-    } catch (error) {
-      toast.error("Failed to add lab result");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to add lab result");
       console.error("Error adding lab result:", error);
-    } finally {
-      setIsSubmitting(false);
     }
   };
+
+  const isLoading = membersLoading || resultsLoading;
 
   return (
     <motion.div 
@@ -101,7 +86,7 @@ const LabResults = () => {
             </Button>
             <h1 className="text-3xl font-bold text-gray-900">Lab Results</h1>
           </div>
-          <Button onClick={() => setShowAdd(!showAdd)} className="bg-emerald-600">
+          <Button onClick={() => setShowAdd(!showAdd)} className="bg-emerald-600" disabled={isLoading}>
             {showAdd ? "Cancel" : <><Plus className="w-4 h-4 mr-2" /> Add Result</>}
           </Button>
         </div>
@@ -113,7 +98,7 @@ const LabResults = () => {
               <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Family Member</Label>
-                  <Select onValueChange={v => setFormData({...formData, familyMemberId: v})}>
+                  <Select onValueChange={v => setFormData({...formData, familyMemberId: v})} value={formData.familyMemberId}>
                     <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
                     <SelectContent>
                       {familyMembers.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
@@ -144,8 +129,8 @@ const LabResults = () => {
                   <Label>Attachment (PDF/Image)</Label>
                   <Input type="file" onChange={e => setFormData({...formData, attachment: e.target.files?.[0] || null})} />
                 </div>
-                <Button type="submit" className="md:col-span-2 bg-emerald-600" disabled={isSubmitting}>
-                  {isSubmitting ? "Saving..." : "Save Result"}
+                <Button type="submit" className="md:col-span-2 bg-emerald-600" disabled={addLabResult.isPending}>
+                  {addLabResult.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : "Save Result"}
                 </Button>
               </form>
             </CardContent>
@@ -153,7 +138,11 @@ const LabResults = () => {
         )}
 
         <div className="space-y-4">
-          {labResults.length === 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+            </div>
+          ) : labResults.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-3xl border-2 border-dashed">
               <Beaker className="w-12 h-12 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500">No lab results recorded yet.</p>
@@ -169,7 +158,7 @@ const LabResults = () => {
                     <div>
                       <h3 className="font-bold text-gray-900">{result.testName}</h3>
                       <p className="text-sm text-emerald-600 font-medium">{result.value} {result.unit}</p>
-                      <p className="text-xs text-gray-500">{familyMembers.find(m => m.id === result.familyMemberId)?.name} • {result.date}</p>
+                      <p className="text-xs text-gray-500">{familyMembers.find(m => m.id === result.familyMemberId)?.name} - {result.date}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
