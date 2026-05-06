@@ -57,7 +57,7 @@ export interface FamilyMember {
   id: string;
   name: string;
   relationship: string;
-  createdAt: string;
+  createdAt?: string; // Made optional as it's handled by DB
 }
 
 export interface Appointment {
@@ -258,7 +258,6 @@ export const uploadFile = async (file: File): Promise<string> => {
 };
 
 export const generateMockData = async (): Promise<void> => {
-  // Mock data generation logic
   const mockDoseLogs: DoseLog[] = [
     {
       id: "mock1",
