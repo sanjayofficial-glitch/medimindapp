@@ -19,8 +19,7 @@ const LabResults = () => {
   const [results, setResults] = useState<LabResult[]>([]);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [showAdd, setShowAdd] = useState(false);
-  const [selectedTest, setSelectedTest] = useState<string>("Cholesterol (LDL)");
-  
+  const [selectedTest, setSelectedTest] = useState<string>("Cholesterol (LDL)");  
   const [formData, setFormData] = useState({
     familyMemberId: "",
     testName: "",
@@ -28,7 +27,7 @@ const LabResults = () => {
     unit: "",
     date: new Date().toISOString().split('T')[0],
     normalRange: "",
-    attachment: null as any // File | null
+    attachment: null as File | null
   });
 
   const loadData = async () => {
@@ -52,17 +51,19 @@ const LabResults = () => {
     if (!formData.familyMemberId || !formData.testName || !formData.value) {
       return toast.error("Please fill in required fields");
     }
-
     try {
-      // Upload attachment if exists
       let fileUrl = "";
       if (formData.attachment) {
         fileUrl = await uploadFile(formData.attachment);
       }
-
       await addLabResult({
-        ...formData,
-        file_url: fileUrl // Use file_url to match the type
+        family_member_id: formData.familyMemberId,
+        test_name: formData.testName,
+        value: parseFloat(formData.value),
+        unit: formData.unit,
+        date: formData.date,
+        normal_range: formData.normalRange,
+        file_url: fileUrl,
       });
       await loadData();
       setShowAdd(false);
@@ -73,7 +74,7 @@ const LabResults = () => {
         unit: "",
         date: new Date().toISOString().split('T')[0],
         normalRange: "",
-        attachment: null
+        attachment: null,
       });
       toast.success("Lab result added with file!");
     } catch (error) {
@@ -155,7 +156,8 @@ const LabResults = () => {
                 <div className="space-y-2">
                   <Label>Value</Label>
                   <Input 
-                    type="number"                     step="0.01"
+                    type="number" 
+                    step="0.01"
                     placeholder="e.g., 120"
                     value={formData.value}
                     onChange={e => setFormData({...formData, value: e.target.value})}
@@ -185,7 +187,7 @@ const LabResults = () => {
                     onChange={e => setFormData({...formData, normalRange: e.target.value})}
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 md:col-span-2">
                   <Label>Attachment (Image/PDF)</Label>
                   <Input 
                     type="file" 
@@ -266,7 +268,8 @@ const LabResults = () => {
                       {result.file_url && (
                         <div className="mt-2 flex gap-2">
                           <a 
-                            href={result.file_url}                             target="_blank" 
+                            href={result.file_url} 
+                            target="_blank" 
                             rel="noopener noreferrer"
                             className="text-sm text-primary hover:underline"
                           >
