@@ -13,7 +13,8 @@ import {
   Trophy,
   Settings as SettingsIcon,
   HelpCircle,
-  Info
+  Info,
+  Lock
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -71,10 +72,17 @@ const More = () => {
               </div>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </Link>
-            <Link to="/about" className="w-full flex items-center justify-between p-4 hover:bg-muted border-b border-border last:border-0">
+            <Link to="/faq" className="w-full flex items-center justify-between p-4 hover:bg-muted border-b border-border last:border-0">
               <div className="flex items-center gap-3 text-foreground">
                 <HelpCircle className="w-5 h-5" />
                 <span className="font-medium">Help & FAQ</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </Link>
+            <Link to="/privacy" className="w-full flex items-center justify-between p-4 hover:bg-muted border-b border-border last:border-0">
+              <div className="flex items-center gap-3 text-foreground">
+                <Lock className="w-5 h-5" />
+                <span className="font-medium">Privacy Policy</span>
               </div>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </Link>
