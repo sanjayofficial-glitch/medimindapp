@@ -22,6 +22,7 @@ export interface DoseLog {
   id: string;
   medicineId: string;
   medicineName: string;
+  familyMemberId: string;
   scheduledTime: string;
   actualTime?: string;
   date: string;
@@ -181,6 +182,7 @@ export const getDoseLogs = async (): Promise<DoseLog[]> => {
     ...l,
     medicineId: l.medicine_id,
     medicineName: l.medicine_name,
+    familyMemberId: l.family_member_id,
     scheduledTime: l.scheduled_time,
     actualTime: l.actual_time  })) || [];
 };
@@ -192,6 +194,7 @@ export const getDoseLogsForDate = async (date: string): Promise<DoseLog[]> => {
     ...l,
     medicineId: l.medicine_id,
     medicineName: l.medicine_name,
+    familyMemberId: l.family_member_id,
     scheduledTime: l.scheduled_time,
     actualTime: l.actual_time
   })) || [];
@@ -203,6 +206,7 @@ export const saveDoseLog = async (log: DoseLog): Promise<void> => {
     id: log.id.includes('log_') ? undefined : log.id,
     medicine_id: log.medicineId,
     medicine_name: log.medicineName,
+    family_member_id: log.familyMemberId,
     scheduled_time: log.scheduledTime,
     actual_time: log.actualTime,
     date: log.date,

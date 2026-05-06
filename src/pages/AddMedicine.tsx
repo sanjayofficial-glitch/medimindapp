@@ -52,6 +52,7 @@ const AddMedicine = () => {
           id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           medicineId: newMedicine.id,
           medicineName: newMedicine.name,
+          familyMemberId: selectedMember,
           scheduledTime: time.trim(),
           date: today,
           status: "partial",
