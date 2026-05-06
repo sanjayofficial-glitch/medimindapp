@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { QUERY_KEYS, queryClient } from "@/lib/query-client";
+import { QUERY_KEYS } from "@/lib/query-client";
 import type { FamilyMember, Medicine, DoseLog, LabResult, VitalLog, SymptomLog, MoodLog, Appointment, Prescription } from "@/utils/storage";
 
 export const useFamilyMembers = () => {
@@ -20,7 +20,17 @@ export const useMedicines = () => {
     queryFn: async (): Promise<Medicine[]> => {
       const { data, error } = await supabase.from('medicines').select('*');
       if (error) throw new Error(error.message);
-      return data || [];
+      return (data || []).map(m => ({
+        id: m.id,
+        familyMemberId: m.family_member_id,
+        name: m.name,
+        dosage: m.dosage,
+        times: m.times,
+        frequency: m.frequency,
+        additionalText: m.additional_text,
+        stock: m.stock,
+        refillAt: m.refill_at
+      }));
     },
   });
 };
@@ -31,7 +41,16 @@ export const useDoseLogs = () => {
     queryFn: async (): Promise<DoseLog[]> => {
       const { data, error } = await supabase.from('dose_logs').select('*');
       if (error) throw new Error(error.message);
-      return data || [];
+      return (data || []).map(d => ({
+        id: d.id,
+        medicineId: d.medicine_id,
+        medicineName: d.medicine_name,
+        familyMemberId: d.family_member_id,
+        scheduledTime: d.scheduled_time,
+        actualTime: d.actual_time,
+        date: d.date,
+        status: d.status
+      }));
     },
   });
 };
@@ -42,7 +61,16 @@ export const useDoseLogsForDate = (date: string) => {
     queryFn: async (): Promise<DoseLog[]> => {
       const { data, error } = await supabase.from('dose_logs').select('*').eq('date', date);
       if (error) throw new Error(error.message);
-      return data || [];
+      return (data || []).map(d => ({
+        id: d.id,
+        medicineId: d.medicine_id,
+        medicineName: d.medicine_name,
+        familyMemberId: d.family_member_id,
+        scheduledTime: d.scheduled_time,
+        actualTime: d.actual_time,
+        date: d.date,
+        status: d.status
+      }));
     },
     enabled: !!date,
   });
@@ -54,7 +82,16 @@ export const useLabResults = () => {
     queryFn: async (): Promise<LabResult[]> => {
       const { data, error } = await supabase.from('lab_results').select('*');
       if (error) throw new Error(error.message);
-      return data || [];
+      return (data || []).map(l => ({
+        id: l.id,
+        familyMemberId: l.family_member_id,
+        testName: l.test_name,
+        value: l.value.toString(),
+        unit: l.unit,
+        date: l.date,
+        normalRange: l.normal_range,
+        file_url: l.file_url
+      }));
     },
   });
 };
@@ -65,7 +102,16 @@ export const useVitals = () => {
     queryFn: async (): Promise<VitalLog[]> => {
       const { data, error } = await supabase.from('vitals').select('*');
       if (error) throw new Error(error.message);
-      return data || [];
+      return (data || []).map(v => ({
+        id: v.id,
+        familyMemberId: v.family_member_id,
+        type: v.type,
+        value: v.value,
+        unit: v.unit,
+        date: v.date,
+        time: v.time,
+        notes: v.notes
+      }));
     },
   });
 };
@@ -76,7 +122,15 @@ export const useSymptoms = () => {
     queryFn: async (): Promise<SymptomLog[]> => {
       const { data, error } = await supabase.from('symptoms').select('*');
       if (error) throw new Error(error.message);
-      return data || [];
+      return (data || []).map(s => ({
+        id: s.id,
+        familyMemberId: s.family_member_id,
+        symptom: s.symptom,
+        severity: s.severity,
+        date: s.date,
+        time: s.time,
+        notes: s.notes
+      }));
     },
   });
 };
@@ -87,7 +141,13 @@ export const useMoodLogs = () => {
     queryFn: async (): Promise<MoodLog[]> => {
       const { data, error } = await supabase.from('mood_logs').select('*');
       if (error) throw new Error(error.message);
-      return data || [];
+      return (data || []).map(m => ({
+        id: m.id,
+        familyMemberId: m.family_member_id,
+        mood: m.mood,
+        date: m.date,
+        notes: m.notes
+      }));
     },
   });
 };
@@ -98,7 +158,16 @@ export const useAppointments = () => {
     queryFn: async (): Promise<Appointment[]> => {
       const { data, error } = await supabase.from('appointments').select('*');
       if (error) throw new Error(error.message);
-      return data || [];
+      return (data || []).map(a => ({
+        id: a.id,
+        familyMemberId: a.family_member_id,
+        doctorName: a.doctor_name,
+        specialty: a.specialty,
+        date: a.date,
+        time: a.time,
+        location: a.location,
+        notes: a.notes
+      }));
     },
   });
 };
@@ -109,7 +178,15 @@ export const usePrescriptions = () => {
     queryFn: async (): Promise<Prescription[]> => {
       const { data, error } = await supabase.from('prescriptions').select('*');
       if (error) throw new Error(error.message);
-      return data || [];
+      return (data || []).map(p => ({
+        id: p.id,
+        familyMemberId: p.family_member_id,
+        title: p.title,
+        imageUrl: p.image_url,
+        pharmacyName: p.pharmacy_name,
+        pharmacyPhone: p.pharmacy_phone,
+        expiryDate: p.expiry_date
+      }));
     },
   });
 };
@@ -152,7 +229,14 @@ export const useAddFamilyMember = () => {
   
   return useMutation({
     mutationFn: async (member: Omit<FamilyMember, 'id'>) => {
-      const { data, error } = await supabase.from('family_members').insert([member]).select().single();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { data, error } = await supabase.from('family_members').insert([{
+        name: member.name,
+        relationship: member.relationship,
+        user_id: user.id
+      }]).select().single();
       if (error) throw new Error(error.message);
       return data;
     },
@@ -167,9 +251,32 @@ export const useAddMedicine = () => {
   
   return useMutation({
     mutationFn: async (medicine: Omit<Medicine, 'id'>) => {
-      const { data, error } = await supabase.from('medicines').insert([medicine]).select().single();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { data, error } = await supabase.from('medicines').insert([{
+        family_member_id: medicine.familyMemberId,
+        name: medicine.name,
+        dosage: medicine.dosage,
+        times: medicine.times,
+        frequency: medicine.frequency,
+        additional_text: medicine.additionalText,
+        stock: medicine.stock,
+        refill_at: medicine.refillAt,
+        user_id: user.id
+      }]).select().single();
       if (error) throw new Error(error.message);
-      return data;
+      return {
+        id: data.id,
+        familyMemberId: data.family_member_id,
+        name: data.name,
+        dosage: data.dosage,
+        times: data.times,
+        frequency: data.frequency,
+        additionalText: data.additional_text,
+        stock: data.stock,
+        refillAt: data.refill_at
+      };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.medicines });
@@ -182,7 +289,20 @@ export const useSaveDoseLog = () => {
   
   return useMutation({
     mutationFn: async (log: DoseLog) => {
-      const { error } = await supabase.from('dose_logs').upsert([log]);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { error } = await supabase.from('dose_logs').upsert([{
+        id: log.id,
+        medicine_id: log.medicineId,
+        medicine_name: log.medicineName,
+        family_member_id: log.familyMemberId,
+        scheduled_time: log.scheduledTime,
+        actual_time: log.actualTime,
+        date: log.date,
+        status: log.status,
+        user_id: user.id
+      }]);
       if (error) throw new Error(error.message);
       return log;
     },
@@ -198,7 +318,19 @@ export const useAddVitalLog = () => {
   
   return useMutation({
     mutationFn: async (log: Omit<VitalLog, 'id'>) => {
-      const { data, error } = await supabase.from('vitals').insert([log]).select().single();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { data, error } = await supabase.from('vitals').insert([{
+        family_member_id: log.familyMemberId,
+        type: log.type,
+        value: log.value,
+        unit: log.unit,
+        date: log.date,
+        time: log.time,
+        notes: log.notes,
+        user_id: user.id
+      }]).select().single();
       if (error) throw new Error(error.message);
       return data;
     },
@@ -213,7 +345,18 @@ export const useAddSymptomLog = () => {
   
   return useMutation({
     mutationFn: async (log: Omit<SymptomLog, 'id'>) => {
-      const { data, error } = await supabase.from('symptoms').insert([log]).select().single();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { data, error } = await supabase.from('symptoms').insert([{
+        family_member_id: log.familyMemberId,
+        symptom: log.symptom,
+        severity: log.severity,
+        date: log.date,
+        time: log.time,
+        notes: log.notes,
+        user_id: user.id
+      }]).select().single();
       if (error) throw new Error(error.message);
       return data;
     },
@@ -228,7 +371,16 @@ export const useAddMoodLog = () => {
   
   return useMutation({
     mutationFn: async (log: Omit<MoodLog, 'id'>) => {
-      const { data, error } = await supabase.from('mood_logs').insert([log]).select().single();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { data, error } = await supabase.from('mood_logs').insert([{
+        family_member_id: log.familyMemberId,
+        mood: log.mood,
+        date: log.date,
+        notes: log.notes,
+        user_id: user.id
+      }]).select().single();
       if (error) throw new Error(error.message);
       return data;
     },
@@ -243,7 +395,19 @@ export const useAddAppointment = () => {
   
   return useMutation({
     mutationFn: async (appointment: Omit<Appointment, 'id'>) => {
-      const { data, error } = await supabase.from('appointments').insert([appointment]).select().single();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { data, error } = await supabase.from('appointments').insert([{
+        family_member_id: appointment.familyMemberId,
+        doctor_name: appointment.doctorName,
+        specialty: appointment.specialty,
+        date: appointment.date,
+        time: appointment.time,
+        location: appointment.location,
+        notes: appointment.notes,
+        user_id: user.id
+      }]).select().single();
       if (error) throw new Error(error.message);
       return data;
     },
@@ -258,7 +422,18 @@ export const useAddPrescription = () => {
   
   return useMutation({
     mutationFn: async (prescription: Omit<Prescription, 'id'>) => {
-      const { data, error } = await supabase.from('prescriptions').insert([prescription]).select().single();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { data, error } = await supabase.from('prescriptions').insert([{
+        family_member_id: prescription.familyMemberId,
+        title: prescription.title,
+        image_url: prescription.imageUrl,
+        pharmacy_name: prescription.pharmacyName,
+        pharmacy_phone: prescription.pharmacyPhone,
+        expiry_date: prescription.expiryDate,
+        user_id: user.id
+      }]).select().single();
       if (error) throw new Error(error.message);
       return data;
     },
@@ -273,7 +448,16 @@ export const useUpdateMedicine = () => {
   
   return useMutation({
     mutationFn: async (medicine: Medicine) => {
-      const { error } = await supabase.from('medicines').update(medicine).eq('id', medicine.id);
+      const { error } = await supabase.from('medicines').update({
+        family_member_id: medicine.familyMemberId,
+        name: medicine.name,
+        dosage: medicine.dosage,
+        times: medicine.times,
+        frequency: medicine.frequency,
+        additional_text: medicine.additionalText,
+        stock: medicine.stock,
+        refill_at: medicine.refillAt
+      }).eq('id', medicine.id);
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
@@ -301,7 +485,10 @@ export const useUpdateFamilyMember = () => {
   
   return useMutation({
     mutationFn: async (member: FamilyMember) => {
-      const { error } = await supabase.from('family_members').update(member).eq('id', member.id);
+      const { error } = await supabase.from('family_members').update({
+        name: member.name,
+        relationship: member.relationship
+      }).eq('id', member.id);
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
@@ -311,6 +498,7 @@ export const useUpdateFamilyMember = () => {
 };
 
 export const usePrefetchFamilyMembers = () => {
+  const queryClient = useQueryClient();
   return () => {
     queryClient.prefetchQuery({
       queryKey: QUERY_KEYS.familyMembers,
@@ -324,13 +512,24 @@ export const usePrefetchFamilyMembers = () => {
 };
 
 export const usePrefetchMedicines = () => {
+  const queryClient = useQueryClient();
   return () => {
     queryClient.prefetchQuery({
       queryKey: QUERY_KEYS.medicines,
       queryFn: async (): Promise<Medicine[]> => {
         const { data, error } = await supabase.from('medicines').select('*');
         if (error) throw new Error(error.message);
-        return data || [];
+        return (data || []).map(m => ({
+          id: m.id,
+          familyMemberId: m.family_member_id,
+          name: m.name,
+          dosage: m.dosage,
+          times: m.times,
+          frequency: m.frequency,
+          additionalText: m.additional_text,
+          stock: m.stock,
+          refillAt: m.refill_at
+        }));
       },
     });
   };
