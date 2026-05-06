@@ -23,6 +23,7 @@ const MoodJournal = lazy(() => import("./pages/MoodJournal"));
 const PrescriptionWallet = lazy(() => import("./pages/PrescriptionWallet"));
 const More = lazy(() => import("./pages/More"));
 const Settings = lazy(() => import("./pages/Settings"));
+const About = lazy(() => import("./pages/About"));
 
 const Loading = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -59,6 +60,7 @@ const App = () => {
           <Route path="/wallet" element={<PrescriptionWallet />} />
           <Route path="/more" element={<More />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/about" element={<About />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
