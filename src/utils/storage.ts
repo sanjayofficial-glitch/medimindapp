@@ -102,131 +102,131 @@ export interface EmergencyProfile {
 // Storage functions
 export const getDoseLogs = async (): Promise<DoseLog[]> => {
   const { data, error } = await supabase.from('dose_logs').select('*');
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data || [];
 };
 
 export const getDoseLogsForDate = async (date: string): Promise<DoseLog[]> => {
   const { data, error } = await supabase.from('dose_logs').select('*').eq('date', date);
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data || [];
 };
 
 export const saveDoseLog = async (log: DoseLog): Promise<void> => {
   const { error } = await supabase.from('dose_logs').upsert([log]);
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 };
 
 export const getVitalLogs = async (): Promise<VitalLog[]> => {
   const { data, error } = await supabase.from('vitals').select('*');
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data || [];
 };
 
 export const addVitalLog = async (log: Omit<VitalLog, 'id'>): Promise<void> => {
   const { error } = await supabase.from('vitals').insert([log]);
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 };
 
 export const getSymptomLogs = async (): Promise<SymptomLog[]> => {
   const { data, error } = await supabase.from('symptoms').select('*');
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data || [];
 };
 
 export const addSymptomLog = async (log: Omit<SymptomLog, 'id'>): Promise<void> => {
   const { error } = await supabase.from('symptoms').insert([log]);
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 };
 
 export const getMoodLogs = async (): Promise<MoodLog[]> => {
   const { data, error } = await supabase.from('mood_logs').select('*');
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data || [];
 };
 
 export const addMoodLog = async (log: Omit<MoodLog, 'id'>): Promise<void> => {
   const { error } = await supabase.from('mood_logs').insert([log]);
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 };
 
 export const getMedicines = async (): Promise<Medicine[]> => {
   const { data, error } = await supabase.from('medicines').select('*');
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data || [];
 };
 
 export const addMedicine = async (medicine: Omit<Medicine, 'id'>): Promise<Medicine> => {
   const { data, error } = await supabase.from('medicines').insert([medicine]).select().single();
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data;
 };
 
 export const updateMedicine = async (medicine: Medicine): Promise<void> => {
   const { error } = await supabase.from('medicines').update(medicine).eq('id', medicine.id);
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 };
 
 export const getFamilyMembers = async (): Promise<FamilyMember[]> => {
   const { data, error } = await supabase.from('family_members').select('*');
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data || [];
 };
 
 export const addFamilyMember = async (member: Omit<FamilyMember, 'id'>): Promise<FamilyMember> => {
   const { data, error } = await supabase.from('family_members').insert([member]).select().single();
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data;
 };
 
 export const updateFamilyMember = async (member: FamilyMember): Promise<void> => {
   const { error } = await supabase.from('family_members').update(member).eq('id', member.id);
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 };
 
 export const removeFamilyMember = async (id: string): Promise<void> => {
   const { error } = await supabase.from('family_members').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 };
 
 export const getAppointments = async (): Promise<Appointment[]> => {
   const { data, error } = await supabase.from('appointments').select('*');
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data || [];
 };
 
 export const addAppointment = async (appointment: Omit<Appointment, 'id'>): Promise<Appointment> => {
   const { data, error } = await supabase.from('appointments').insert([appointment]).select().single();
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data;
 };
 
 export const getPrescriptions = async (): Promise<Prescription[]> => {
   const { data, error } = await supabase.from('prescriptions').select('*');
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data || [];
 };
 
 export const addPrescription = async (prescription: Omit<Prescription, 'id'>): Promise<Prescription> => {
   const { data, error } = await supabase.from('prescriptions').insert([prescription]).select().single();
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data;
 };
 
 export const getEmergencyProfile = async (): Promise<EmergencyProfile> => {
   const { data, error } = await supabase.from('emergency_profiles').select('*').single();
-  if (error) throw error;
+  if (error && error.code !== 'PGRST116') throw new Error(error.message);
   return data || { bloodType: "", allergies: [], conditions: [], emergencyContacts: [] };
 };
 
 export const saveEmergencyProfile = async (profile: EmergencyProfile): Promise<void> => {
   const { error } = await supabase.from('emergency_profiles').upsert([profile]);
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 };
 
 export const getLabResults = async (): Promise<LabResult[]> => {
   const { data, error } = await supabase.from('lab_results').select('*');
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data || [];
 };
 
@@ -271,7 +271,7 @@ export const uploadFile = async (file: File): Promise<string> => {
   const filePath = `lab-results/${fileName}`;
 
   const { error } = await supabase.storage.from('lab-results').upload(filePath, file);
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 
   const { data } = supabase.storage.from('lab-results').getPublicUrl(filePath);
   return data.publicUrl;
@@ -291,5 +291,5 @@ export const generateMockData = async (): Promise<void> => {
   ];
   
   const { error } = await supabase.from('dose_logs').insert(mockDoseLogs);
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 };

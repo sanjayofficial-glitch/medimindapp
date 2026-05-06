@@ -8,7 +8,7 @@ export const useFamilyMembers = () => {
     queryKey: QUERY_KEYS.familyMembers,
     queryFn: async (): Promise<FamilyMember[]> => {
       const { data, error } = await supabase.from('family_members').select('*');
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data || [];
     },
   });
@@ -19,7 +19,7 @@ export const useMedicines = () => {
     queryKey: QUERY_KEYS.medicines,
     queryFn: async (): Promise<Medicine[]> => {
       const { data, error } = await supabase.from('medicines').select('*');
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data || [];
     },
   });
@@ -30,7 +30,7 @@ export const useDoseLogs = () => {
     queryKey: QUERY_KEYS.doseLogs,
     queryFn: async (): Promise<DoseLog[]> => {
       const { data, error } = await supabase.from('dose_logs').select('*');
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data || [];
     },
   });
@@ -41,7 +41,7 @@ export const useDoseLogsForDate = (date: string) => {
     queryKey: QUERY_KEYS.doseLogsForDate(date),
     queryFn: async (): Promise<DoseLog[]> => {
       const { data, error } = await supabase.from('dose_logs').select('*').eq('date', date);
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data || [];
     },
     enabled: !!date,
@@ -53,7 +53,7 @@ export const useLabResults = () => {
     queryKey: QUERY_KEYS.labResults,
     queryFn: async (): Promise<LabResult[]> => {
       const { data, error } = await supabase.from('lab_results').select('*');
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data || [];
     },
   });
@@ -64,7 +64,7 @@ export const useVitals = () => {
     queryKey: QUERY_KEYS.vitals,
     queryFn: async (): Promise<VitalLog[]> => {
       const { data, error } = await supabase.from('vitals').select('*');
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data || [];
     },
   });
@@ -75,7 +75,7 @@ export const useSymptoms = () => {
     queryKey: QUERY_KEYS.symptoms,
     queryFn: async (): Promise<SymptomLog[]> => {
       const { data, error } = await supabase.from('symptoms').select('*');
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data || [];
     },
   });
@@ -86,7 +86,7 @@ export const useMoodLogs = () => {
     queryKey: QUERY_KEYS.moodLogs,
     queryFn: async (): Promise<MoodLog[]> => {
       const { data, error } = await supabase.from('mood_logs').select('*');
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data || [];
     },
   });
@@ -97,7 +97,7 @@ export const useAppointments = () => {
     queryKey: QUERY_KEYS.appointments,
     queryFn: async (): Promise<Appointment[]> => {
       const { data, error } = await supabase.from('appointments').select('*');
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data || [];
     },
   });
@@ -108,7 +108,7 @@ export const usePrescriptions = () => {
     queryKey: QUERY_KEYS.prescriptions,
     queryFn: async (): Promise<Prescription[]> => {
       const { data, error } = await supabase.from('prescriptions').select('*');
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data || [];
     },
   });
@@ -138,7 +138,7 @@ export const useAddLabResult = () => {
         user_id: user.id
       }]).select();
 
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data?.[0];
     },
     onSuccess: () => {
@@ -153,7 +153,7 @@ export const useAddFamilyMember = () => {
   return useMutation({
     mutationFn: async (member: Omit<FamilyMember, 'id'>) => {
       const { data, error } = await supabase.from('family_members').insert([member]).select().single();
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data;
     },
     onSuccess: () => {
@@ -168,7 +168,7 @@ export const useAddMedicine = () => {
   return useMutation({
     mutationFn: async (medicine: Omit<Medicine, 'id'>) => {
       const { data, error } = await supabase.from('medicines').insert([medicine]).select().single();
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data;
     },
     onSuccess: () => {
@@ -183,7 +183,7 @@ export const useSaveDoseLog = () => {
   return useMutation({
     mutationFn: async (log: DoseLog) => {
       const { error } = await supabase.from('dose_logs').upsert([log]);
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return log;
     },
     onSuccess: (log) => {
@@ -199,7 +199,7 @@ export const useAddVitalLog = () => {
   return useMutation({
     mutationFn: async (log: Omit<VitalLog, 'id'>) => {
       const { data, error } = await supabase.from('vitals').insert([log]).select().single();
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data;
     },
     onSuccess: () => {
@@ -214,7 +214,7 @@ export const useAddSymptomLog = () => {
   return useMutation({
     mutationFn: async (log: Omit<SymptomLog, 'id'>) => {
       const { data, error } = await supabase.from('symptoms').insert([log]).select().single();
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data;
     },
     onSuccess: () => {
@@ -229,7 +229,7 @@ export const useAddMoodLog = () => {
   return useMutation({
     mutationFn: async (log: Omit<MoodLog, 'id'>) => {
       const { data, error } = await supabase.from('mood_logs').insert([log]).select().single();
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data;
     },
     onSuccess: () => {
@@ -244,7 +244,7 @@ export const useAddAppointment = () => {
   return useMutation({
     mutationFn: async (appointment: Omit<Appointment, 'id'>) => {
       const { data, error } = await supabase.from('appointments').insert([appointment]).select().single();
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data;
     },
     onSuccess: () => {
@@ -259,7 +259,7 @@ export const useAddPrescription = () => {
   return useMutation({
     mutationFn: async (prescription: Omit<Prescription, 'id'>) => {
       const { data, error } = await supabase.from('prescriptions').insert([prescription]).select().single();
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data;
     },
     onSuccess: () => {
@@ -274,7 +274,7 @@ export const useUpdateMedicine = () => {
   return useMutation({
     mutationFn: async (medicine: Medicine) => {
       const { error } = await supabase.from('medicines').update(medicine).eq('id', medicine.id);
-      if (error) throw error;
+      if (error) throw new Error(error.message);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.medicines });
@@ -288,7 +288,7 @@ export const useRemoveFamilyMember = () => {
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('family_members').delete().eq('id', id);
-      if (error) throw error;
+      if (error) throw new Error(error.message);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.familyMembers });
@@ -302,7 +302,7 @@ export const useUpdateFamilyMember = () => {
   return useMutation({
     mutationFn: async (member: FamilyMember) => {
       const { error } = await supabase.from('family_members').update(member).eq('id', member.id);
-      if (error) throw error;
+      if (error) throw new Error(error.message);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.familyMembers });
@@ -316,7 +316,7 @@ export const usePrefetchFamilyMembers = () => {
       queryKey: QUERY_KEYS.familyMembers,
       queryFn: async (): Promise<FamilyMember[]> => {
         const { data, error } = await supabase.from('family_members').select('*');
-        if (error) throw error;
+        if (error) throw new Error(error.message);
         return data || [];
       },
     });
@@ -329,7 +329,7 @@ export const usePrefetchMedicines = () => {
       queryKey: QUERY_KEYS.medicines,
       queryFn: async (): Promise<Medicine[]> => {
         const { data, error } = await supabase.from('medicines').select('*');
-        if (error) throw error;
+        if (error) throw new Error(error.message);
         return data || [];
       },
     });
