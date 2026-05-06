@@ -399,6 +399,11 @@ export const addPrescription = async (prescription: Omit<Prescription, 'id'>): P
   };
 };
 
+export const removePrescription = async (id: string): Promise<void> => {
+  const { error } = await supabase.from('prescriptions').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+};
+
 export const getEmergencyProfile = async (): Promise<EmergencyProfile> => {
   const { data, error } = await supabase.from('emergency_profiles').select('*').single();
   if (error && error.code !== 'PGRST116') throw new Error(error.message);

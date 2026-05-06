@@ -443,6 +443,20 @@ export const useAddPrescription = () => {
   });
 };
 
+export const useRemovePrescription = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('prescriptions').delete().eq('id', id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.prescriptions });
+    },
+  });
+};
+
 export const useUpdateMedicine = () => {
   const queryClient = useQueryClient();
   
