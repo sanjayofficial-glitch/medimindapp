@@ -4,20 +4,23 @@ const handleSubmit = async (e: React.FormEvent) => {
     return toast.error("Please fill in required fields");
   }
   try {
+    // Upload attachment if exists
     let fileUrl = "";
     if (formData.attachment) {
       fileUrl = await uploadFile(formData.attachment);
     }
-    // Pass value as string instead of number
+
+    // Pass value as string; storage layer will convert to number
     await addLabResult({
       family_member_id: formData.familyMemberId,
       test_name: formData.testName,
-      value: formData.value, // <-- Changed from parseFloat to string
+      value: formData.value,               // <-- corrected
       unit: formData.unit,
       date: formData.date,
       normal_range: formData.normalRange,
       file_url: fileUrl,
     });
+
     await loadData();
     setShowAdd(false);
     setFormData({
