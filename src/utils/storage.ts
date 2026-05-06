@@ -135,7 +135,7 @@ export const getMedicines = async (): Promise<Medicine[]> => {
 
 export const addMedicine = async (m: Omit<Medicine, 'id'>) => {
   const { data: { user } } = await supabase.auth.getUser();
-  const { error } = await supabase.from('medicines').insert([{
+  const { data, error } = await supabase.from('medicines').insert([{
     family_member_id: m.familyMemberId,
     name: m.name,
     dosage: m.dosage,
@@ -145,8 +145,19 @@ export const addMedicine = async (m: Omit<Medicine, 'id'>) => {
     stock: m.stock,
     refill_at: m.refillAt,
     user_id: user?.id
-  }]);
+  }]).select().single();
   if (error) throw error;
+  return {
+    id: data.id,
+    familyMemberId: data.family_member_id,
+    name: data.name,
+    dosage: data.dosage,
+    times: data.times,
+    frequency: data.frequency,
+    additionalText: data.additional_text,
+    stock: data.stock,
+    refillAt: data.refill_at
+  };
 };
 
 export const updateMedicine = async (m: Medicine) => {
