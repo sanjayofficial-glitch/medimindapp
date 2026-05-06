@@ -12,7 +12,6 @@ import {
   Activity,
   Package,
   Sparkles,
-  Info,
   ShieldAlert,
   Trophy,
   Settings as SettingsIcon,
@@ -29,10 +28,11 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/AuthContext";
-import { useDoseLogsForDate, useSaveDoseLog } from "@/hooks/use-queries";
+import { useDoseLogsForDate, useSaveDoseLog, useMedicines, useUpdateMedicine } from "@/hooks/use-queries";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import InteractionChecker from "@/components/InteractionChecker";
+import DynamicAIInsight from "@/components/DynamicAIInsight";
 
 const Dashboard = () => {
   const { user, logout, isLoading: isAuthLoading } = useAuth();
@@ -40,7 +40,9 @@ const Dashboard = () => {
   
   const today = new Date().toISOString().split('T')[0];
   const { data: todayLogs = [], isLoading: isDataLoading, refetch } = useDoseLogsForDate(today);
+  const { data: medicines = [] } = useMedicines();
   const saveDoseLog = useSaveDoseLog();
+  const updateMedicine = useUpdateMedicine();
 
   useEffect(() => {
     if (!isAuthLoading && !user) {
@@ -55,7 +57,24 @@ const Dashboard = () => {
         status,
         actualTime: status === "taken" ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : undefined
       };
+      
       await saveDoseLog.mutateAsync(updatedLog);
+
+      // Automatic stock decrement
+      if (status === "taken") {
+        const medicine = medicines.find(m => m.id === log.medicineId);
+        if (medicine && medicine.stock !== undefined && medicine.stock > 0) {
+          await updateMedicine.mutateAsync({
+            ...medicine,
+            stock: medicine.stock - 1
+          });
+          
+          if (medicine.stock - 1 <= (medicine.refillAt || 5)) {
+            toast.warning(`Low stock alert: ${medicine.name} (${medicine.stock - 1} left)`);
+          }
+        }
+      }
+
       toast.success(`Marked ${log.medicineName} as ${status}`);
       refetch();
     } catch (error) {
@@ -299,26 +318,7 @@ const Dashboard = () => {
               </div>
             </section>
 
-            <Card className="bg-primary text-primary-foreground border-none shadow-xl shadow-primary/20 overflow-hidden relative">
-              <div className="absolute top-0 right-0 p-4 opacity-10">
-                <Sparkles className="w-24 h-24" />
-              </div>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Sparkles className="w-5 h-5" />
-                  AI Health Insight
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm opacity-90 leading-relaxed">
-                  You've been consistent with your Metformin for 5 days! AI analysis shows your mood is 20% better on days you take your meds before 9 AM.
-                </p>
-                <div className="flex items-center gap-2 bg-white/10 p-2 rounded-lg text-[10px] font-medium">
-                  <Info className="w-3 h-3" />
-                  <span>Tip: Consistency improves treatment efficacy by 40%.</span>
-                </div>
-              </CardContent>
-            </Card>
+            <DynamicAIInsight />
           </div>
         </div>
       </main>
