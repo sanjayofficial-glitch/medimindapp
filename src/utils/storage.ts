@@ -296,8 +296,16 @@ export const getLabResults = async (): Promise<LabResult[]> => {
 };
 
 export const addLabResult = async (l: Omit<LabResult, 'id'> & { file_url?: string }) => {
+  const { data: { user } } = await supabase.auth.getUser();
   const { error } = await supabase.from('lab_results').insert([{
-    ...l
+    family_member_id: l.familyMemberId,
+    test_name: l.testName,
+    value: parseFloat(l.value),
+    unit: l.unit,
+    date: l.date,
+    normal_range: l.normalRange,
+    file_url: l.file_url,
+    user_id: user?.id
   }]);
   if (error) throw error;
 };
