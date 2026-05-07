@@ -13,25 +13,71 @@ async function sendWebPush(subscription: string, payload: PushNotificationPayloa
   try {
     const sub = JSON.parse(subscription);
     
-    const response = await fetch(sub.endpoint, {
-      method: "POST",
-      headers: {
-        "TTL": "86400",
-        "Content-Type": "application/json",
-        "Authorization": `vapid t=${VAPID_PRIVATE_KEY}`
-      },
-      body: JSON.stringify({
+    if (!sub.endpoint) {
+      console.error("WebPush error: No endpoint in subscription");
+      return false;
+    }
+
+    const endpoint = sub.endpoint;
+    const isFcmEndpoint = endpoint.includes("fcm.googleapis.com") || endpoint.includes("firebase.com");
+    
+    let headers: Record<string, string> = {
+      "TTL": "86400",
+      "Content-Type": "application/json",
+    };
+
+    if (isFcmEndpoint) {
+      headers["Authorization"] = `key=${VAPID_PRIVATE_KEY}`;
+    } else if (VAPID_PRIVATE_KEY) {
+      headers["Authorization"] = `vapid t=${VAPID_PRIVATE_KEY}`;
+    }
+
+    let body: Record<string, unknown>;
+    
+    if (isFcmEndpoint) {
+      body = {
+        to: sub.endpoint,
+        notification: {
+          title: payload.title,
+          body: payload.body,
+          icon: payload.icon || "/favicon.ico"
+        },
+        webpush: {
+          urgency: "high",
+          payload: {
+            url: payload.url || "/dashboard"
+          }
+        }
+      };
+    } else {
+      body = {
         notification: {
           title: payload.title,
           body: payload.body,
           icon: payload.icon || "/favicon.ico",
-          badge: "/favicon.ico",
-          data: {
-            url: payload.url || "/dashboard"
-          }
+          badge: "/favicon.ico"
+        },
+        data: {
+          url: payload.url || "/dashboard"
         }
-      })
+      };
+    }
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body)
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("WebPush response not OK:", response.status, errorText);
+      
+      if (response.status === 410 || response.status === 404) {
+        console.log("Subscription expired, needs to be re-subscribed");
+        return false;
+      }
+    }
 
     return response.ok;
   } catch (error) {

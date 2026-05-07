@@ -15,24 +15,75 @@ async function sendWebPush(subscription: string, title: string, body: string): P
   try {
     const sub = JSON.parse(subscription);
     
-    const response = await fetch(sub.endpoint, {
-      method: "POST",
-      headers: {
-        "TTL": "86400",
-        "Content-Type": "application/json",
-        "Authorization": `vapid t=${VAPID_PRIVATE_KEY}`
-      },
-      body: JSON.stringify({
+    if (!sub.endpoint) {
+      console.error("WebPush error: No endpoint in subscription");
+      return false;
+    }
+
+    const endpoint = sub.endpoint;
+    const isFcmEndpoint = endpoint.includes("fcm.googleapis.com") || endpoint.includes("firebase.com");
+    
+    let headers: Record<string, string> = {
+      "TTL": "86400",
+      "Content-Type": "application/json",
+    };
+
+    if (isFcmEndpoint) {
+      headers["Authorization"] = `key=${VAPID_PRIVATE_KEY}`;
+    } else if (VAPID_PRIVATE_KEY) {
+      headers["Authorization"] = `vapid t=${VAPID_PRIVATE_KEY}`;
+    }
+
+    let pushBody: Record<string, unknown>;
+    
+    if (isFcmEndpoint) {
+      pushBody = {
+        to: sub.endpoint,
+        notification: {
+          title,
+          body,
+          icon: "/favicon.ico"
+        },
+        webpush: {
+          urgency: "high",
+          payload: {
+            url: "/dashboard"
+          }
+        }
+      };
+    } else {
+      pushBody = {
         notification: {
           title,
           body,
           icon: "/favicon.ico",
-          data: { url: "/dashboard" }
+          badge: "/favicon.ico"
+        },
+        data: {
+          url: "/dashboard"
         }
-      })
+      };
+    }
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(pushBody)
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("WebPush response not OK:", response.status, errorText);
+      
+      if (response.status === 410 || response.status === 404) {
+        console.log("Subscription expired, needs to be re-subscribed");
+        return false;
+      }
+    }
+
     return response.ok;
-  } catch {
+  } catch (error) {
+    console.error("WebPush error:", error);
     return false;
   }
 }
