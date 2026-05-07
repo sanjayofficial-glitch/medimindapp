@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/AuthContext";
 import { useDoseLogsForDate, useSaveDoseLog, useMedicines, useUpdateMedicine } from "@/hooks/use-queries";
+import { DoseLog } from "@/utils/storage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import InteractionChecker from "@/components/InteractionChecker";
@@ -50,9 +51,9 @@ const Dashboard = () => {
     }
   }, [user, isAuthLoading, navigate]);
 
-  const handleStatusUpdate = async (log: any, status: "taken" | "missed") => {
+  const handleStatusUpdate = async (log: DoseLog, status: "taken" | "missed") => {
     try {
-      const updatedLog: any = {
+      const updatedLog: DoseLog = {
         ...log,
         status,
         actualTime: status === "taken" ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : undefined
@@ -88,8 +89,8 @@ const Dashboard = () => {
     toast.success("Logged out successfully");
   };
 
-  const takenCount = todayLogs.filter((l: any) => l.status === "taken").length;
-  const pendingCount = todayLogs.filter((l: any) => l.status === "partial").length;
+  const takenCount = todayLogs.filter((l: DoseLog) => l.status === "taken").length;
+  const pendingCount = todayLogs.filter((l: DoseLog) => l.status === "partial").length;
   const totalToday = todayLogs.length;
   const progress = totalToday > 0 ? (takenCount / totalToday) * 100 : 0;
 
@@ -221,7 +222,7 @@ const Dashboard = () => {
               <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Next Dose</CardTitle></CardHeader>
               <CardContent>
                 <div className={cn("text-3xl font-bold", pendingCount > 0 ? "text-foreground" : "text-primary")}>
-                  {pendingCount > 0 ? todayLogs.find((l: any) => l.status === "partial")?.scheduledTime : "All Clear"}
+                  {pendingCount > 0 ? todayLogs.find((l: DoseLog) => l.status === "partial")?.scheduledTime : "All Clear"}
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">Stay on schedule</p>
               </CardContent>
@@ -244,7 +245,7 @@ const Dashboard = () => {
                     <Link to="/add-medicine"><Button variant="outline" className="rounded-full">Get Started</Button></Link>
                   </div>
                 ) : (
-                  todayLogs.sort((a: any, b: any) => a.scheduledTime.localeCompare(b.scheduledTime)).map((log: any) => (
+                  todayLogs.sort((a: DoseLog, b: DoseLog) => a.scheduledTime.localeCompare(b.scheduledTime)).map((log: DoseLog) => (
                     <motion.div 
                       key={log.id} 
                       layout

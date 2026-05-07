@@ -1,18 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { useFamilyMembers } from "@/hooks/use-queries";
-import { saveMedicine, saveDoseLog, FamilyMember } from "@/utils/storage";
+import { useFamilyMembers, useAddMedicine, useSaveDoseLog } from "@/hooks/use-queries";
 import { medicineDatabase, MedicineDBEntry } from "@/data/medicineDatabase";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 
 const AddMedicine = () => {
   const navigate = useNavigate();
@@ -24,8 +22,10 @@ const AddMedicine = () => {
   const [newHour, setNewHour] = useState("");
   const [newMinute, setNewMinute] = useState("");
   const [newPeriod, setNewPeriod] = useState("AM");
+  
   const { data: familyMembers = [] } = useFamilyMembers();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const addMedicineMutation = useAddMedicine();
+  const saveDoseLogMutation = useSaveDoseLog();
 
   const pad = (n: string) => n.padStart(2, "0");
   const hourOptions = Array.from({ length: 12 }, (_, i) => `${i + 1}`);
@@ -51,10 +51,9 @@ const AddMedicine = () => {
     if (!frequency) return toast.error("Please select a frequency");
     if (times.length === 0) return toast.error("Please add at least one time");
 
-    setIsSubmitting(true);
     try {
       const medicineName = selectedMed?.brand_name || "Custom Medicine";
-      const newMedicine = await addMedicine({
+      const newMedicine = await addMedicineMutation.mutateAsync({
         familyMemberId: selectedMember,
         name: medicineName,
         dosage: dosage.trim(),
@@ -63,17 +62,17 @@ const AddMedicine = () => {
       });
 
       const today = new Date().toISOString().split("T")[0];
-      // Use for...of loop to properly handle async/await
       for (const timeStr of times) {
         const [timePart] = timeStr.split(" ");
         const [hour, minute] = timePart.split(":");
         const scheduledTime = `${hour}:${minute}`;
-        await saveDoseLog({
+        await saveDoseLogMutation.mutateAsync({
           id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
           medicineId: newMedicine.id,
           medicineName: newMedicine.name,
           familyMemberId: selectedMember,
           scheduledTime: scheduledTime,
+          actualTime: null,
           date: today,
           status: "partial",
         });
@@ -84,10 +83,10 @@ const AddMedicine = () => {
     } catch (error) {
       console.error("Error adding medicine:", error);
       toast.error("Failed to add medicine. Please try again.");
-    } finally {
-      setIsSubmitting(false);
     }
   };
+
+  const isSubmitting = addMedicineMutation.isPending || saveDoseLogMutation.isPending;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-32 p-6">
@@ -114,7 +113,7 @@ const AddMedicine = () => {
                       <SelectValue placeholder="Select member" />
                     </SelectTrigger>
                     <SelectContent>
-                      {familyMembers.map((member: FamilyMember) => (
+                      {familyMembers.map((member) => (
                         <SelectItem key={member.id} value={member.id}>
                           {member.name}
                         </SelectItem>
@@ -126,14 +125,14 @@ const AddMedicine = () => {
                 <div className="space-y-2">
                   <Label>Medicine</Label>
                   <Select onValueChange={(value) => {
-                    const med = medicineDatabase.find((m: MedicineDBEntry) => m.brand_name === value);
+                    const med = medicineDatabase.find((m) => m.brand_name === value);
                     setSelectedMed(med || null);
                   }}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select medicine" />
                     </SelectTrigger>
                     <SelectContent>
-                      {medicineDatabase.map((med: MedicineDBEntry) => (
+                      {medicineDatabase.map((med) => (
                         <SelectItem key={med.brand_name} value={med.brand_name}>
                           {med.brand_name}
                         </SelectItem>
@@ -168,11 +167,9 @@ const AddMedicine = () => {
                 </div>
               </div>
 
-              {/* Custom AM/PM Time Picker */}
               <div className="space-y-4">
                 <Label>Times (AM/PM)</Label>
                 <div className="grid grid-cols-3 gap-2">
-                  {/* Hour Picker */}
                   <div>
                     <Label className="text-sm font-medium">Hour</Label>
                     <Select value={newHour} onValueChange={setNewHour}>
@@ -189,7 +186,6 @@ const AddMedicine = () => {
                     </Select>
                   </div>
 
-                  {/* Minute Picker */}
                   <div>
                     <Label className="text-sm font-medium">Minute</Label>
                     <Select value={newMinute} onValueChange={setNewMinute}>
@@ -206,7 +202,6 @@ const AddMedicine = () => {
                     </Select>
                   </div>
 
-                  {/* AM/PM Picker */}
                   <div>
                     <Label className="text-sm font-medium">Period</Label>
                     <Select value={newPeriod} onValueChange={setNewPeriod}>
@@ -230,7 +225,6 @@ const AddMedicine = () => {
                   Add Time
                 </Button>
 
-                {/* Display Added Times */}
                 {times.length > 0 && (
                   <div className="space-y-2 mt-2">
                     <p className="text-xs text-gray-600">Scheduled times:</p>

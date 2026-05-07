@@ -66,7 +66,7 @@ const Settings = () => {
 
   const getInitials = () => {
     if (name) {
-      return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+      return name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
     }
     if (email) {
       return email[0].toUpperCase();

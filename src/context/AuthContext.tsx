@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { User, AuthError, AuthTokenResponse } from "@supabase/supabase-js";
+import { User, AuthError, AuthResponse } from "@supabase/supabase-js";
 import { queryClient } from "@/lib/query-client";
 import { QUERY_KEYS } from "@/lib/query-client";
 
@@ -8,12 +8,11 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, pass: string) => Promise<{ success: boolean; error?: AuthError | null }>;
   logout: () => Promise<void>;
-  signup: (name: string, email: string, pass: string) => Promise<{ success: boolean; error?: AuthError | null; data?: AuthTokenResponse }>;
+  signup: (name: string, email: string, pass: string) => Promise<{ success: boolean; error?: AuthError | null; data?: AuthResponse["data"] }>;
   updateProfile: (name: string, email: string) => Promise<boolean>;
   isLoading: boolean;
 }
 
-// Initialize with undefined to enforce provider usage
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -21,7 +20,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    let isMounted = true; // Prevent state updates if component unmounts
+    let isMounted = true;
 
     const initAuth = async () => {
       try {
@@ -59,7 +58,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!error && data?.user) {
         prefetchInitialData();
       }
-      return { success: !error, error, data };
+      return { success: !error, error };
     } catch (err) {
       console.error("AuthContext: Login error:", err);
       return { success: false, error: err as AuthError };

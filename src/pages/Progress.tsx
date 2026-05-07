@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getDoseLogs, getMedicines, DoseLog, VitalLog, SymptomLog } from "@/utils/storage";
-import { useVitalLogs, useSymptomLogs } from "@/hooks/use-queries";
+import { getDoseLogs, getVitalLogs, getSymptomLogs, DoseLog, VitalLog, SymptomLog } from "@/utils/storage";
 import { CheckCircle, XCircle, AlertCircle, Activity, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateHealthReport } from "@/utils/report-generator";
@@ -28,12 +27,11 @@ const Progress = () => {
     late: { name: string; time: string }[];
   }>({ taken: [], missed: [], late: [] });
 
-  useEffect(() => {
-    const loadData = async () => {
+  const loadData = async () => {
+    try {
       const logs: DoseLog[] = await getDoseLogs();
-      const vitals: VitalLog[] = await useVitalLogs().data || [];
-      const symptoms: SymptomLog[] = await useSymptomLogs().data || [];
-      const medicines = await getMedicines();
+      const vitals: VitalLog[] = await getVitalLogs();
+      const symptoms: SymptomLog[] = await getSymptomLogs();
       
       const taken = logs.filter(l => l.status === "taken").length;
       const missed = logs.filter(l => l.status === "missed").length;
@@ -79,8 +77,12 @@ const Progress = () => {
       const missedMeds = todayLogs.filter(l => l.status === "missed").map(l => ({ name: l.medicineName, time: l.scheduledTime }));
       const lateMeds = todayLogs.filter(l => l.status === "partial").map(l => ({ name: l.medicineName, time: l.scheduledTime }));
       setTodayMedsByStatus({ taken: takenMeds, missed: missedMeds, late: lateMeds });
-    };
+    } catch (error) {
+      console.error("Error loading progress data:", error);
+    }
+  };
 
+  useEffect(() => {
     loadData();
   }, []);
 

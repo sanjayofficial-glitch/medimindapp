@@ -37,11 +37,6 @@ const LabResults = () => {
     }
 
     try {
-      const fileUrl = "";
-      if (formData.attachment) {
-        toast.info("File upload not implemented yet - saving text data only");
-      }
-
       await addLabResult.mutateAsync({
         familyMemberId: formData.familyMemberId,
         testName: formData.testName,
@@ -49,7 +44,7 @@ const LabResults = () => {
         unit: formData.unit,
         date: formData.date,
         normalRange: formData.normalRange,
-        file_url: fileUrl,
+        file_url: "",
       });
 
       await refetch();
@@ -66,7 +61,6 @@ const LabResults = () => {
       toast.success("Lab result added successfully!");
     } catch (error: any) {
       toast.error(error instanceof Error ? error.message : "Failed to add lab result");
-      console.error("Error adding lab result:", error);
     }
   };
 

@@ -1,11 +1,11 @@
 "use client";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, ChevronLeft, Search, FileText, Calendar, Phone, Building2, Trash2, Loader2, AlertCircle, Filter, ExternalLink, XCircle } from "lucide-react";
+import { Plus, ChevronLeft, Search, FileText, Calendar, Phone, Building2, Trash2, Loader2, AlertCircle, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
@@ -14,7 +14,8 @@ import { QUERY_KEYS } from "@/lib/query-client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Prescription } from "@/utils/storage";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertTitle } from "@/components/ui/alert";
+import DynamicAIInsight from "@/components/DynamicAIInsight";
 
 const PrescriptionWallet = () => {
   const navigate = useNavigate();
@@ -38,7 +39,6 @@ const PrescriptionWallet = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Validation
     if (!formData.title || !formData.familyMemberId || !formData.expiryDate) {
       setFormError("Please fill in all required fields");
       return;
@@ -46,7 +46,6 @@ const PrescriptionWallet = () => {
     setFormError(null);
     try {
       const newPrescription = await addPrescription.mutateAsync(formData);
-      // Optimistic UI update
       queryClient.setQueryData(QUERY_KEYS.prescriptions, (prev: Prescription[] | undefined) => [newPrescription, ...(prev || [])]);
       setShowAdd(false);
       setFormData({
@@ -58,7 +57,7 @@ const PrescriptionWallet = () => {
         familyMemberId: "",
       });
       toast.success("Prescription added to wallet!");
-    } catch (error) {
+    } catch (error: any) {
       setFormError(error.message || "Failed to add prescription");
       toast.error("Failed to add prescription");
     }
@@ -108,7 +107,6 @@ const PrescriptionWallet = () => {
               <DialogTitle>Add New Prescription</DialogTitle>
             </DialogHeader>
 
-            {/* Inline error display */}
             {formError && (
               <Alert variant="destructive" className="mb-4">
                 <AlertTitle className="text-sm font-medium">{formError}</AlertTitle>
@@ -195,9 +193,8 @@ const PrescriptionWallet = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Main content */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="md:col-span-2">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+          <div className="md:col-span-2 relative">
             <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
             <Input
               placeholder="Search by title or pharmacy..."
@@ -228,14 +225,14 @@ const PrescriptionWallet = () => {
 
           {isLoading
             ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <div className="col-span-full flex flex-col items-center justify-center py-20 gap-4">
                 <Loader2 className="w-10 h-10 animate-spin text-purple-600" />
                 <p className="text-sm text-muted-foreground font-medium">Opening your wallet...</p>
               </div>
             )
             : filteredRx.length === 0
             ? (
-              <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-purple-100">
+              <div className="col-span-full text-center py-20 bg-white rounded-3xl border-2 border-dashed border-purple-100">
                 <FileText className="w-16 h-16 text-purple-100 mx-auto mb-4" />
                 <h3 className="text-lg font-bold text-gray-900">No documents found</h3>
                 <p className="text-gray-500 max-w-xs mx-auto mt-1">
@@ -260,7 +257,7 @@ const PrescriptionWallet = () => {
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.9 }}
                           className={cn(
-                            "overflow-hidden border-none shadow-md hover:shadow-xl transition-all group",
+                            "overflow-hidden border-none shadow-md hover:shadow-xl transition-all group rounded-2xl",
                             expired ? "bg-rose-50/50" : "bg-white"
                           )}
                         >
@@ -271,7 +268,7 @@ const PrescriptionWallet = () => {
                               className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-500"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                            <div className="absolute bottom-3 left-3 right-3 flex justify-end items-end">
+                            <div className="absolute bottom-3 left-3 right-3 flex justify-between items-end">
                               <div>
                                 <p className="text-[10px] font-bold text-white/80 uppercase tracking-widest">
                                   {member?.name || "Unknown"}
@@ -279,7 +276,7 @@ const PrescriptionWallet = () => {
                                 <h3 className="text-white font-bold line-clamp-1">{rx.title}</h3>
                               </div>
                               {expired && (
-                                <div className="absolute top-3 right-3 bg-rose-600 text-white px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 shadow-lg">
+                                <div className="bg-rose-600 text-white px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 shadow-lg">
                                   <AlertCircle className="w-3 h-3" />
                                   EXPIRED
                                 </div>
@@ -307,19 +304,19 @@ const PrescriptionWallet = () => {
                               <Calendar className="w-3.5 h-3.5 text-purple-500" />
                               <span>Expires: {new Date(rx.expiryDate).toLocaleDateString()}</span>
                             </div>
+                            
+                            <div className="pt-2 flex justify-end">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 h-8"
+                                onClick={() => handleDelete(rx.id)}
+                                disabled={removePrescription.isPending}
+                              >
+                                <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Remove
+                              </Button>
+                            </div>
                           </CardContent>
-
-                          <div className="pt-2 flex justify-end">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 h-8"
-                              onClick={() => handleDelete(rx.id)}
-                              disabled={removePrescription.isPending}
-                            >
-                              <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Remove
-                            </Button>
-                          </div>
                         </motion.div>
                       );
                     })}
@@ -329,7 +326,9 @@ const PrescriptionWallet = () => {
             )}
         </div>
 
-        <DynamicAIInsight />
+        <div className="mt-8">
+          <DynamicAIInsight />
+        </div>
       </div>
     </motion.div>
   );
