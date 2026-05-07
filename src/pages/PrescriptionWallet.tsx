@@ -245,87 +245,87 @@ const PrescriptionWallet = () => {
               </div>
             )
             : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <AnimatePresence mode="popLayout">
-                  {filteredRx.map((rx) => {
-                    const member = familyMembers.find((m) => m.id === rx.familyMemberId);
-                    const expired = isExpired(rx.expiryDate);
-                    return (
-                      <motion.div
-                        key={rx.id}
-                        layout
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        className={cn(
-                          "overflow-hidden border-none shadow-md hover:shadow-xl transition-all group",
-                          expired ? "bg-rose-50/50" : "bg-white"
-                        )}
-                      >
-                        <div className="relative h-40 bg-gray-100 overflow-hidden">
-                          <img
-                            src={rx.imageUrl}
-                            alt={rx.title}
-                            className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-500"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                          <div className="absolute bottom-3 left-3 right-3 flex justify-end items-end">
-                            <div>
-                              <p className="text-[10px] font-bold text-white/80 uppercase tracking-widest">
-                                {member?.name || "Unknown"}
-                              </p>
-                              <h3 className="text-white font-bold line-clamp-1">{rx.title}</h3>
-                            </div>
-                            {expired && (
-                              <div className="absolute top-3 right-3 bg-rose-600 text-white px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 shadow-lg">
-                                <AlertCircle className="w-3 h-3" />
-                                EXPIRED
+              <div className="col-span-full">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <AnimatePresence mode="popLayout">
+                    {filteredRx.map((rx) => {
+                      const member = familyMembers.find((m) => m.id === rx.familyMemberId);
+                      const expired = isExpired(rx.expiryDate);
+                      return (
+                        <motion.div
+                          key={rx.id}
+                          layout
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          className={cn(
+                            "overflow-hidden border-none shadow-md hover:shadow-xl transition-all group",
+                            expired ? "bg-rose-50/50" : "bg-white"
+                          )}
+                        >
+                          <div className="relative h-40 bg-gray-100 overflow-hidden">
+                            <img
+                              src={rx.imageUrl}
+                              alt={rx.title}
+                              className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-500"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                            <div className="absolute bottom-3 left-3 right-3 flex justify-end items-end">
+                              <div>
+                                <p className="text-[10px] font-bold text-white/80 uppercase tracking-widest">
+                                  {member?.name || "Unknown"}
+                                </p>
+                                <h3 className="text-white font-bold line-clamp-1">{rx.title}</h3>
                               </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <CardContent className="p-4 space-y-3">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-xs text-gray-600">
-                              <Building2 className="w-3.5 h-3.5 text-purple-500" />
-                              <span className="font-medium">{rx.pharmacyName || "No pharmacy listed"}</span>
-                            </div>
-
-                            <div className="flex items-center gap-2 text-xs text-gray-600">
-                              <Phone className="w-3.5 h-3.5 text-purple-500" />
-                              <span>{rx.pharmacyPhone || "No phone listed"}</span>
+                              {expired && (
+                                <div className="absolute top-3 right-3 bg-rose-600 text-white px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 shadow-lg">
+                                  <AlertCircle className="w-3 h-3" />
+                                  EXPIRED
+                                </div>
+                              )}
                             </div>
                           </div>
 
-                          <div className={cn(
-                            "flex items-center gap-2 text-xs font-medium",
-                            expired ? "text-rose-600" : "text-gray-600"
-                          )}>
-                            <Calendar className="w-3.5 h-3.5 text-purple-500" />
-                            <span>Expires: {new Date(rx.expiryDate).toLocaleDateString()}</span>
-                          </div>
-                        </CardContent>
+                          <CardContent className="p-4 space-y-3">
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2 text-xs text-gray-600">
+                                <Building2 className="w-3.5 h-3.5 text-purple-500" />
+                                <span className="font-medium">{rx.pharmacyName || "No pharmacy listed"}</span>
+                              </div>
 
-                        <div className="pt-2 flex justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 h-8"
-                            onClick={() => handleDelete(rx.id)}
-                            disabled={removePrescription.isPending}
-                          >
-                            <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Remove
-                          </Button>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </AnimatePresence>
+                              <div className="flex items-center gap-2 text-xs text-gray-600">
+                                <Phone className="w-3.5 h-3.5 text-purple-500" />
+                                <span>{rx.pharmacyPhone || "No phone listed"}</span>
+                              </div>
+                            </div>
+
+                            <div className={cn(
+                              "flex items-center gap-2 text-xs font-medium",
+                              expired ? "text-rose-600" : "text-gray-600"
+                            )}>
+                              <Calendar className="w-3.5 h-3.5 text-purple-500" />
+                              <span>Expires: {new Date(rx.expiryDate).toLocaleDateString()}</span>
+                            </div>
+                          </CardContent>
+
+                          <div className="pt-2 flex justify-end">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 h-8"
+                              onClick={() => handleDelete(rx.id)}
+                              disabled={removePrescription.isPending}
+                            >
+                              <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Remove
+                            </Button>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
+                </div>
               </div>
-            )
-          </div>
-        </div>
+            )}
 
         <DynamicAIInsight />
       </div>
