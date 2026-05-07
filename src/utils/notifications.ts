@@ -1,3 +1,5 @@
+import { supabase } from "@/integrations/supabase/client";
+
 export interface NotificationAction {
   type: 'taken' | 'snooze';
   medicineId: string;
@@ -207,4 +209,31 @@ export const getNotificationPermissionStatus = (): boolean => {
 
 export const getScheduledNotificationCount = (): number => {
   return activeTimeouts.size;
+};
+
+export const sendPushNotification = async (
+  userId: string,
+  title: string,
+  body: string,
+  medicineId?: string
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase.functions.invoke('send-push-notification', {
+      body: {
+        userId,
+        title,
+        body,
+        medicineId
+      }
+    });
+
+    if (error) {
+      console.error('[NOTIF] Push notification error:', error);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('[NOTIF] Failed to send push notification:', error);
+    return false;
+  }
 };
