@@ -58,16 +58,7 @@ self.addEventListener('notificationclick', (event) => {
   );
   
   if (event.action === 'taken' || event.action === 'snooze') {
-    event.waitUntil(
-      fetch('/api/push-action', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: event.action,
-          notification: event.notification.data
-        })
-      }).catch(() => {})
-    );
+    console.log('[ServiceWorker] Push action:', event.action);
   }
 });
 
