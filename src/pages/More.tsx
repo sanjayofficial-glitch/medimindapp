@@ -19,6 +19,7 @@ import {
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { iconPop, cardInteractive, chevronSlide, listItem } from "@/lib/animations";
 
 const More = () => {
   const menuItems = [
@@ -32,67 +33,91 @@ const More = () => {
     { title: "Achievements", icon: Trophy, to: "/progress", color: "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400", sub: "Streaks & milestones" }
   ];
 
+  const settingsItems = [
+    { title: "Account Settings", icon: SettingsIcon, to: "/settings" },
+    { title: "Help & FAQ", icon: HelpCircle, to: "/faq" },
+    { title: "Privacy Policy", icon: Lock, to: "/privacy" },
+    { title: "About MediMind", icon: Info, to: "/about" },
+  ];
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="min-h-screen bg-background pb-32 p-6"
+      className="min-h-screen bg-background pb-32 p-4 sm:p-6"
     >
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-foreground mb-8">Health Hub</h1>
+        <motion.h1 
+          initial={{ y: -10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="text-2xl sm:text-3xl font-bold text-foreground mb-6 sm:mb-8"
+        >
+          Health Hub
+        </motion.h1>
         
         <div className="space-y-3">
           {menuItems.map((item, i) => (
             <Link key={i} to={item.to}>
-              <Card className="group hover:border-emerald-500/50 transition-all cursor-pointer border-border bg-card shadow-sm">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-colors", item.color, "group-hover:bg-emerald-600 group-hover:text-white")}>
-                      <item.icon className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-foreground">{item.title}</p>
-                      <p className="text-xs text-muted-foreground">{item.sub}</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-emerald-600 transition-colors" />
-                </CardContent>
-              </Card>
+              <motion.div
+                variants={listItem}
+                initial="hidden"
+                animate="visible"
+                custom={i}
+              >
+                <motion.div 
+                  variants={cardInteractive}
+                  initial="rest"
+                  whileHover="hover"
+                  whileTap="tap"
+                >
+                  <Card className="group hover:border-emerald-500/50 transition-all cursor-pointer border-border bg-card shadow-sm overflow-hidden">
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <motion.div 
+                          variants={iconPop}
+                          initial="rest"
+                          whileHover="hover"
+                          whileTap="tap"
+                          className={cn("w-11 sm:w-12 h-11 sm:h-12 rounded-2xl flex items-center justify-center transition-colors", item.color, "group-hover:bg-emerald-600 group-hover:text-white")}
+                        >
+                          <item.icon className="w-5 sm:w-6 h-5 sm:h-6" />
+                        </motion.div>
+                        <div>
+                          <p className="font-bold text-foreground">{item.title}</p>
+                          <p className="text-xs text-muted-foreground">{item.sub}</p>
+                        </div>
+                      </div>
+                      <motion.div variants={chevronSlide} initial="rest" whileHover="hover">
+                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-emerald-600 transition-colors" />
+                      </motion.div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </motion.div>
             </Link>
           ))}
         </div>
 
-        <div className="mt-12 space-y-6">
+        <div className="mt-10 sm:mt-12 space-y-4">
           <h3 className="font-bold text-foreground px-2">Settings & Support</h3>
           <div className="bg-card rounded-3xl shadow-sm overflow-hidden border border-border">
-            <Link to="/settings" className="w-full flex items-center justify-between p-4 hover:bg-muted border-b border-border last:border-0">
-              <div className="flex items-center gap-3 text-foreground">
-                <SettingsIcon className="w-5 h-5" />
-                <span className="font-medium">Account Settings</span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </Link>
-            <Link to="/faq" className="w-full flex items-center justify-between p-4 hover:bg-muted border-b border-border last:border-0">
-              <div className="flex items-center gap-3 text-foreground">
-                <HelpCircle className="w-5 h-5" />
-                <span className="font-medium">Help & FAQ</span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </Link>
-            <Link to="/privacy" className="w-full flex items-center justify-between p-4 hover:bg-muted border-b border-border last:border-0">
-              <div className="flex items-center gap-3 text-foreground">
-                <Lock className="w-5 h-5" />
-                <span className="font-medium">Privacy Policy</span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </Link>
-            <Link to="/about" className="w-full flex items-center justify-between p-4 hover:bg-muted border-b border-border last:border-0">
-              <div className="flex items-center gap-3 text-foreground">
-                <Info className="w-5 h-5" />
-                <span className="font-medium">About MediMind</span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </Link>
+            {settingsItems.map((item, i) => (
+              <Link 
+                key={i} 
+                to={item.to} 
+                className="w-full flex items-center justify-between p-4 hover:bg-muted border-b border-border last:border-0 transition-colors"
+              >
+                <div className="flex items-center gap-3 text-foreground">
+                  <motion.div whileHover={{ scale: 1.1 }} className="text-muted-foreground group-hover:text-foreground">
+                    <item.icon className="w-5 h-5" />
+                  </motion.div>
+                  <span className="font-medium">{item.title}</span>
+                </div>
+                <motion.div variants={chevronSlide} initial="rest" whileHover="hover">
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </motion.div>
+              </Link>
+            ))}
           </div>
         </div>
       </div>

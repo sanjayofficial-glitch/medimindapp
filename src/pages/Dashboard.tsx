@@ -35,7 +35,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import InteractionChecker from "@/components/InteractionChecker";
 import DynamicAIInsight from "@/components/DynamicAIInsight";
-import { scheduleAllNotifications, snoozeNotification, cancelAllNotifications, getNotificationPermissionStatus, cancelNotification } from "@/utils/notifications";
+import { scheduleAllNotifications, snoozeNotification, cancelAllNotifications, getNotificationPermissionStatus, cancelNotification, requestNotificationPermission, showTestNotification } from "@/utils/notifications";
+import { iconPop, cardInteractive, chevronSlide, buttonTap, scaleIn } from "@/lib/animations";
 
 const Dashboard = () => {
   const { user, logout, isLoading: isAuthLoading } = useAuth();
@@ -55,8 +56,20 @@ const Dashboard = () => {
   }, [user, isAuthLoading, navigate]);
 
   useEffect(() => {
-    const isEnabled = getNotificationPermissionStatus();
-    setNotificationsEnabled(isEnabled);
+    const checkPermissions = async () => {
+      const isEnabled = getNotificationPermissionStatus();
+      
+      if (!isEnabled && "Notification" in window && Notification.permission === "default") {
+        const granted = await requestNotificationPermission();
+        setNotificationsEnabled(granted);
+        if (granted) {
+          showTestNotification();
+        }
+      } else {
+        setNotificationsEnabled(isEnabled);
+      }
+    };
+    checkPermissions();
   }, []);
 
   useEffect(() => {
@@ -186,16 +199,36 @@ const Dashboard = () => {
               <ShieldAlert className="w-4 h-4 mr-1" /> Emergency
             </Button>
 
-            <div 
+            <motion.div 
               className={cn(
                 "p-2 rounded-full cursor-pointer transition-colors",
-                notificationsEnabled ? "bg-emerald-100 text-emerald-600" : "bg-gray-100 text-gray-400"
+                notificationsEnabled ? "bg-emerald-100 text-emerald-600" : "bg-orange-100 text-orange-500"
               )}
-              onClick={() => navigate("/settings")}
-              title={notificationsEnabled ? "Notifications enabled" : "Notifications disabled - click to enable"}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={async () => {
+                if (!notificationsEnabled) {
+                  const granted = await requestNotificationPermission();
+                  if (granted) {
+                    setNotificationsEnabled(true);
+                    showTestNotification();
+                    toast.success("Notifications enabled!");
+                  } else {
+                    toast.error("Please enable notifications in browser settings");
+                  }
+                } else {
+                  navigate("/settings");
+                }
+              }}
+              title={notificationsEnabled ? "Notifications enabled - click for settings" : "Click to enable notifications"}
             >
-              <Bell className="w-4 h-4" />
-            </div>
+              <motion.div 
+                animate={notificationsEnabled ? {} : { scale: [1, 1.2, 1], rotate: [0, 10, 0] }}
+                transition={{ duration: 0.5, repeat: 2 }}
+              >
+                <Bell className="w-4 h-4" />
+              </motion.div>
+            </motion.div>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -298,37 +331,60 @@ const Dashboard = () => {
                     <Link to="/add-medicine"><Button variant="outline" className="rounded-full">Get Started</Button></Link>
                   </div>
                 ) : (
-                  todayLogs.sort((a: DoseLog, b: DoseLog) => a.scheduledTime.localeCompare(b.scheduledTime)).map((log: DoseLog) => (
+                  todayLogs.sort((a: DoseLog, b: DoseLog) => a.scheduledTime.localeCompare(b.scheduledTime)).map((log: DoseLog, i: number) => (
                     <motion.div 
                       key={log.id} 
                       layout
-                      className={cn("flex items-center justify-between p-4 bg-card rounded-2xl border border-border shadow-sm", log.status === "taken" && "opacity-70")}
+                      variants={scaleIn}
+                      initial="hidden"
+                      animate="visible"
+                      custom={i}
+                      whileHover={{ scale: 1.01, transition: { duration: 0.15 } }}
+                      whileTap={{ scale: 0.99 }}
+                      className={cn("flex items-center justify-between p-4 bg-card rounded-2xl border border-border shadow-sm hover:shadow-md transition-shadow", log.status === "taken" && "opacity-70")}
                     >
                       <div className="flex items-center gap-4">
-                        <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center", log.status === "taken" ? "bg-primary/20 text-primary" : "bg-primary/10 text-primary")}>
+                        <motion.div 
+                          whileHover={{ scale: 1.1, rotate: 5 }}
+                          className={cn("w-12 h-12 rounded-xl flex items-center justify-center", log.status === "taken" ? "bg-primary/20 text-primary" : "bg-primary/10 text-primary")}
+                        >
                           <Pill className="w-6 h-6" />
-                        </div>
+                        </motion.div>
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="font-bold text-foreground">{log.medicineName}</p>
-                            {log.status === "taken" && <CheckCircle2 className="w-4 h-4 text-primary" />}
+                            {log.status === "taken" && (
+                              <motion.div 
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                              >
+                                <CheckCircle2 className="w-4 h-4 text-primary" />
+                              </motion.div>
+                            )}
                           </div>
                           <p className="text-xs font-medium text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" /> {log.scheduledTime}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         {log.status === "partial" ? (
-                          <Button 
-                            className="h-10 px-6 rounded-full bg-primary text-primary-foreground" 
-                            onClick={() => handleStatusUpdate(log, "taken")}
-                            disabled={saveDoseLog.isPending}
-                          >
-                            {saveDoseLog.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Take Now"}
-                          </Button>
+                          <motion.div whileTap={buttonTap.tap}>
+                            <Button 
+                              className="h-10 px-6 rounded-full bg-primary text-primary-foreground" 
+                              onClick={() => handleStatusUpdate(log, "taken")}
+                              disabled={saveDoseLog.isPending}
+                            >
+                              {saveDoseLog.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Take Now"}
+                            </Button>
+                          </motion.div>
                         ) : (
-                          <div className={cn("px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest", log.status === "taken" ? "bg-primary/20 text-primary" : "bg-destructive/20 text-destructive")}>
+                          <motion.div 
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className={cn("px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest", log.status === "taken" ? "bg-primary/20 text-primary" : "bg-destructive/20 text-destructive")}
+                          >
                             {log.status}
-                          </div>
+                          </motion.div>
                         )}
                       </div>
                     </motion.div>
@@ -353,20 +409,35 @@ const Dashboard = () => {
                   { to: "/wallet", icon: Package, title: "Rx Wallet", sub: "Digital documents", color: "bg-purple-500/10 text-purple-500" }
                 ].map((action, i) => (
                   <Link key={i} to={action.to}>
-                    <Card className="group hover:border-primary/50 transition-all cursor-pointer border-none shadow-sm bg-card">
-                      <CardContent className="p-4 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-colors", action.color, "group-hover:bg-primary group-hover:text-primary-foreground")}>
-                            <action.icon className="w-5 h-5" />
+                    <motion.div 
+                      variants={cardInteractive}
+                      initial="rest"
+                      whileHover="hover"
+                      whileTap="tap"
+                    >
+                      <Card className="group hover:border-primary/50 transition-all cursor-pointer border-none shadow-sm bg-card overflow-hidden">
+                        <CardContent className="p-4 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <motion.div 
+                              variants={iconPop}
+                              initial="rest"
+                              whileHover="hover"
+                              whileTap="tap"
+                              className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-colors", action.color, "group-hover:bg-primary group-hover:text-primary-foreground")}
+                            >
+                              <action.icon className="w-5 h-5" />
+                            </motion.div>
+                            <div>
+                              <p className="font-bold text-foreground">{action.title}</p>
+                              <p className="text-xs text-muted-foreground">{action.sub}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-bold text-foreground">{action.title}</p>
-                            <p className="text-xs text-muted-foreground">{action.sub}</p>
-                          </div>
-                        </div>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </CardContent>
-                    </Card>
+                          <motion.div variants={chevronSlide} initial="rest" whileHover="hover">
+                            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                          </motion.div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
                   </Link>
                 ))}
               </div>

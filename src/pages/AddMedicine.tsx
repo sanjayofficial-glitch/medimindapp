@@ -14,9 +14,12 @@ import { MedicineSelector } from "@/components/MedicineSelector";
 import { toast } from "sonner";
 import { queryClient } from "@/lib/query-client";
 import { QUERY_KEYS } from "@/lib/query-client";
+import { scheduleNotification, getNotificationPermissionStatus } from "@/utils/notifications";
+import { useAuth } from "@/context/AuthContext";
 
 const AddMedicine = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [selectedMember, setSelectedMember] = useState("");
   const [selectedMed, setSelectedMed] = useState<MedicineDBEntry | null>(null);
   const [customName, setCustomName] = useState("");
@@ -98,6 +101,16 @@ const AddMedicine = () => {
       }
 
       toast.success(`Added ${medicineName} with ${times.length} daily doses`);
+      
+      // Schedule notifications if permissions granted
+      if (getNotificationPermissionStatus()) {
+        const userName = user?.user_metadata?.name || "User";
+        times.forEach((time, index) => {
+          const uniqueId = `${newMedicine.id}_${index}`;
+          scheduleNotification(uniqueId, medicineName, time, userName);
+        });
+        toast.info("Notifications scheduled for your medication times");
+      }
       
       // Invalidate dose logs queries so Dashboard refetches
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogs });

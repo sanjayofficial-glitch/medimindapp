@@ -7,9 +7,29 @@ export interface NotificationAction {
 const activeTimeouts = new Map<string, NodeJS.Timeout>();
 
 export const requestNotificationPermission = async (): Promise<boolean> => {
-  if (!("Notification" in window)) return false;
+  if (!("Notification" in window)) {
+    console.log("Notifications not supported in this browser");
+    return false;
+  }
+  
+  if (Notification.permission === "granted") return true;
+  if (Notification.permission === "denied") return false;
+  
   const permission = await Notification.requestPermission();
+  console.log("Notification permission:", permission);
   return permission === "granted";
+};
+
+export const showTestNotification = async (): Promise<boolean> => {
+  const granted = await requestNotificationPermission();
+  if (granted) {
+    new Notification("MediMind", {
+      body: "Notifications are working! You'll receive reminders for your medications.",
+      icon: "/favicon.ico",
+      tag: "test"
+    });
+  }
+  return granted;
 };
 
 const createNotification = (medicineId: string, medicineName: string, userName: string, isSnooze: boolean = false, snoozeMinutes: number = 10) => {
