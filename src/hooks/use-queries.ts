@@ -190,7 +190,7 @@ export const usePrescriptions = () => {
         .select('*')
         .eq('user_id', userId);
       if (error) throw new Error(error.message);
-      return (data || []).map((d: any) => ({
+      return (data || []).map((d: { id: string; family_member_id: string; title: string; image_url: string; pharmacy_name: string; pharmacy_phone: string; expiry_date: string }) => ({
         id: d.id,
         familyMemberId: d.family_member_id,
         title: d.title,
@@ -308,7 +308,7 @@ export const useMoodLogs = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from('mood_logs').select('*');
       if (error) throw new Error(error.message);
-      return (data || []).map((d: any) => ({
+      return (data || []).map((d: { id: string; family_member_id: string; mood: string; date: string; notes: string | null; created_at: string }) => ({
         id: d.id,
         familyMemberId: d.family_member_id,
         mood: d.mood,

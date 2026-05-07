@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { User, AuthError } from "@supabase/supabase-js";
+import { User, AuthError, AuthTokenResponse } from "@supabase/supabase-js";
 import { queryClient } from "@/lib/query-client";
 import { QUERY_KEYS } from "@/lib/query-client";
 
@@ -8,7 +8,7 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, pass: string) => Promise<{ success: boolean; error?: AuthError | null }>;
   logout: () => Promise<void>;
-  signup: (name: string, email: string, pass: string) => Promise<{ success: boolean; error?: AuthError | null; data?: any }>;
+  signup: (name: string, email: string, pass: string) => Promise<{ success: boolean; error?: AuthError | null; data?: AuthTokenResponse }>;
   updateProfile: (name: string, email: string) => Promise<boolean>;
   isLoading: boolean;
 }

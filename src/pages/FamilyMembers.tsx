@@ -9,10 +9,11 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useFamilyMembers, useAddFamilyMember, useUpdateFamilyMember, useRemoveFamilyMember } from "@/hooks/use-queries";
+import { FamilyMember } from "@/utils/storage";
 
 const FamilyMembers = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingMember, setEditingMember] = useState<any>(null);
+  const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [formData, setFormData] = useState({ name: "", relationship: "" });
 
   const relationships = ["Self", "Spouse", "Child", "Parent", "Sibling", "Grandparent", "Other"];

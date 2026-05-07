@@ -37,7 +37,7 @@ const LabResults = () => {
     }
 
     try {
-      let fileUrl = "";
+      const fileUrl = "";
       if (formData.attachment) {
         toast.info("File upload not implemented yet - saving text data only");
       }
