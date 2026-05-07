@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import { ChevronLeft, Loader2, Pill } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,13 +9,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { useFamilyMembers, useAddMedicine, useSaveDoseLog } from "@/hooks/use-queries";
-import { medicineDatabase, MedicineDBEntry } from "@/data/medicineDatabase";
+import { MedicineDBEntry } from "@/data/medicineDatabase";
+import { MedicineSelector } from "@/components/MedicineSelector";
 import { toast } from "sonner";
 
 const AddMedicine = () => {
   const navigate = useNavigate();
   const [selectedMember, setSelectedMember] = useState("");
   const [selectedMed, setSelectedMed] = useState<MedicineDBEntry | null>(null);
+  const [customName, setCustomName] = useState("");
+  const [isCustom, setIsCustom] = useState(false);
   const [dosage, setDosage] = useState("");
   const [frequency, setFrequency] = useState("");
   const [times, setTimes] = useState<string[]>([]);
@@ -31,10 +34,18 @@ const AddMedicine = () => {
   const hourOptions = Array.from({ length: 12 }, (_, i) => `${i + 1}`);
   const minuteOptions = ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"];
 
+  const convertTo24h = (hour: string, minute: string, period: string) => {
+    let h = parseInt(hour);
+    if (period === "PM" && h < 12) h += 12;
+    if (period === "AM" && h === 12) h = 0;
+    return `${pad(h.toString())}:${pad(minute)}`;
+  };
+
   const addTime = () => {
     if (!newHour || !newMinute) return toast.error("Select hour and minute");
     const formatted = `${pad(newHour)}:${pad(newMinute)} ${newPeriod}`;
-    setTimes(prev => [...prev, formatted]);
+    if (times.includes(formatted)) return toast.error("Time already added");
+    setTimes(prev => [...prev, formatted].sort());
     setNewHour("");
     setNewMinute("");
     setNewPeriod("AM");
@@ -47,12 +58,15 @@ const AddMedicine = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMember) return toast.error("Please select a family member");
+    
+    const medicineName = isCustom ? customName.trim() : selectedMed?.brand_name;
+    if (!medicineName) return toast.error("Please select or enter a medicine name");
+    
     if (!dosage.trim()) return toast.error("Please enter a dosage");
     if (!frequency) return toast.error("Please select a frequency");
     if (times.length === 0) return toast.error("Please add at least one time");
 
     try {
-      const medicineName = selectedMed?.brand_name || "Custom Medicine";
       const newMedicine = await addMedicineMutation.mutateAsync({
         familyMemberId: selectedMember,
         name: medicineName,
@@ -62,12 +76,15 @@ const AddMedicine = () => {
       });
 
       const today = new Date().toISOString().split("T")[0];
+      
+      // Create dose logs for today
       for (const timeStr of times) {
-        const [timePart] = timeStr.split(" ");
+        const [timePart, period] = timeStr.split(" ");
         const [hour, minute] = timePart.split(":");
-        const scheduledTime = `${hour}:${minute}`;
+        const scheduledTime = convertTo24h(hour, minute, period);
+        
         await saveDoseLogMutation.mutateAsync({
-          id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+          id: crypto.randomUUID(), // Ensure valid UUID
           medicineId: newMedicine.id,
           medicineName: newMedicine.name,
           familyMemberId: selectedMember,
@@ -78,7 +95,7 @@ const AddMedicine = () => {
         });
       }
 
-      toast.success(`Added ${times.length} dose schedule(s) for ${medicineName}`);
+      toast.success(`Added ${medicineName} with ${times.length} daily doses`);
       navigate("/dashboard");
     } catch (error) {
       console.error("Error adding medicine:", error);
@@ -96,26 +113,29 @@ const AddMedicine = () => {
             <ChevronLeft className="w-4 h-4 mr-1" /> Back
           </Button>
           <h1 className="text-3xl font-bold text-gray-900">Add Medicine</h1>
-          <p className="text-gray-600 mt-1">Add a new medication to your schedule</p>
+          <p className="text-gray-600 mt-1">Schedule a new medication for yourself or a family member</p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Medication Details</CardTitle>
+        <Card className="border-none shadow-lg">
+          <CardHeader className="bg-emerald-600 text-white rounded-t-2xl">
+            <CardTitle className="flex items-center gap-2">
+              <Pill className="w-5 h-5" />
+              Medication Details
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className="p-6">
+            <form onSubmit={handleSubmit} className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label>Family Member</Label>
+                  <Label className="text-sm font-bold text-gray-700">Family Member</Label>
                   <Select value={selectedMember} onValueChange={setSelectedMember}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select member" />
+                    <SelectTrigger className="h-11 bg-white">
+                      <SelectValue placeholder="Who is this for?" />
                     </SelectTrigger>
                     <SelectContent>
                       {familyMembers.map((member) => (
                         <SelectItem key={member.id} value={member.id}>
-                          {member.name}
+                          {member.name} ({member.relationship})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -123,38 +143,54 @@ const AddMedicine = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Medicine</Label>
-                  <Select onValueChange={(value) => {
-                    const med = medicineDatabase.find((m) => m.brand_name === value);
-                    setSelectedMed(med || null);
-                  }}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select medicine" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {medicineDatabase.map((med) => (
-                        <SelectItem key={med.brand_name} value={med.brand_name}>
-                          {med.brand_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-sm font-bold text-gray-700">Medicine Name</Label>
+                  {isCustom ? (
+                    <div className="flex gap-2">
+                      <Input 
+                        value={customName} 
+                        onChange={(e) => setCustomName(e.target.value)}
+                        placeholder="Enter medicine name..."
+                        className="h-11"
+                        autoFocus
+                      />
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        onClick={() => { setIsCustom(false); setCustomName(""); }}
+                        className="text-xs text-emerald-600"
+                      >
+                        Search DB
+                      </Button>
+                    </div>
+                  ) : (
+                    <MedicineSelector 
+                      onSelect={(med) => {
+                        setSelectedMed(med);
+                        setIsCustom(false);
+                      }}
+                      onCustom={() => {
+                        setIsCustom(true);
+                        setSelectedMed(null);
+                      }}
+                    />
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Dosage</Label>
+                  <Label className="text-sm font-bold text-gray-700">Dosage</Label>
                   <Input
                     value={dosage}
                     onChange={(e) => setDosage(e.target.value)}
-                    placeholder="e.g., 500mg"
+                    placeholder="e.g., 500mg, 1 tablet, 5ml"
+                    className="h-11"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Frequency</Label>
+                  <Label className="text-sm font-bold text-gray-700">Frequency</Label>
                   <Select value={frequency} onValueChange={setFrequency}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select frequency" />
+                    <SelectTrigger className="h-11 bg-white">
+                      <SelectValue placeholder="How often?" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Once daily">Once daily</SelectItem>
@@ -167,45 +203,38 @@ const AddMedicine = () => {
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <Label>Times (AM/PM)</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <Label className="text-sm font-medium">Hour</Label>
+              <div className="space-y-4 p-6 bg-gray-50 rounded-2xl border border-gray-100">
+                <Label className="text-sm font-bold text-gray-700">Dose Schedule</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div className="sm:col-span-1">
                     <Select value={newHour} onValueChange={setNewHour}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-11 bg-white">
                         <SelectValue placeholder="Hour" />
                       </SelectTrigger>
                       <SelectContent>
                         {hourOptions.map((hour) => (
-                          <SelectItem key={hour} value={hour}>
-                            {hour}
-                          </SelectItem>
+                          <SelectItem key={hour} value={hour}>{hour}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  <div>
-                    <Label className="text-sm font-medium">Minute</Label>
+                  <div className="sm:col-span-1">
                     <Select value={newMinute} onValueChange={setNewMinute}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Minute" />
+                      <SelectTrigger className="h-11 bg-white">
+                        <SelectValue placeholder="Min" />
                       </SelectTrigger>
                       <SelectContent>
                         {minuteOptions.map((minute) => (
-                          <SelectItem key={minute} value={minute}>
-                            {minute}
-                          </SelectItem>
+                          <SelectItem key={minute} value={minute}>{minute}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  <div>
-                    <Label className="text-sm font-medium">Period</Label>
+                  <div className="sm:col-span-1">
                     <Select value={newPeriod} onValueChange={setNewPeriod}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-11 bg-white">
                         <SelectValue placeholder="AM/PM" />
                       </SelectTrigger>
                       <SelectContent>
@@ -214,31 +243,28 @@ const AddMedicine = () => {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  <Button
+                    type="button"
+                    onClick={addTime}
+                    className="h-11 bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    Add Time
+                  </Button>
                 </div>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-                  onClick={addTime}
-                >
-                  Add Time
-                </Button>
-
                 {times.length > 0 && (
-                  <div className="space-y-2 mt-2">
-                    <p className="text-xs text-gray-600">Scheduled times:</p>
+                  <div className="flex flex-wrap gap-2 mt-4">
                     {times.map((time, index) => (
-                      <div key={index} className="flex items-center justify-between px-3 py-1 rounded-full bg-emerald-50 text-sm">
-                        <span className="font-medium">{time}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
+                      <div key={index} className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-emerald-100 text-sm shadow-sm">
+                        <span className="font-bold text-emerald-700">{time}</span>
+                        <button
+                          type="button"
                           onClick={() => removeTime(index)}
-                          className="text-emerald-600 hover:text-emerald-900"
+                          className="text-gray-400 hover:text-rose-500 transition-colors"
                         >
-                          Remove
-                        </Button>
+                          ×
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -247,16 +273,16 @@ const AddMedicine = () => {
 
               <Button 
                 type="submit" 
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-lg shadow-emerald-100 transition-all active:scale-[0.98]" 
+                className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white text-lg font-bold shadow-xl shadow-emerald-100 transition-all active:scale-[0.98]" 
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Adding...
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Creating Schedule...
                   </>
                 ) : (
-                  "Add Medicine"
+                  "Save Medication Schedule"
                 )}
               </Button>
             </form>
