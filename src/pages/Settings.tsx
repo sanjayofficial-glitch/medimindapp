@@ -2,16 +2,18 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { User, ChevronLeft, LogOut, ShieldCheck, Camera } from "lucide-react";
+import { User, ChevronLeft, LogOut, ShieldCheck, Camera, Bell, BellOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { saveProfilePicture, getProfilePicture } from "@/utils/storage";
+import { useOneSignal } from "@/hooks/use-one-signal";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -23,6 +25,8 @@ const Settings = () => {
   const [email, setEmail] = useState(user?.email || "");
   const [isSaving, setIsSaving] = useState(false);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
+
+  const { isEnabled: notificationsEnabled, isLoading: isCheckingNotifications, isSubscribing, isSupported, subscribe, unsubscribe } = useOneSignal();
 
   useEffect(() => {
     setMounted(true);
@@ -159,6 +163,55 @@ const Settings = () => {
               </form>
             </CardContent>
           </Card>
+
+          {isSupported && (
+            <Card className="dark:bg-slate-900 dark:border-slate-800">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 dark:text-white">
+                  {notificationsEnabled ? <Bell className="w-5 h-5 text-emerald-600" /> : <BellOff className="w-5 h-5 text-gray-400" />}
+                  Push Notifications
+                </CardTitle>
+                <CardDescription>Receive reminders when it's time to take your medicine</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-100 dark:border-slate-700">
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">Medication Reminders</p>
+                      <p className="text-xs text-gray-500">
+                        {notificationsEnabled 
+                          ? "You'll receive push notifications" 
+                          : "Enable to get notified when it's time for your meds"}
+                      </p>
+                    </div>
+                  </div>
+                  {isCheckingNotifications ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                  ) : (
+                    <Switch
+                      checked={notificationsEnabled}
+                      disabled={isSubscribing}
+                      onCheckedChange={async (checked) => {
+                        if (checked) {
+                          const success = await subscribe();
+                          if (success) {
+                            toast.success("Notifications enabled! You'll receive medication reminders.");
+                          } else {
+                            toast.error("Failed to enable notifications. Please check your browser settings.");
+                          }
+                        } else {
+                          const success = await unsubscribe();
+                          if (success) {
+                            toast.info("Notifications disabled.");
+                          }
+                        }
+                      }}
+                    />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="dark:bg-slate-900 dark:border-slate-800">
             <CardHeader>

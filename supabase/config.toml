@@ -6,11 +6,11 @@ enabled = true
 port = 54321
 max_rows = 1000
 
-[functions.send-push-notification]
+[functions.save-onesignal-subscription]
+verify_jwt = true
+
+[functions.send-medication-notification]
 verify_jwt = false
 
-[functions.check-medication-reminders]
-verify_jwt = false
-
-[functions.webpush-reminders]
+[functions.check-due-medications]
 verify_jwt = false
