@@ -1,6 +1,6 @@
 declare global {
   interface Window {
-    OneSignal: typeof OneSignal;
+    OneSignal: any;
   }
 }
 
@@ -9,11 +9,6 @@ interface OneSignalInitOptions {
   allowLocalhostAsSecureOrigin?: boolean;
   notifyButton?: object;
   welcomeNotification?: object;
-}
-
-interface OneSignalSubscription {
-  pushToken: string;
-  externalId: string;
 }
 
 const ONESIGNAL_APP_ID = import.meta.env.VITE_ONESIGNAL_APP_ID;
@@ -126,7 +121,7 @@ export const unsubscribeFromPush = async (): Promise<boolean> => {
   }
 };
 
-export const sendTestNotification = async (userId: string): Promise<boolean> => {
+export const sendTestNotification = async (): Promise<boolean> => {
   if (!window.OneSignal || !ONESIGNAL_APP_ID) return false;
 
   try {
@@ -147,7 +142,7 @@ export const sendTestNotification = async (userId: string): Promise<boolean> => 
 export const setupNotificationClickHandler = (onNotificationClick: (data: Record<string, unknown>) => void) => {
   if (!window.OneSignal) return;
 
-  window.OneSignal.Notifications.addEventListener('click', (event) => {
+  window.OneSignal.Notifications.addEventListener('click', (event: any) => {
     console.log('[OneSignal] Notification clicked:', event);
     const data = event?.notification?.launchData || {};
     onNotificationClick(data);
