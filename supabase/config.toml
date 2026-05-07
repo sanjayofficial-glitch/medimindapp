@@ -1,0 +1,13 @@
+[project]
+id = "tokndrkhxgmckuffbtrd"
+
+[api]
+enabled = true
+port = 54321
+max_rows = 1000
+
+[functions.send-push-notification]
+verify_jwt = false
+
+[functions.check-medication-reminders]
+verify_jwt = false

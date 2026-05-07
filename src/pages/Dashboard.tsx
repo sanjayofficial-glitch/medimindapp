@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import InteractionChecker from "@/components/InteractionChecker";
 import DynamicAIInsight from "@/components/DynamicAIInsight";
 import { scheduleAllNotifications, snoozeNotification, cancelAllNotifications, getNotificationPermissionStatus, cancelNotification, requestNotificationPermission, showTestNotification, sendImmediateNotification, getScheduledNotificationCount } from "@/utils/notifications";
+import { subscribeToPush, sendTestPushNotification, isPushSupported, requestPushPermission, getServiceWorkerRegistration } from "@/utils/push-notifications";
 import { iconPop, cardInteractive, chevronSlide, buttonTap, scaleIn } from "@/lib/animations";
 
 const Dashboard = () => {
@@ -56,21 +57,22 @@ const Dashboard = () => {
   }, [user, isAuthLoading, navigate]);
 
   useEffect(() => {
-    const checkPermissions = async () => {
-      const isEnabled = getNotificationPermissionStatus();
+    const initNotifications = async () => {
+      if (!user) return;
       
-      if (!isEnabled && "Notification" in window && Notification.permission === "default") {
-        const granted = await requestNotificationPermission();
-        setNotificationsEnabled(granted);
-        if (granted) {
-          showTestNotification();
+      const permStatus = getNotificationPermissionStatus();
+      setNotificationsEnabled(permStatus);
+      
+      if (permStatus && isPushSupported()) {
+        const registration = await getServiceWorkerRegistration();
+        if (registration) {
+          await subscribeToPush(user.id);
+          console.log('[DASHBOARD] Push notifications initialized');
         }
-      } else {
-        setNotificationsEnabled(isEnabled);
       }
     };
-    checkPermissions();
-  }, []);
+    initNotifications();
+  }, [user]);
 
   useEffect(() => {
     if (notificationsEnabled && medicines.length > 0 && user) {
@@ -209,24 +211,32 @@ const Dashboard = () => {
               whileTap={{ scale: 0.9 }}
               onClick={async () => {
                 if (!notificationsEnabled) {
-                  const granted = await requestNotificationPermission();
-                  if (granted) {
+                  const granted = await requestPushPermission();
+                  if (granted && user) {
+                    await subscribeToPush(user.id);
                     setNotificationsEnabled(true);
                     showTestNotification();
-                    toast.success("Notifications enabled!");
+                    toast.success("Push notifications enabled!");
                   } else {
                     toast.error("Please enable notifications in browser settings");
                   }
                 } else {
-                  sendImmediateNotification(
-                    "Test Notification",
-                    `Your notifications are working! Scheduled: ${getScheduledNotificationCount()}`,
-                    "test"
-                  );
-                  toast.info(`Test notification sent. ${getScheduledNotificationCount()} notifications scheduled.`);
+                  if (user) {
+                    const success = await sendTestPushNotification(user.id);
+                    if (success) {
+                      toast.success("Test notification sent via push!");
+                    } else {
+                      sendImmediateNotification(
+                        "Test Notification",
+                        "Local notification working! Push will be available after edge function deployment.",
+                        "test"
+                      );
+                      toast.info("Local test notification sent");
+                    }
+                  }
                 }
               }}
-              title={notificationsEnabled ? "Click to send test notification" : "Click to enable notifications"}
+              title={notificationsEnabled ? "Click to send test notification" : "Click to enable push notifications"}
             >
               <motion.div 
                 animate={notificationsEnabled ? {} : { scale: [1, 1.2, 1], rotate: [0, 10, 0] }}
