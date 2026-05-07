@@ -2,31 +2,58 @@ const CACHE_NAME = 'medimind-v1';
 const OFFLINE_URL = '/';
 
 self.addEventListener('install', (event) => {
+  console.log('[ServiceWorker] Installing...');
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.add(OFFLINE_URL))
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('[ServiceWorker] Caching app shell');
+      return cache.add(OFFLINE_URL);
+    })
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  console.log('[ServiceWorker] Activating...');
+  event.waitUntil(
+    clients.claim()
   );
 });
 
 self.addEventListener('push', (event) => {
-  console.log('[ServiceWorker] Push received');
+  console.log('[ServiceWorker] Push received:', event);
   
-  let data = { title: 'MediMind', body: 'Time for your medication!', icon: '/favicon.ico' };
+  let data = {
+    title: 'MediMind Reminder',
+    body: 'Time for your medication!',
+    icon: '/favicon.ico',
+    badge: '/favicon.ico',
+    url: '/dashboard',
+    tag: 'medimind'
+  };
   
   if (event.data) {
     try {
-      data = event.data.json();
+      const parsed = event.data.json();
+      data = { ...data, ...parsed };
     } catch (e) {
-      data.body = event.data.text();
+      try {
+        data.body = event.data.text();
+      } catch (e2) {
+        data.body = 'Time for your medication!';
+      }
     }
   }
 
   const options = {
     body: data.body,
     icon: data.icon || '/favicon.ico',
-    badge: '/favicon.ico',
+    badge: data.badge || '/favicon.ico',
     vibrate: [100, 50, 100],
+    tag: data.tag || 'medimind',
+    requireInteraction: true,
     data: {
-      url: data.url || '/dashboard'
+      url: data.url || '/dashboard',
+      medicineId: data.medicineId
     },
     actions: [
       { action: 'taken', title: '✅ Taken' },
@@ -34,12 +61,15 @@ self.addEventListener('push', (event) => {
     ]
   };
 
+  console.log('[ServiceWorker] Showing notification:', data.title);
+  
   event.waitUntil(
     self.registration.showNotification(data.title, options)
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
+  console.log('[ServiceWorker] Notification click:', event.action);
   event.notification.close();
   
   const urlToOpen = event.notification.data?.url || '/dashboard';
@@ -47,7 +77,7 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {
-        if (client.url === urlToOpen && 'focus' in client) {
+        if (client.url.includes(urlToOpen) && 'focus' in client) {
           return client.focus();
         }
       }
@@ -58,7 +88,7 @@ self.addEventListener('notificationclick', (event) => {
   );
   
   if (event.action === 'taken' || event.action === 'snooze') {
-    console.log('[ServiceWorker] Push action:', event.action);
+    console.log('[ServiceWorker] Action handled:', event.action);
   }
 });
 
@@ -67,5 +97,13 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request).catch(() => caches.match(OFFLINE_URL))
     );
+  }
+});
+
+self.addEventListener('message', (event) => {
+  console.log('[ServiceWorker] Message received:', event.data);
+  
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
   }
 });
