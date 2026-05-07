@@ -31,8 +31,8 @@ const Progress = () => {
   useEffect(() => {
     const loadData = async () => {
       const logs: DoseLog[] = await getDoseLogs();
-      const vitals: VitalLog[] = await getVitalLogs();
-      const symptoms: SymptomLog[] = await getSymptomLogs();
+      const vitals: VitalLog[] = await useVitalLogs().data || [];
+      const symptoms: SymptomLog[] = await useSymptomLogs().data || [];
       const medicines = await getMedicines();
       
       const taken = logs.filter(l => l.status === "taken").length;

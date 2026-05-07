@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { getFamilyMembers, FamilyMember, addVitalLog, getVitalLogs, VitalLog } from "@/utils/storage";
+import { useFamilyMembers, useAddVitalLog, useVitalLogs } from "@/hooks/use-queries";
+import { FamilyMember, VitalLog } from "@/utils/storage";
 import { toast } from "sonner";
 
 const VitalsTracker = () => {
@@ -21,16 +22,14 @@ const VitalsTracker = () => {
   const [value, setValue] = useState("");
   const [notes, setNotes] = useState("");
 
-  const loadData = async () => {
-    const members = await getFamilyMembers();
-    const logs = await getVitalLogs();
-    setFamilyMembers(members);
-    setVitals(logs);
-  };
+  const { data: membersData } = useFamilyMembers();
+  const { data: vitalsData } = useVitalLogs();
+  const addVitalLog = useAddVitalLog();
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (membersData) setFamilyMembers(membersData);
+    if (vitalsData) setVitals(vitalsData);
+  }, [membersData, vitalsData]);
 
   const handleAddVital = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +37,7 @@ const VitalsTracker = () => {
 
     const unit = type === "blood_pressure" ? "mmHg" : type === "blood_sugar" ? "mg/dL" : type === "weight" ? "kg" : "bpm";
     
-    await addVitalLog({
+    await addVitalLog.mutateAsync({
       familyMemberId: selectedMember,
       type,
       value,
@@ -48,7 +47,6 @@ const VitalsTracker = () => {
       notes
     });
 
-    await loadData();
     setValue("");
     setNotes("");
     toast.success("Vital recorded successfully");
@@ -96,7 +94,7 @@ const VitalsTracker = () => {
 
                 <div className="space-y-2">
                   <Label>Vital Type</Label>
-                  <Select value={type} onValueChange={(v: any) => setType(v)}>
+                  <Select value={type} onValueChange={(v) => setType(v as VitalLog["type"])}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="blood_pressure">Blood Pressure</SelectItem>
