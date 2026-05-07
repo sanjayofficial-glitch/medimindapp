@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, Variants } from "framer-motion";
 import { 
@@ -15,8 +15,7 @@ import {
   ShieldAlert,
   Trophy,
   Settings as SettingsIcon,
-  Loader2,
-  Bell
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,14 +34,12 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import InteractionChecker from "@/components/InteractionChecker";
 import DynamicAIInsight from "@/components/DynamicAIInsight";
-import { scheduleAllNotifications, snoozeNotification, cancelAllNotifications, getNotificationPermissionStatus, cancelNotification, showTestNotification, getScheduledNotificationCount } from "@/utils/notifications";
-import { subscribeToPush, isPushSupported, requestPushPermission, getServiceWorkerRegistration, sendPushNotificationViaEdge, checkAndSendDueMedicationReminders } from "@/utils/push-notifications";
+
 import { iconPop, cardInteractive, chevronSlide, buttonTap, scaleIn } from "@/lib/animations";
 
 const Dashboard = () => {
   const { user, logout, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   
   const today = new Date().toISOString().split('T')[0];
   const { data: todayLogs = [], isLoading: isDataLoading, refetch } = useDoseLogsForDate(today);
@@ -55,97 +52,6 @@ const Dashboard = () => {
       navigate("/login");
     }
   }, [user, isAuthLoading, navigate]);
-
-  useEffect(() => {
-    const initNotifications = async () => {
-      if (!user) return;
-      
-      const permStatus = getNotificationPermissionStatus();
-      setNotificationsEnabled(permStatus);
-      
-      if (permStatus && isPushSupported()) {
-        const registration = await getServiceWorkerRegistration();
-        if (registration) {
-          await subscribeToPush(user.id);
-          console.log('[DASHBOARD] Push notifications initialized');
-          
-          const sentKey = `push_reminder_sent_${new Date().toDateString()}`;
-          if (!sessionStorage.getItem(sentKey)) {
-            const reminderCount = await checkAndSendDueMedicationReminders(user.id);
-            if (reminderCount > 0) {
-              console.log('[DASHBOARD] Sent push reminders for', reminderCount, 'medications');
-              sessionStorage.setItem(sentKey, 'true');
-            }
-          }
-        }
-      }
-    };
-    initNotifications();
-  }, [user]);
-
-  useEffect(() => {
-    if (notificationsEnabled && medicines.length > 0 && user) {
-      const userName = user.user_metadata?.name || "User";
-      console.log("[DASHBOARD] Scheduling notifications for medicines:", medicines.map(m => ({ name: m.name, times: m.times })));
-      
-      cancelAllNotifications();
-      scheduleAllNotifications(medicines, userName);
-      
-      const count = getScheduledNotificationCount();
-      console.log("[DASHBOARD] Total scheduled:", count);
-      
-      if (count > 0) {
-        const shownKey = `notif_shown_${new Date().toDateString()}`;
-        if (!sessionStorage.getItem(shownKey)) {
-          toast.info(`${count} reminder${count > 1 ? 's' : ''} scheduled for today`);
-          sessionStorage.setItem(shownKey, 'true');
-        }
-      }
-    }
-    
-    return () => {
-      cancelAllNotifications();
-    };
-  }, [medicines, notificationsEnabled, user]);
-
-  useEffect(() => {
-    if (!notificationsEnabled || !user) return;
-    
-    const checkInterval = 5 * 60 * 1000;
-    const intervalId = setInterval(async () => {
-      const sentKey = `push_reminder_sent_${new Date().toDateString()}`;
-      if (!sessionStorage.getItem(sentKey)) {
-        const reminderCount = await checkAndSendDueMedicationReminders(user.id);
-        if (reminderCount > 0) {
-          sessionStorage.setItem(sentKey, 'true');
-        }
-      }
-    }, checkInterval);
-    
-    return () => clearInterval(intervalId);
-  }, [notificationsEnabled, user]);
-
-  useEffect(() => {
-    const handleNotificationAction = (event: CustomEvent) => {
-      const { type, medicineId, snoozeMinutes } = event.detail;
-      if (type === "taken") {
-        const log = todayLogs.find(l => l.medicineId === medicineId);
-        if (log) handleStatusUpdate(log, "taken");
-        cancelNotification(medicineId);
-      } else if (type === "snooze") {
-        const log = todayLogs.find(l => l.medicineId === medicineId);
-        if (log) {
-          snoozeNotification(medicineId, log.medicineName, user?.user_metadata?.name || "User", snoozeMinutes || 10);
-          toast.info(`Reminder snoozed for ${snoozeMinutes || 10} minutes`);
-        }
-      }
-    };
-
-    window.addEventListener("medimind_notification_action", handleNotificationAction as EventListener);
-    return () => {
-      window.removeEventListener("medimind_notification_action", handleNotificationAction as EventListener);
-    };
-  }, [todayLogs, user]);
 
   const handleStatusUpdate = async (log: DoseLog, status: "taken" | "missed") => {
     try {
@@ -239,54 +145,6 @@ const Dashboard = () => {
             >
               <ShieldAlert className="w-4 h-4 mr-1" /> Emergency
             </Button>
-
-            <motion.div 
-              className={cn(
-                "p-2 rounded-full cursor-pointer transition-colors",
-                notificationsEnabled ? "bg-emerald-100 text-emerald-600" : "bg-orange-100 text-orange-500"
-              )}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={async () => {
-                if (!notificationsEnabled) {
-                  const granted = await requestPushPermission();
-                  if (granted && user) {
-                    await subscribeToPush(user.id);
-                    setNotificationsEnabled(true);
-                    showTestNotification();
-                    
-                    const pushResult = await sendPushNotificationViaEdge(
-                      user.id,
-                      '💊 MediMind',
-                      'Push notifications are now configured!'
-                    );
-                    if (pushResult.success) {
-                      toast.success("Notifications enabled! Real push notifications ready.");
-                    } else {
-                      toast.warning("Browser notifications enabled, but push setup has issues.");
-                    }
-                  } else {
-                    toast.error("Please allow notifications in browser popup");
-                  }
-                } else {
-                  // Test notification
-                  const sent = await showTestNotification();
-                  if (sent) {
-                    toast.success("Test notification sent!");
-                  } else {
-                    toast.error("Notifications blocked - check browser settings");
-                  }
-                }
-              }}
-              title={notificationsEnabled ? "Click to send test notification" : "Click to enable push notifications"}
-            >
-              <motion.div 
-                animate={notificationsEnabled ? {} : { scale: [1, 1.2, 1], rotate: [0, 10, 0] }}
-                transition={{ duration: 0.5, repeat: 2 }}
-              >
-                <Bell className="w-4 h-4" />
-              </motion.div>
-            </motion.div>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

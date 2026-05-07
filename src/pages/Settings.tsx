@@ -12,7 +12,6 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
-import { requestNotificationPermission } from "@/utils/notifications";
 import { saveProfilePicture, getProfilePicture } from "@/utils/storage";
 
 const Settings = () => {
@@ -24,14 +23,10 @@ const Settings = () => {
   const [name, setName] = useState(user?.user_metadata?.name || "");
   const [email, setEmail] = useState(user?.email || "");
   const [isSaving, setIsSaving] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
-    if ("Notification" in window) {
-      setNotificationsEnabled(Notification.permission === "granted");
-    }
     const saved = getProfilePicture();
     if (saved) {
       setProfilePicture(saved);
@@ -84,22 +79,6 @@ const Settings = () => {
       toast.error("Failed to update profile");
     }
     setIsSaving(false);
-  };
-
-  const handleToggleNotifications = async (checked: boolean) => {
-    if (checked) {
-      const granted = await requestNotificationPermission();
-      if (granted) {
-        setNotificationsEnabled(true);
-        toast.success("Notifications enabled!");
-      } else {
-        setNotificationsEnabled(false);
-        toast.error("Permission denied. Please enable notifications in your browser settings.");
-      }
-    } else {
-      setNotificationsEnabled(false);
-      toast.info("Notifications disabled. You won't receive dose reminders.");
-    }
   };
 
   const handleLogout = () => {
