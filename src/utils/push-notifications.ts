@@ -22,6 +22,12 @@ const convertSubscriptionToJson = (sub: PushSubscription): string => {
 export const getServiceWorkerRegistration = async (): Promise<ServiceWorkerRegistration | null> => {
   if ('serviceWorker' in navigator) {
     try {
+      const existing = await navigator.serviceWorker.getRegistration('/sw.js');
+      if (existing) {
+        console.log('[PUSH] Existing Service Worker found:', existing.scope);
+        return existing;
+      }
+      
       const registration = await navigator.serviceWorker.register('/sw.js', {
         scope: '/'
       });
@@ -68,6 +74,7 @@ export const subscribeToPush = async (userId: string): Promise<PushSubscription 
     const existingSub = await registration.pushManager.getSubscription();
     if (existingSub) {
       console.log('[PUSH] Already subscribed, using existing subscription');
+      await savePushSubscription(userId, existingSub);
       return existingSub;
     }
 
@@ -189,4 +196,17 @@ const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
 export const getNotificationPermission = (): NotificationPermission | 'unsupported' => {
   if (!('Notification' in window)) return 'unsupported';
   return Notification.permission;
+};
+
+export const checkServiceWorkerReady = async (): Promise<boolean> => {
+  if (!('serviceWorker' in navigator)) return false;
+  
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    console.log('[PUSH] Service Worker ready:', registration.scope);
+    return true;
+  } catch (error) {
+    console.error('[PUSH] Service Worker not ready:', error);
+    return false;
+  }
 };
