@@ -35,7 +35,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import InteractionChecker from "@/components/InteractionChecker";
 import DynamicAIInsight from "@/components/DynamicAIInsight";
-import { scheduleAllNotifications, snoozeNotification, cancelAllNotifications, getNotificationPermissionStatus, cancelNotification, requestNotificationPermission, showTestNotification } from "@/utils/notifications";
+import { scheduleAllNotifications, snoozeNotification, cancelAllNotifications, getNotificationPermissionStatus, cancelNotification, requestNotificationPermission, showTestNotification, sendImmediateNotification, getScheduledNotificationCount } from "@/utils/notifications";
 import { iconPop, cardInteractive, chevronSlide, buttonTap, scaleIn } from "@/lib/animations";
 
 const Dashboard = () => {
@@ -75,8 +75,9 @@ const Dashboard = () => {
   useEffect(() => {
     if (notificationsEnabled && medicines.length > 0 && user) {
       const userName = user.user_metadata?.name || "User";
+      console.log("[DASHBOARD] Scheduling notifications for medicines:", medicines.map(m => ({ name: m.name, times: m.times })));
       scheduleAllNotifications(medicines, userName);
-      console.log("Notifications scheduled for", medicines.length, "medicines");
+      console.log("[DASHBOARD] Total scheduled:", getScheduledNotificationCount());
     }
     
     return () => {
@@ -217,10 +218,15 @@ const Dashboard = () => {
                     toast.error("Please enable notifications in browser settings");
                   }
                 } else {
-                  navigate("/settings");
+                  sendImmediateNotification(
+                    "Test Notification",
+                    `Your notifications are working! Scheduled: ${getScheduledNotificationCount()}`,
+                    "test"
+                  );
+                  toast.info(`Test notification sent. ${getScheduledNotificationCount()} notifications scheduled.`);
                 }
               }}
-              title={notificationsEnabled ? "Notifications enabled - click for settings" : "Click to enable notifications"}
+              title={notificationsEnabled ? "Click to send test notification" : "Click to enable notifications"}
             >
               <motion.div 
                 animate={notificationsEnabled ? {} : { scale: [1, 1.2, 1], rotate: [0, 10, 0] }}

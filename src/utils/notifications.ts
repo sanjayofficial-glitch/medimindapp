@@ -20,87 +20,99 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
   return permission === "granted";
 };
 
+export const sendImmediateNotification = (title: string, body: string, tag?: string) => {
+  if (Notification.permission !== "granted") {
+    console.log("Cannot send notification - permission not granted");
+    return false;
+  }
+  
+  const notif = new Notification(title, {
+    body,
+    icon: "/favicon.ico",
+    tag: tag || "medimind",
+    requireInteraction: true
+  });
+  
+  notif.onclick = () => {
+    window.focus();
+    notif.close();
+  };
+  
+  return true;
+};
+
 export const showTestNotification = async (): Promise<boolean> => {
   const granted = await requestNotificationPermission();
   if (granted) {
-    new Notification("MediMind", {
-      body: "Notifications are working! You'll receive reminders for your medications.",
-      icon: "/favicon.ico",
-      tag: "test"
-    });
+    sendImmediateNotification(
+      "MediMind Test", 
+      "Notifications are working! You'll receive reminders for your medications.",
+      "test"
+    );
   }
   return granted;
 };
 
-const createNotification = (medicineId: string, medicineName: string, userName: string, isSnooze: boolean = false, snoozeMinutes: number = 10) => {
-  if (Notification.permission !== "granted") return;
+export const showMedicineNotification = (
+  medicineId: string, 
+  medicineName: string, 
+  userName: string, 
+  isSnooze: boolean = false, 
+  snoozeMinutes: number = 10
+) => {
+  if (Notification.permission !== "granted") {
+    console.log("Cannot show notification - permission not granted");
+    return;
+  }
 
   const bodyText = isSnooze 
     ? `Reminder: You snoozed your ${medicineName} - it will alert again after ${snoozeMinutes} minutes`
     : `Hey ${userName}, don't forget your ${medicineName}!`;
 
-  const options: NotificationOptions & { actions: { action: string; title: string }[] } = {
-    body: bodyText,
-    icon: "/favicon.ico",
-    tag: medicineId,
-    requireInteraction: true,
-    actions: [
-      { action: "taken", title: "✅ Taken" },
-      { action: "snooze_10", title: "⏰ +10 min" },
-      { action: "snooze_20", title: "⏰ +20 min" }
-    ]
-  };
+  const notif = new Notification(
+    isSnooze ? `⏰ Reminder: ${medicineName}` : "💊 Time for your medicine",
+    {
+      body: bodyText,
+      icon: "/favicon.ico",
+      tag: medicineId,
+      requireInteraction: true,
+    }
+  );
 
-  const title = isSnooze 
-    ? `Reminder: ${medicineName} (after ${snoozeMinutes} min)` 
-    : "Time for your medicine 💊";
-
-  const notif = new Notification(title, options);
-
-  const handleAction = (action: string) => {
-    let snoozeMins = 10;
-    if (action === "snooze_20") snoozeMins = 20;
-    
+  notif.onclick = () => {
     window.dispatchEvent(new CustomEvent("medimind_notification_action", {
-      detail: { 
-        type: action.startsWith("snooze") ? "snooze" : action, 
-        medicineId,
-        snoozeMinutes: action.startsWith("snooze") ? snoozeMins : undefined
-      } as NotificationAction
+      detail: { type: "taken", medicineId } as NotificationAction
     }));
+    window.focus();
     notif.close();
   };
-
-  notif.addEventListener("action", (e: Event) => {
-    const actionEvent = e as unknown as { action: string };
-    handleAction(actionEvent.action);
-  });
-  notif.onclick = () => handleAction("taken");
 };
 
-const convertTo24Hour = (timeStr: string): { hours: number; minutes: number } => {
-  const parts = timeStr.trim().split(' ');
+const parseTimeString = (timeStr: string): { hours: number; minutes: number } => {
+  const trimmed = timeStr.trim();
   let hours: number;
   let minutes: number = 0;
   
-  if (parts.length === 2) {
-    const [timePart, period] = parts;
+  if (trimmed.includes(' ') && (trimmed.toUpperCase().includes('AM') || trimmed.toUpperCase().includes('PM'))) {
+    const parts = trimmed.split(' ');
+    const timePart = parts[0];
+    const period = parts[1].toUpperCase();
     const [h, m] = timePart.split(':').map(Number);
-    hours = h;
+    hours = h || 0;
     minutes = m || 0;
     
-    if (period.toUpperCase() === 'PM' && hours < 12) {
-      hours += 12;
-    } else if (period.toUpperCase() === 'AM' && hours === 12) {
-      hours = 0;
-    }
-  } else {
-    const [h, m] = timeStr.split(':').map(Number);
-    hours = h;
+    if (period === 'PM' && hours < 12) hours += 12;
+    else if (period === 'AM' && hours === 12) hours = 0;
+  } else if (trimmed.includes(':')) {
+    const [h, m] = trimmed.split(':').map(Number);
+    hours = h || 0;
     minutes = m || 0;
+  } else {
+    hours = parseInt(trimmed) || 0;
+    minutes = 0;
   }
   
-  return { hours, minutes };
+  return { hours: Math.min(23, Math.max(0, hours)), minutes: Math.min(59, Math.max(0, minutes)) };
 };
 
 export const scheduleNotification = (
@@ -108,38 +120,58 @@ export const scheduleNotification = (
   medicineName: string,
   time: string,
   userName: string
-) => {
-  if (!("Notification" in window) || Notification.permission !== "granted") {
-    console.log("Notification permission not granted, skipping schedule");
-    return;
+): { scheduled: boolean; nextRun: string } | undefined => {
+  if (!("Notification" in window)) {
+    console.log("Notifications not supported in this browser");
+    return undefined;
+  }
+  
+  if (Notification.permission !== "granted") {
+    console.log("Notification permission not granted");
+    return undefined;
   }
   
   cancelNotification(medicineId);
 
-  const { hours, minutes } = convertTo24Hour(time);
+  const { hours, minutes } = parseTimeString(time);
   const now = new Date();
   const target = new Date();
   target.setHours(hours, minutes, 0, 0);
-  if (target <= now) target.setDate(target.getDate() + 1);
+  
+  if (target <= now) {
+    target.setDate(target.getDate() + 1);
+  }
 
-  const delay = target.getTime() - now.getTime();
-  console.log(`Scheduling notification for ${medicineName} at ${time} (${hours}:${minutes}), delay: ${delay}ms`);
+  const delay = Math.max(0, target.getTime() - now.getTime());
+  const nextRun = target.toLocaleTimeString();
+  
+  console.log(`[NOTIF] Scheduling: "${medicineName}" at ${time} -> ${hours}:${minutes}, delay: ${delay}ms, will fire at ${nextRun}`);
   
   const timeoutId = setTimeout(() => {
-    createNotification(medicineId, medicineName, userName);
+    console.log(`[NOTIF] Triggering notification for: ${medicineName}`);
+    showMedicineNotification(medicineId, medicineName, userName);
     scheduleNotification(medicineId, medicineName, time, userName);
   }, delay);
   
   activeTimeouts.set(medicineId, timeoutId);
+  
+  return { scheduled: true, nextRun };
 };
 
-export const scheduleAllNotifications = (medicines: { id: string; name: string; times: string[] }[], userName: string) => {
-  if (!("Notification" in window) || Notification.permission !== "granted") return;
+export const scheduleAllNotifications = (medicines: { id: string; name: string; times: string[] }[], userName: string): void => {
+  if (!("Notification" in window) || Notification.permission !== "granted") {
+    console.log("[NOTIF] Cannot schedule - permission not granted or not supported");
+    return;
+  }
+  
+  console.log("[NOTIF] Scheduling all notifications for", medicines.length, "medicines");
   
   medicines.forEach(medicine => {
+    console.log("[NOTIF] Medicine:", medicine.name, "times:", medicine.times);
     medicine.times.forEach((time, index) => {
       const uniqueId = `${medicine.id}_${index}`;
-      scheduleNotification(uniqueId, medicine.name, time, userName);
+      const result = scheduleNotification(uniqueId, medicine.name, time, userName);
+      console.log("[NOTIF] Result:", result);
     });
   });
 };
@@ -147,9 +179,9 @@ export const scheduleAllNotifications = (medicines: { id: string; name: string; 
 export const snoozeNotification = (medicineId: string, medicineName: string, userName: string, snoozeMinutes: number = 10) => {
   cancelNotification(medicineId);
   const delay = snoozeMinutes * 60 * 1000;
-  console.log(`Snoozing notification for ${medicineName} for ${snoozeMinutes} minutes`);
+  console.log(`[NOTIF] Snoozing ${medicineName} for ${snoozeMinutes} minutes`);
   
-  const timeoutId = setTimeout(() => createNotification(medicineId, medicineName, userName, true, snoozeMinutes), delay);
+  const timeoutId = setTimeout(() => showMedicineNotification(medicineId, medicineName, userName, true, snoozeMinutes), delay);
   activeTimeouts.set(medicineId, timeoutId);
 };
 
@@ -162,11 +194,17 @@ export const cancelNotification = (medicineId: string) => {
 };
 
 export const cancelAllNotifications = () => {
+  console.log("[NOTIF] Cancelling all notifications");
   activeTimeouts.forEach((timeout) => clearTimeout(timeout));
   activeTimeouts.clear();
 };
 
 export const getNotificationPermissionStatus = (): boolean => {
   if (!("Notification" in window)) return false;
+  console.log("[NOTIF] Current permission:", Notification.permission);
   return Notification.permission === "granted";
+};
+
+export const getScheduledNotificationCount = (): number => {
+  return activeTimeouts.size;
 };
