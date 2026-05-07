@@ -1,23 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Plus, ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { getFamilyMembers, useFamilyMembers } from "@/hooks/use-queries";
-import { addMedicine } from "@/utils/storage";
+import { useFamilyMembers } from "@/hooks/use-queries";
+import { addMedicine, saveDoseLog } from "@/utils/storage";
+import { medicineDatabase, MedicineDBEntry } from "@/data/medicineDatabase";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 const AddMedicine = () => {
   const navigate = useNavigate();
   const [selectedMember, setSelectedMember] = useState("");
-  const [selectedMed, setSelectedMed] = useState<null | any>(null);
+  const [selectedMed, setSelectedMed] = useState<MedicineDBEntry | null>(null);
   const [dosage, setDosage] = useState("");
   const [frequency, setFrequency] = useState("");
   const [times, setTimes] = useState<string[]>([""]);
@@ -57,7 +57,7 @@ const AddMedicine = () => {
       const today = new Date().toISOString().split('T')[0];
       for (const time of validTimes) {
         await saveDoseLog({
-          id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
           medicineId: newMedicine.id,
           medicineName: newMedicine.name,
           familyMemberId: selectedMember,
@@ -114,14 +114,14 @@ const AddMedicine = () => {
                 <div className="space-y-2">
                   <Label>Medicine</Label>
                   <Select onValueChange={(value) => {
-                    const med = medicineDatabase.find((m) => m.brand_name === value);
+                    const med = medicineDatabase.find((m: MedicineDBEntry) => m.brand_name === value);
                     setSelectedMed(med || null);
                   }}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select medicine" />
                     </SelectTrigger>
                     <SelectContent>
-                      {medicineDatabase.map((med) => (
+                      {medicineDatabase.map((med: MedicineDBEntry) => (
                         <SelectItem key={med.brand_name} value={med.brand_name}>
                           {med.brand_name}
                         </SelectItem>
@@ -172,7 +172,8 @@ const AddMedicine = () => {
                         size="sm"
                         onClick={() => removeTime(index)}
                       >
-                        Remove                      </Button>
+                        Remove
+                      </Button>
                     )}
                   </div>
                 ))}
