@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Sparkles, Loader2, Info, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { askAIAssistant, getAISettings } from "@/utils/ai-assistant";
+import { askAIAssistant } from "@/utils/ai-assistant";
 import { Button } from "@/components/ui/button";
 
 const DynamicAIInsight = () => {
@@ -12,17 +12,10 @@ const DynamicAIInsight = () => {
   const [error, setError] = useState<string | null>(null);
 
   const generateInsight = async () => {
-    const settings = getAISettings();
-    if (!settings?.apiKey) {
-      setError("API Key required for insights");
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
     try {
       const response = await askAIAssistant("Analyze my recent medication adherence and health logs. Give me one short, punchy, encouraging insight or tip (max 2 sentences).");
-      // Remove the disclaimer for the dashboard card to keep it clean
       const cleanInsight = response.split("Disclaimer:")[0].trim();
       setInsight(cleanInsight);
     } catch (err) {
