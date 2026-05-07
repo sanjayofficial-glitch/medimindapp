@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import { usePrescriptions, useAddPrescription, useRemovePrescription, useFamilyMembers, useQueryClient } from "@/hooks/use-queries";
+import { QUERY_KEYS } from "@/lib/query-client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -179,14 +180,14 @@ const PrescriptionWallet = () => {
                   className="w-full bg-purple-600"
                   disabled={addPrescription.isPending}
                 >
-                  {addPrescription.isPending
-                    ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        Saving...
-                      </>
-                    )
-                    : "Save to Wallet"
+                  {addPrescription.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save to Wallet"
+                  )}
                 </Button>
               </DialogFooter>
             </form>

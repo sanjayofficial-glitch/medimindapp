@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getDoseLogs, getVitalLogs, getSymptomLogs, DoseLog, VitalLog, SymptomLog } from "@/utils/storage";
+import { getDoseLogs, getVitalLogs, getSymptomLogs, getMedicines, DoseLog, VitalLog, SymptomLog } from "@/utils/storage";
 import { CheckCircle, XCircle, AlertCircle, Activity, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateHealthReport } from "@/utils/report-generator";
@@ -21,12 +21,18 @@ const Progress = () => {
   const [vitalData, setVitalData] = useState<any[]>([]);
   const [symptomStats, setSymptomStats] = useState({ mild: 0, moderate: 0, severe: 0 });
   const [isExporting, setIsExporting] = useState(false);
+  const [todayMedsByStatus, setTodayMedsByStatus] = useState<{
+    taken: { name: string; time: string }[];
+    missed: { name: string; time: string }[];
+    late: { name: string; time: string }[];
+  }>({ taken: [], missed: [], late: [] });
 
   useEffect(() => {
     const loadData = async () => {
       const logs: DoseLog[] = await getDoseLogs();
       const vitals: VitalLog[] = await getVitalLogs();
       const symptoms: SymptomLog[] = await getSymptomLogs();
+      const medicines = await getMedicines();
       
       const taken = logs.filter(l => l.status === "taken").length;
       const missed = logs.filter(l => l.status === "missed").length;
@@ -65,6 +71,13 @@ const Progress = () => {
         severe: symptoms.filter(s => s.severity === "severe").length,
       };
       setSymptomStats(sStats);
+
+      const today = new Date().toISOString().split('T')[0];
+      const todayLogs = logs.filter(l => l.date === today);
+      const takenMeds = todayLogs.filter(l => l.status === "taken").map(l => ({ name: l.medicineName, time: l.scheduledTime }));
+      const missedMeds = todayLogs.filter(l => l.status === "missed").map(l => ({ name: l.medicineName, time: l.scheduledTime }));
+      const lateMeds = todayLogs.filter(l => l.status === "partial").map(l => ({ name: l.medicineName, time: l.scheduledTime }));
+      setTodayMedsByStatus({ taken: takenMeds, missed: missedMeds, late: lateMeds });
     };
 
     loadData();

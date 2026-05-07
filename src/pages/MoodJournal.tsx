@@ -6,16 +6,27 @@ import { Smile, Meh, Frown, Angry, ChevronLeft, History, Loader2, MessageSquare 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import { useFamilyMembers, useMoodLogs, useAddMoodLog } from "@/hooks/use-queries";
 import { toast } from "sonner";
 import { MoodLog } from "@/utils/storage";
+
+const moodMessages: Record<string, string> = {
+  great:   "You're feeling great today! Keep that energy going 🌟",
+  good:    "You're doing well! Keep up the positivity 🌟",
+  okay:    "It's okay to feel okay. Tomorrow is a new day 💙",
+  bad:     "It's okay to feel down. Be gentle with yourself 💙",
+  awful:   "Feeling awful is valid. Reach out if you need support 💙",
+};
 
 const MoodJournal = () => {
   const navigate = useNavigate();
   const [selectedMember, setSelectedMember] = useState("");
   const [selectedMood, setSelectedMood] = useState<MoodLog["mood"] | null>(null);
   const [notes, setNotes] = useState("");
+  const [showMessage, setShowMessage] = useState(false);
+  const [motivationalMessage, setMotivationalMessage] = useState("");
 
   const { data: familyMembers = [], isLoading: membersLoading } = useFamilyMembers();
   const { data: moodLogs = [], isLoading: logsLoading } = useMoodLogs();
@@ -41,6 +52,9 @@ const MoodJournal = () => {
         notes: notes.trim() || undefined
       });
 
+      const message = moodMessages[selectedMood] || "Mood logged!";
+      setMotivationalMessage(message);
+      setShowMessage(true);
       setSelectedMood(null);
       setNotes("");
       toast.success("Mood logged successfully!");
@@ -181,7 +195,16 @@ const MoodJournal = () => {
               </CardContent>
             </Card>
           </div>
-        </div>
+        <Dialog open={showMessage} onOpenChange={setShowMessage}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-center text-indigo-600">Mood Logged!</DialogTitle>
+              <DialogDescription className="text-center text-base pt-2">
+                {motivationalMessage}
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
       </div>
     </motion.div>
   );
