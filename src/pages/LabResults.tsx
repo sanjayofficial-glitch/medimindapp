@@ -59,7 +59,7 @@ const LabResults = () => {
         attachment: null,
       });
       toast.success("Lab result added successfully!");
-    } catch (error: any) {
+    } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to add lab result");
     }
   };

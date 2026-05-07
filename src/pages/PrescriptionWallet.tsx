@@ -57,8 +57,8 @@ const PrescriptionWallet = () => {
         familyMemberId: "",
       });
       toast.success("Prescription added to wallet!");
-    } catch (error: any) {
-      setFormError(error.message || "Failed to add prescription");
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Failed to add prescription");
       toast.error("Failed to add prescription");
     }
   };
