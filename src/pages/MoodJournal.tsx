@@ -32,7 +32,7 @@ const MoodJournal = () => {
   const { data: moodLogs = [], isLoading: logsLoading } = useMoodLogs();
   const addMoodLog = useAddMoodLog();
 
-  const moods: { type: MoodLog["mood"], icon: any, color: string, label: string }[] = [
+  const moods: { type: MoodLog["mood"]; icon: typeof Smile | typeof Meh | typeof Frown | typeof Angry; color: string; label: string }[] = [
     { type: "great", icon: Smile, color: "text-emerald-500 bg-emerald-50 border-emerald-200", label: "Great" },
     { type: "good", icon: Smile, color: "text-blue-500 bg-blue-50 border-blue-200", label: "Good" },
     { type: "okay", icon: Meh, color: "text-amber-500 bg-amber-50 border-amber-200", label: "Okay" },

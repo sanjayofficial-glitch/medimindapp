@@ -65,7 +65,7 @@ const LabResults = () => {
       });
       toast.success("Lab result added successfully!");
     } catch (error: any) {
-      toast.error(error.message || "Failed to add lab result");
+      toast.error(error instanceof Error ? error.message : "Failed to add lab result");
       console.error("Error adding lab result:", error);
     }
   };

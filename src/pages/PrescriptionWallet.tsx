@@ -46,7 +46,7 @@ const PrescriptionWallet = () => {
     try {
       const newPrescription = await addPrescription.mutateAsync(formData);
       // Optimistic UI update
-      queryClient.setQueryData(QUERY_KEYS.prescriptions, (prev: any[]) => [newPrescription, ...prev]);
+      queryClient.setQueryData(QUERY_KEYS.prescriptions, (prev: Prescription[] | undefined) => [newPrescription, ...(prev || [])]);
       setShowAdd(false);
       setFormData({
         title: "",
