@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.check-medication-reminders]
 verify_jwt = false
+
+[functions.webpush-reminders]
+verify_jwt = false
