@@ -11,4 +11,3 @@ verify_jwt = false
 
 [functions.check-medication-reminders]
 verify_jwt = false
-schedule = "every 5 minutes"
