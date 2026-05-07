@@ -86,7 +86,7 @@ export const useLabResults = () => {
         id: l.id,
         familyMemberId: l.family_member_id,
         testName: l.test_name,
-        value: l.value.toString(),
+        value: l.value,
         unit: l.unit,
         date: l.date,
         normalRange: l.normal_range,
@@ -228,7 +228,7 @@ export const useAddFamilyMember = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (member: Omit<FamilyMember, 'id'>) => {
+    mutationFn: async (member: { name: string; relationship: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 

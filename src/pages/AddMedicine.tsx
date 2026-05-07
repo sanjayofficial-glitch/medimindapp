@@ -21,7 +21,7 @@ const AddMedicine = () => {
   const [dosage, setDosage] = useState("");
   const [frequency, setFrequency] = useState("");
   const [times, setTimes] = useState<string[]>([""]);
-  const { data: familyMembers = [], isLoading: membersLoading } = useFamilyMembers();
+  const { data: familyMembers = [] } = useFamilyMembers();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const addTime = () => setTimes([...times, ""]);
