@@ -87,7 +87,18 @@ export const useMedicines = () => {
         .select('*')
         .eq('user_id', userId);
       if (error) throw new Error(error.message);
-      return (data || []) as Medicine[];
+      
+      return (data || []).map(m => ({
+        id: m.id,
+        familyMemberId: m.family_member_id,
+        name: m.name,
+        dosage: m.dosage,
+        times: m.times,
+        frequency: m.frequency,
+        additionalText: m.additional_text,
+        stock: m.stock,
+        refillAt: m.refill_at
+      })) as Medicine[];
     },
   });
 };
@@ -99,11 +110,32 @@ export const useAddMedicine = () => {
       const userId = await getUserId();
       const { data, error } = await supabase
         .from('medicines')
-        .insert([{ ...medicine, user_id: userId }])
+        .insert([{ 
+          family_member_id: medicine.familyMemberId,
+          name: medicine.name,
+          dosage: medicine.dosage,
+          times: medicine.times,
+          frequency: medicine.frequency,
+          additional_text: medicine.additionalText,
+          stock: medicine.stock,
+          refill_at: medicine.refillAt,
+          user_id: userId 
+        }])
         .select()
         .single();
       if (error) throw new Error(error.message);
-      return data as Medicine;
+      
+      return {
+        id: data.id,
+        familyMemberId: data.family_member_id,
+        name: data.name,
+        dosage: data.dosage,
+        times: data.times,
+        frequency: data.frequency,
+        additionalText: data.additional_text,
+        stock: data.stock,
+        refillAt: data.refill_at
+      } as Medicine;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.medicines });
@@ -117,12 +149,31 @@ export const useUpdateMedicine = () => {
     mutationFn: async (medicine: Medicine) => {
       const { data, error } = await supabase
         .from('medicines')
-        .update(medicine)
+        .update({
+          name: medicine.name,
+          dosage: medicine.dosage,
+          times: medicine.times,
+          frequency: medicine.frequency,
+          additional_text: medicine.additionalText,
+          stock: medicine.stock,
+          refill_at: medicine.refillAt
+        })
         .eq('id', medicine.id)
         .select()
         .single();
       if (error) throw new Error(error.message);
-      return data as Medicine;
+      
+      return {
+        id: data.id,
+        familyMemberId: data.family_member_id,
+        name: data.name,
+        dosage: data.dosage,
+        times: data.times,
+        frequency: data.frequency,
+        additionalText: data.additional_text,
+        stock: data.stock,
+        refillAt: data.refill_at
+      } as Medicine;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.medicines });
@@ -150,7 +201,16 @@ export const useDoseLogs = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from('dose_logs').select('*');
       if (error) throw new Error(error.message);
-      return (data || []) as DoseLog[];
+      return (data || []).map(d => ({
+        id: d.id,
+        medicineId: d.medicine_id,
+        medicineName: d.medicine_name,
+        familyMemberId: d.family_member_id,
+        scheduledTime: d.scheduled_time,
+        actualTime: d.actual_time,
+        date: d.date,
+        status: d.status
+      })) as DoseLog[];
     },
   });
 };
@@ -159,9 +219,21 @@ export const useDoseLogsForDate = (date: string) => {
   return useQuery({
     queryKey: QUERY_KEYS.doseLogsForDate(date),
     queryFn: async () => {
-      const { data, error } = await supabase.from('dose_logs').select('*').eq('date', date);
+      const { data, error } = await supabase
+        .from('dose_logs')
+        .select('*')
+        .eq('date', date);
       if (error) throw new Error(error.message);
-      return (data || []) as DoseLog[];
+      return (data || []).map(d => ({
+        id: d.id,
+        medicineId: d.medicine_id,
+        medicineName: d.medicine_name,
+        familyMemberId: d.family_member_id,
+        scheduledTime: d.scheduled_time,
+        actualTime: d.actual_time,
+        date: d.date,
+        status: d.status
+      })) as DoseLog[];
     },
   });
 };
@@ -170,9 +242,34 @@ export const useSaveDoseLog = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (log: DoseLog) => {
-      const { data, error } = await supabase.from('dose_logs').upsert([log]).select().single();
+      const userId = await getUserId();
+      const { data, error } = await supabase
+        .from('dose_logs')
+        .upsert([{
+          id: log.id,
+          medicine_id: log.medicineId,
+          medicine_name: log.medicineName,
+          family_member_id: log.familyMemberId,
+          scheduled_time: log.scheduledTime,
+          actual_time: log.actualTime,
+          date: log.date,
+          status: log.status,
+          user_id: userId
+        }])
+        .select()
+        .single();
       if (error) throw new Error(error.message);
-      return data as DoseLog;
+      
+      return {
+        id: data.id,
+        medicineId: data.medicine_id,
+        medicineName: data.medicine_name,
+        familyMemberId: data.family_member_id,
+        scheduledTime: data.scheduled_time,
+        actualTime: data.actual_time,
+        date: data.date,
+        status: data.status
+      } as DoseLog;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogs });
@@ -190,7 +287,7 @@ export const usePrescriptions = () => {
         .select('*')
         .eq('user_id', userId);
       if (error) throw new Error(error.message);
-      return (data || []).map((d: { id: string; family_member_id: string; title: string; image_url: string; pharmacy_name: string; pharmacy_phone: string; expiry_date: string }) => ({
+      return (data || []).map(d => ({
         id: d.id,
         familyMemberId: d.family_member_id,
         title: d.title,
@@ -256,9 +353,18 @@ export const useVitalLogs = () => {
   return useQuery({
     queryKey: QUERY_KEYS.vitals,
     queryFn: async () => {
-      const { data, error } = await supabase.from('vital_logs').select('*');
+      const { data, error } = await supabase.from('vitals').select('*');
       if (error) throw new Error(error.message);
-      return (data || []) as VitalLog[];
+      return (data || []).map(v => ({
+        id: v.id,
+        familyMemberId: v.family_member_id,
+        type: v.type,
+        value: v.value,
+        unit: v.unit,
+        date: v.date,
+        time: v.time,
+        notes: v.notes
+      })) as VitalLog[];
     },
   });
 };
@@ -267,9 +373,33 @@ export const useAddVitalLog = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (log: Omit<VitalLog, 'id'>) => {
-      const { data, error } = await supabase.from('vital_logs').insert([log]).select().single();
+      const userId = await getUserId();
+      const { data, error } = await supabase
+        .from('vitals')
+        .insert([{
+          family_member_id: log.familyMemberId,
+          type: log.type,
+          value: log.value,
+          unit: log.unit,
+          date: log.date,
+          time: log.time,
+          notes: log.notes,
+          user_id: userId
+        }])
+        .select()
+        .single();
       if (error) throw new Error(error.message);
-      return data as VitalLog;
+      
+      return {
+        id: data.id,
+        familyMemberId: data.family_member_id,
+        type: data.type,
+        value: data.value,
+        unit: data.unit,
+        date: data.date,
+        time: data.time,
+        notes: data.notes
+      } as VitalLog;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.vitals });
@@ -281,9 +411,17 @@ export const useSymptomLogs = () => {
   return useQuery({
     queryKey: QUERY_KEYS.symptoms,
     queryFn: async () => {
-      const { data, error } = await supabase.from('symptom_logs').select('*');
+      const { data, error } = await supabase.from('symptoms').select('*');
       if (error) throw new Error(error.message);
-      return (data || []) as SymptomLog[];
+      return (data || []).map(s => ({
+        id: s.id,
+        familyMemberId: s.family_member_id,
+        symptom: s.symptom,
+        severity: s.severity,
+        date: s.date,
+        time: s.time,
+        notes: s.notes
+      })) as SymptomLog[];
     },
   });
 };
@@ -292,9 +430,31 @@ export const useAddSymptomLog = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (log: Omit<SymptomLog, 'id'>) => {
-      const { data, error } = await supabase.from('symptom_logs').insert([log]).select().single();
+      const userId = await getUserId();
+      const { data, error } = await supabase
+        .from('symptoms')
+        .insert([{
+          family_member_id: log.familyMemberId,
+          symptom: log.symptom,
+          severity: log.severity,
+          date: log.date,
+          time: log.time,
+          notes: log.notes,
+          user_id: userId
+        }])
+        .select()
+        .single();
       if (error) throw new Error(error.message);
-      return data as SymptomLog;
+      
+      return {
+        id: data.id,
+        familyMemberId: data.family_member_id,
+        symptom: data.symptom,
+        severity: data.severity,
+        date: data.date,
+        time: data.time,
+        notes: data.notes
+      } as SymptomLog;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.symptoms });
@@ -308,7 +468,7 @@ export const useMoodLogs = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from('mood_logs').select('*');
       if (error) throw new Error(error.message);
-      return (data || []).map((d: { id: string; family_member_id: string; mood: string; date: string; notes: string | null; created_at: string }) => ({
+      return (data || []).map(d => ({
         id: d.id,
         familyMemberId: d.family_member_id,
         mood: d.mood,
@@ -324,6 +484,7 @@ export const useAddMoodLog = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (log: Omit<MoodLog, 'id'>) => {
+      const userId = await getUserId();
       const { data, error } = await supabase
         .from('mood_logs')
         .insert([{
@@ -331,6 +492,7 @@ export const useAddMoodLog = () => {
           mood: log.mood,
           date: log.date,
           notes: log.notes,
+          user_id: userId
         }])
         .select()
         .single();
@@ -356,7 +518,16 @@ export const useAppointments = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from('appointments').select('*');
       if (error) throw new Error(error.message);
-      return (data || []) as Appointment[];
+      return (data || []).map(a => ({
+        id: a.id,
+        familyMemberId: a.family_member_id,
+        doctorName: a.doctor_name,
+        specialty: a.specialty,
+        date: a.date,
+        time: a.time,
+        location: a.location,
+        notes: a.notes
+      })) as Appointment[];
     },
   });
 };
@@ -365,9 +536,33 @@ export const useAddAppointment = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (appointment: Omit<Appointment, 'id'>) => {
-      const { data, error } = await supabase.from('appointments').insert([appointment]).select().single();
+      const userId = await getUserId();
+      const { data, error } = await supabase
+        .from('appointments')
+        .insert([{
+          family_member_id: appointment.familyMemberId,
+          doctor_name: appointment.doctorName,
+          specialty: appointment.specialty,
+          date: appointment.date,
+          time: appointment.time,
+          location: appointment.location,
+          notes: appointment.notes,
+          user_id: userId
+        }])
+        .select()
+        .single();
       if (error) throw new Error(error.message);
-      return data as Appointment;
+      
+      return {
+        id: data.id,
+        familyMemberId: data.family_member_id,
+        doctorName: data.doctor_name,
+        specialty: data.specialty,
+        date: data.date,
+        time: data.time,
+        location: data.location,
+        notes: data.notes
+      } as Appointment;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.appointments });
@@ -395,7 +590,17 @@ export const useLabResults = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from('lab_results').select('*');
       if (error) throw new Error(error.message);
-      return (data || []) as LabResult[];
+      return (data || []).map(l => ({
+        id: l.id,
+        familyMemberId: l.family_member_id,
+        testName: l.test_name,
+        value: l.value,
+        unit: l.unit,
+        date: l.date,
+        notes: l.notes,
+        normalRange: l.normal_range,
+        file_url: l.file_url
+      })) as LabResult[];
     },
   });
 };
@@ -404,9 +609,35 @@ export const useAddLabResult = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (result: Omit<LabResult, 'id'>) => {
-      const { data, error } = await supabase.from('lab_results').insert([result]).select().single();
+      const userId = await getUserId();
+      const { data, error } = await supabase
+        .from('lab_results')
+        .insert([{
+          family_member_id: result.familyMemberId,
+          test_name: result.testName,
+          value: result.value,
+          unit: result.unit,
+          date: result.date,
+          notes: result.notes,
+          normal_range: result.normalRange,
+          file_url: result.file_url,
+          user_id: userId
+        }])
+        .select()
+        .single();
       if (error) throw new Error(error.message);
-      return data as LabResult;
+      
+      return {
+        id: data.id,
+        familyMemberId: data.family_member_id,
+        testName: data.test_name,
+        value: data.value,
+        unit: data.unit,
+        date: data.date,
+        notes: data.notes,
+        normalRange: data.normal_range,
+        file_url: data.file_url
+      } as LabResult;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.labResults });
