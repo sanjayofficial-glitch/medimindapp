@@ -326,6 +326,7 @@ const PrescriptionWallet = () => {
                 </div>
               </div>
             )}
+        </div>
 
         <DynamicAIInsight />
       </div>

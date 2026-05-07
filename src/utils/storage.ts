@@ -79,7 +79,6 @@ export interface Prescription {
 // ========================
 // Supabase Client
 // ========================
-const { supabase } = supabase;
 
 // ========================
 // Prescription Functions
