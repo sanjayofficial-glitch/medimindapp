@@ -59,7 +59,8 @@ const BottomTabBar = () => {
                   ? "text-primary" 
                   : "text-muted-foreground hover:text-foreground"
               )}
-              whileTap={buttonTap.tap}
+              variants={buttonTap}
+              whileTap="tap"
             >
               {isActive && (
                 <motion.div 

@@ -374,7 +374,7 @@ const Dashboard = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         {log.status === "partial" ? (
-                          <motion.div whileTap={buttonTap.tap}>
+                          <motion.div variants={buttonTap} whileTap="tap">
                             <Button 
                               className="h-10 px-6 rounded-full bg-primary text-primary-foreground" 
                               onClick={() => handleStatusUpdate(log, "taken")}
