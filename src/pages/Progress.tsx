@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getDoseLogs, getVitalLogs, getSymptomLogs, getMedicines, DoseLog, VitalLog, SymptomLog } from "@/utils/storage";
+import { getDoseLogs, getMedicines, DoseLog, VitalLog, SymptomLog } from "@/utils/storage";
+import { useVitalLogs, useSymptomLogs } from "@/hooks/use-queries";
 import { CheckCircle, XCircle, AlertCircle, Activity, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateHealthReport } from "@/utils/report-generator";
@@ -17,8 +18,8 @@ const Progress = () => {
     late: 0,
     rate: 0
   });
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [vitalData, setVitalData] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<{ name: string; rate: number }[]>([]);
+  const [vitalData, setVitalData] = useState<{ name: string; value: number }[]>([]);
   const [symptomStats, setSymptomStats] = useState({ mild: 0, moderate: 0, severe: 0 });
   const [isExporting, setIsExporting] = useState(false);
   const [todayMedsByStatus, setTodayMedsByStatus] = useState<{

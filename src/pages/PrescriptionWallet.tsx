@@ -13,6 +13,7 @@ import { usePrescriptions, useAddPrescription, useRemovePrescription, useFamilyM
 import { QUERY_KEYS } from "@/lib/query-client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Prescription } from "@/utils/storage";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const PrescriptionWallet = () => {
