@@ -7,6 +7,7 @@ const SETTINGS_KEY = "medimind_ai_settings";
 export interface AISettings {
   apiKey: string;
   provider: "gemini";
+  model?: string;
 }
 
 export const getAISettings = (): AISettings | null => {
@@ -18,6 +19,16 @@ export const saveAISettings = (settings: AISettings) => {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 };
 
+const DEFAULT_MODELS = [
+  "gemini-2.0-flash",
+  "gemini-1.5-flash-002",
+  "gemini-1.5-flash-latest",
+  "gemini-1.5-pro",
+  "gemini-pro"
+];
+
+export const getAvailableModels = () => DEFAULT_MODELS;
+
 export const askAIAssistant = async (query: string): Promise<string> => {
   const settings = getAISettings();
   if (!settings || !settings.apiKey) {
@@ -26,7 +37,8 @@ export const askAIAssistant = async (query: string): Promise<string> => {
 
   try {
     const genAI = new GoogleGenerativeAI(settings.apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const modelName = settings.model || "gemini-2.0-flash";
+    const model = genAI.getGenerativeModel({ model: modelName });
 
     const medicines: Medicine[] = await getMedicines();
     const doseLogs: DoseLog[] = await getDoseLogs();
