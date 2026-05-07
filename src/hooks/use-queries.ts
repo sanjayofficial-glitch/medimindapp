@@ -139,6 +139,7 @@ export const useAddMedicine = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.medicines });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogs });
     },
   });
 };
@@ -219,10 +220,12 @@ export const useDoseLogsForDate = (date: string) => {
   return useQuery({
     queryKey: QUERY_KEYS.doseLogsForDate(date),
     queryFn: async () => {
+      const userId = await getUserId();
       const { data, error } = await supabase
         .from('dose_logs')
         .select('*')
-        .eq('date', date);
+        .eq('date', date)
+        .eq('user_id', userId);
       if (error) throw new Error(error.message);
       return (data || []).map(d => ({
         id: d.id,
@@ -235,6 +238,7 @@ export const useDoseLogsForDate = (date: string) => {
         status: d.status
       })) as DoseLog[];
     },
+    staleTime: 0,
   });
 };
 
@@ -260,7 +264,7 @@ export const useSaveDoseLog = () => {
         .single();
       if (error) throw new Error(error.message);
       
-      return {
+return {
         id: data.id,
         medicineId: data.medicine_id,
         medicineName: data.medicine_name,

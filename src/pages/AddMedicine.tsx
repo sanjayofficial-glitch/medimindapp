@@ -12,6 +12,8 @@ import { useFamilyMembers, useAddMedicine, useSaveDoseLog } from "@/hooks/use-qu
 import { MedicineDBEntry } from "@/data/medicineDatabase";
 import { MedicineSelector } from "@/components/MedicineSelector";
 import { toast } from "sonner";
+import { queryClient } from "@/lib/query-client";
+import { QUERY_KEYS } from "@/lib/query-client";
 
 const AddMedicine = () => {
   const navigate = useNavigate();
@@ -96,6 +98,10 @@ const AddMedicine = () => {
       }
 
       toast.success(`Added ${medicineName} with ${times.length} daily doses`);
+      
+      // Invalidate dose logs queries so Dashboard refetches
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogs });
+      
       navigate("/dashboard");
     } catch (error) {
       console.error("Error adding medicine:", error);
