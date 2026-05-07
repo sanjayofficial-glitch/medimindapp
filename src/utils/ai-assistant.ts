@@ -1,103 +1,90 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getMedicines, getDoseLogs, Medicine, DoseLog } from "./storage";
 import { medicineDatabase } from "@/data/medicineDatabase";
 
-const SETTINGS_KEY = "medimind_ai_settings";
-
-export interface AISettings {
-  apiKey: string;
-  provider: "gemini";
-  model?: string;
-}
-
-export const getAISettings = (): AISettings | null => {
-  const settings = localStorage.getItem(SETTINGS_KEY);
-  return settings ? JSON.parse(settings) : null;
-};
-
-export const saveAISettings = (settings: AISettings) => {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-};
-
-const DEFAULT_MODELS = [
-  "gemini-2.0-flash",
-  "gemini-1.5-flash-002",
-  "gemini-1.5-flash-latest",
-  "gemini-1.5-pro",
-  "gemini-pro"
+const DEMO_RESPONSES = [
+  "Based on your medication schedule, remember to take your doses at consistent times each day for best results. Disclaimer: I'm an AI assistant, not a doctor. Please consult a healthcare professional for medical advice.",
+  "Great question! Regular medication adherence is key to effective treatment. Keep tracking your doses and note any side effects you experience. Disclaimer: I'm an AI assistant, not a doctor. Please consult a healthcare professional for medical advice.",
+  "I recommend setting daily reminders for your medications. Consistency helps maintain steady levels of medication in your body for optimal effect. Disclaimer: I'm an AI assistant, not a doctor. Please consult a healthcare professional for medical advice.",
 ];
 
-export const getAvailableModels = () => DEFAULT_MODELS;
+const getDemoResponse = () => {
+  return DEMO_RESPONSES[Math.floor(Math.random() * DEMO_RESPONSES.length)];
+};
+
+const systemPrompt = `You are MediMind AI, a friendly medical assistant helping users manage their medications. Be helpful, empathetic, and concise (2-3 sentences max). If asking about missed dose: suggest taking it soon unless it's nearly time for the next dose. If asking about side effects: mention common ones but always recommend consulting a doctor. IMPORTANT: End your response with: "Disclaimer: I'm an AI assistant, not a doctor. Please consult a healthcare professional for medical advice."`;
 
 export const askAIAssistant = async (query: string): Promise<string> => {
-  const settings = getAISettings();
-  if (!settings || !settings.apiKey) {
-    throw new Error("API key not found. Please configure it in settings.");
+  const apiKey = import.meta.env.VITE_AI_API_KEY;
+  
+  if (!apiKey || apiKey.length < 10) {
+    return getDemoResponse();
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(settings.apiKey);
-    const modelName = settings.model || "gemini-2.0-flash";
-    const model = genAI.getGenerativeModel({ model: modelName });
-
-    const medicines: Medicine[] = await getMedicines();
-    const doseLogs: DoseLog[] = await getDoseLogs();
+    let medicines: Medicine[] = [];
+    let doseLogs: DoseLog[] = [];
     
-    const context = {
-      userMedicines: medicines.map(m => ({
-        name: m.name,
-        dosage: m.dosage,
-        frequency: m.frequency,
-        times: m.times,
-        notes: m.additionalText
-      })),
-      recentHistory: doseLogs.slice(-15).map(l => ({
-        name: l.medicineName,
-        status: l.status,
-        scheduled: l.scheduledTime,
-        actual: l.actualTime,
-        date: l.date
-      })),
-      referenceDatabase: medicineDatabase.filter(db => 
-        medicines.some(m => 
-          m.name.toLowerCase().includes(db.brand_name.toLowerCase()) || 
-          db.brand_name.toLowerCase().includes(m.name.toLowerCase()) ||
-          m.dosage.toLowerCase().includes(db.generic_name.toLowerCase())
-        )
-      ).slice(0, 5)
-    };
-
-    const prompt = `
-      You are MediMind AI, a professional medical assistant. 
-      
-      USER DATA:
-      - Current Medications: ${JSON.stringify(context.userMedicines)}
-      - Recent History: ${JSON.stringify(context.recentHistory)}
-      - Reference Info: ${JSON.stringify(context.referenceDatabase)}
-      
-      USER QUESTION: "${query}"
-      
-      GUIDELINES:
-      1. If the user missed a dose: Check the "Reference Info" for specific guidance. If not found, suggest taking it as soon as remembered unless it's nearly time for the next dose.
-      2. Food interactions: Use the "Reference Info" (guidance/cautions) to answer if it should be taken before or after food.
-      3. Safety: Mention specific cautions from the database if relevant.
-      4. Tone: Be empathetic, clear, and concise.
-      5. MANDATORY DISCLAIMER: End every response with "Disclaimer: I am an AI, not a doctor. Consult a healthcare professional for medical advice."
-      
-      Response:
-    `;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    try {
+      medicines = await getMedicines();
+      doseLogs = await getDoseLogs();
+    } catch (dbError) {
+      console.warn("Could not fetch user data:", dbError);
+    }
     
-    if (!text) {
-      throw new Error("The AI returned an empty response.");
+    const matchedMeds = medicineDatabase.filter(db => 
+      medicines.some(m => 
+        m.name.toLowerCase().includes(db.brand_name.toLowerCase()) || 
+        db.brand_name.toLowerCase().includes(m.name.toLowerCase())
+      )
+    ).slice(0, 5);
+
+    const userContext = `
+User Context:
+- Medications: ${medicines.length > 0 ? medicines.map(m => `${m.name} (${m.dosage}) ${m.frequency}`).join(", ") : "No medications added yet"}
+- Recent adherence: ${doseLogs.length > 0 ? `${doseLogs.filter(l => l.status === "taken").length}/${doseLogs.length} doses taken` : "No history yet"}
+
+${matchedMeds.length > 0 ? `Medicine Database Reference: ${matchedMeds.map(m => `${m.brand_name}: ${m.guidance || "General guidance available"}`).join("; ")}` : ""}
+
+User Question: ${query}
+`;
+
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContext },
+        ],
+        temperature: 0.7,
+        max_tokens: 512,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("Groq API Error:", response.status, errorData);
+      return getDemoResponse();
+    }
+
+    const data = await response.json();
+    
+    if (!data.choices || !data.choices[0]?.message?.content) {
+      return getDemoResponse();
+    }
+
+    const text = data.choices[0].message.content.trim();
+    if (!text || text.length === 0) {
+      return getDemoResponse();
     }
     
     return text;
   } catch (error) {
     console.error("AI Assistant Error:", error);
-    throw error;
+    return getDemoResponse();
   }
 };
