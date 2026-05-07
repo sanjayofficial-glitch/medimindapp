@@ -56,7 +56,7 @@ const Dashboard = () => {
       const updatedLog: DoseLog = {
         ...log,
         status,
-        actualTime: status === "taken" ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : undefined
+        actualTime: status === "taken" ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : null
       };
       
       await saveDoseLog.mutateAsync(updatedLog);
