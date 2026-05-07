@@ -35,7 +35,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import InteractionChecker from "@/components/InteractionChecker";
 import DynamicAIInsight from "@/components/DynamicAIInsight";
-import { scheduleAllNotifications, snoozeNotification, cancelAllNotifications, getNotificationPermissionStatus, cancelNotification, showTestNotification, sendImmediateNotification, getScheduledNotificationCount } from "@/utils/notifications";
+import { scheduleAllNotifications, snoozeNotification, cancelAllNotifications, getNotificationPermissionStatus, cancelNotification, showTestNotification, getScheduledNotificationCount } from "@/utils/notifications";
 import { subscribeToPush, isPushSupported, requestPushPermission, getServiceWorkerRegistration, sendPushNotificationViaEdge, checkAndSendDueMedicationReminders } from "@/utils/push-notifications";
 import { iconPop, cardInteractive, chevronSlide, buttonTap, scaleIn } from "@/lib/animations";
 
@@ -269,17 +269,12 @@ const Dashboard = () => {
                     toast.error("Please allow notifications in browser popup");
                   }
                 } else {
-                  showTestNotification();
-                  
-                  const pushResult = await sendPushNotificationViaEdge(
-                    user.id,
-                    '💊 MediMind Test',
-                    'Your push notification system is working!'
-                  );
-                  if (pushResult.success) {
-                    toast.success("Test push notification sent to your device!");
+                  // Test notification
+                  const sent = await showTestNotification();
+                  if (sent) {
+                    toast.success("Test notification sent!");
                   } else {
-                    toast.error(`Push failed: ${pushResult.error}`);
+                    toast.error("Notifications blocked - check browser settings");
                   }
                 }
               }}
