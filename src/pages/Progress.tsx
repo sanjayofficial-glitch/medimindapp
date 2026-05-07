@@ -150,6 +150,65 @@ const Progress = () => {
                 </ResponsiveContainer>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Today's Medicines</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                    <span className="font-medium text-emerald-700">Taken</span>
+                  </div>
+                  {todayMedsByStatus.taken.length > 0 ? (
+                    <div className="pl-5 space-y-1">
+                      {todayMedsByStatus.taken.map((med, i) => (
+                        <div key={i} className="text-sm text-gray-700">
+                          • {med.name} — {med.time}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400 pl-5">No medicines in this category today</p>
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                    <span className="font-medium text-rose-700">Missed</span>
+                  </div>
+                  {todayMedsByStatus.missed.length > 0 ? (
+                    <div className="pl-5 space-y-1">
+                      {todayMedsByStatus.missed.map((med, i) => (
+                        <div key={i} className="text-sm text-gray-700">
+                          • {med.name} — {med.time}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400 pl-5">No medicines in this category today</p>
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-3 h-3 rounded-full bg-orange-400" />
+                    <span className="font-medium text-amber-700">Late</span>
+                  </div>
+                  {todayMedsByStatus.late.length > 0 ? (
+                    <div className="pl-5 space-y-1">
+                      {todayMedsByStatus.late.map((med, i) => (
+                        <div key={i} className="text-sm text-gray-700">
+                          • {med.name} — {med.time}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400 pl-5">No medicines in this category today</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="vitals" className="space-y-6">
