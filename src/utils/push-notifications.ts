@@ -160,11 +160,88 @@ export const getPushSubscription = async (userId: string): Promise<string | null
   return data?.subscription || null;
 };
 
+export const sendPushNotificationViaEdge = async (
+  userId: string,
+  title: string,
+  body: string,
+  url?: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('webpush-reminders', {
+      body: {
+        user_id: userId,
+        title,
+        body,
+        url: url || '/dashboard'
+      }
+    });
+
+    if (error) {
+      console.error('[PUSH] Edge function error:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log('[PUSH] Notification sent successfully:', data);
+    return { success: true };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[PUSH] Failed to send push notification:', errorMessage);
+    return { success: false, error: errorMessage };
+  }
+};
+
+export const checkAndSendDueMedicationReminders = async (userId: string): Promise<number> => {
+  try {
+    const now = new Date();
+    const currentTime = now.toTimeString().slice(0, 5);
+    const today = now.toISOString().split('T')[0];
+
+    const { data: dueLogs, error: queryError } = await supabase
+      .from('dose_logs')
+      .select('*, medicines(name)')
+      .eq('user_id', userId)
+      .eq('date', today)
+      .eq('status', 'pending')
+      .lte('scheduled_time', currentTime);
+
+    if (queryError) {
+      console.error('[PUSH] Error querying due logs:', queryError);
+      return 0;
+    }
+
+    if (!dueLogs || dueLogs.length === 0) {
+      console.log('[PUSH] No due medications at this time');
+      return 0;
+    }
+
+    const medicineNames = dueLogs.map((log: any) => log.medicines?.name || log.medicine_name).filter(Boolean);
+    const uniqueMedicines = [...new Set(medicineNames)];
+    
+    const result = await sendPushNotificationViaEdge(
+      userId,
+      '💊 Time for your medicine',
+      `Don't forget to take: ${uniqueMedicines.join(', ')}`,
+      '/dashboard'
+    );
+
+    if (result.success) {
+      console.log('[PUSH] Sent reminders for', dueLogs.length, 'medications');
+      return dueLogs.length;
+    } else {
+      console.error('[PUSH] Failed to send reminders:', result.error);
+      return 0;
+    }
+  } catch (error) {
+    console.error('[PUSH] Error in checkAndSendDueMedicationReminders:', error);
+    return 0;
+  }
+};
+
 export const sendTestPushNotification = async (userId: string): Promise<boolean> => {
   try {
-    const { error } = await supabase.functions.invoke('send-push-notification', {
+    const { error } = await supabase.functions.invoke('webpush-reminders', {
       body: {
-        userId,
+        user_id: userId,
         title: 'MediMind Test',
         body: 'Your push notifications are working!'
       }

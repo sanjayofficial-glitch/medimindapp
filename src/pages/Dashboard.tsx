@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
 import InteractionChecker from "@/components/InteractionChecker";
 import DynamicAIInsight from "@/components/DynamicAIInsight";
 import { scheduleAllNotifications, snoozeNotification, cancelAllNotifications, getNotificationPermissionStatus, cancelNotification, showTestNotification, sendImmediateNotification, getScheduledNotificationCount } from "@/utils/notifications";
-import { subscribeToPush, isPushSupported, requestPushPermission, getServiceWorkerRegistration } from "@/utils/push-notifications";
+import { subscribeToPush, isPushSupported, requestPushPermission, getServiceWorkerRegistration, sendPushNotificationViaEdge, checkAndSendDueMedicationReminders } from "@/utils/push-notifications";
 import { iconPop, cardInteractive, chevronSlide, buttonTap, scaleIn } from "@/lib/animations";
 
 const Dashboard = () => {
@@ -68,6 +68,15 @@ const Dashboard = () => {
         if (registration) {
           await subscribeToPush(user.id);
           console.log('[DASHBOARD] Push notifications initialized');
+          
+          const sentKey = `push_reminder_sent_${new Date().toDateString()}`;
+          if (!sessionStorage.getItem(sentKey)) {
+            const reminderCount = await checkAndSendDueMedicationReminders(user.id);
+            if (reminderCount > 0) {
+              console.log('[DASHBOARD] Sent push reminders for', reminderCount, 'medications');
+              sessionStorage.setItem(sentKey, 'true');
+            }
+          }
         }
       }
     };
@@ -79,7 +88,6 @@ const Dashboard = () => {
       const userName = user.user_metadata?.name || "User";
       console.log("[DASHBOARD] Scheduling notifications for medicines:", medicines.map(m => ({ name: m.name, times: m.times })));
       
-      // Clear existing and reschedule
       cancelAllNotifications();
       scheduleAllNotifications(medicines, userName);
       
@@ -87,7 +95,6 @@ const Dashboard = () => {
       console.log("[DASHBOARD] Total scheduled:", count);
       
       if (count > 0) {
-        // Show toast with scheduled count (only first time)
         const shownKey = `notif_shown_${new Date().toDateString()}`;
         if (!sessionStorage.getItem(shownKey)) {
           toast.info(`${count} reminder${count > 1 ? 's' : ''} scheduled for today`);
@@ -100,6 +107,23 @@ const Dashboard = () => {
       cancelAllNotifications();
     };
   }, [medicines, notificationsEnabled, user]);
+
+  useEffect(() => {
+    if (!notificationsEnabled || !user) return;
+    
+    const checkInterval = 5 * 60 * 1000;
+    const intervalId = setInterval(async () => {
+      const sentKey = `push_reminder_sent_${new Date().toDateString()}`;
+      if (!sessionStorage.getItem(sentKey)) {
+        const reminderCount = await checkAndSendDueMedicationReminders(user.id);
+        if (reminderCount > 0) {
+          sessionStorage.setItem(sentKey, 'true');
+        }
+      }
+    }, checkInterval);
+    
+    return () => clearInterval(intervalId);
+  }, [notificationsEnabled, user]);
 
   useEffect(() => {
     const handleNotificationAction = (event: CustomEvent) => {
@@ -230,21 +254,32 @@ const Dashboard = () => {
                     await subscribeToPush(user.id);
                     setNotificationsEnabled(true);
                     showTestNotification();
-                    toast.success("Notifications enabled!");
+                    
+                    const pushResult = await sendPushNotificationViaEdge(
+                      user.id,
+                      '💊 MediMind',
+                      'Push notifications are now configured!'
+                    );
+                    if (pushResult.success) {
+                      toast.success("Notifications enabled! Real push notifications ready.");
+                    } else {
+                      toast.warning("Browser notifications enabled, but push setup has issues.");
+                    }
                   } else {
                     toast.error("Please allow notifications in browser popup");
                   }
                 } else {
-                  // Test immediate notification
-                  const sent = sendImmediateNotification(
-                    "💊 MediMind Test",
-                    "Your notification system is working! You'll receive reminders at scheduled times.",
-                    "test"
+                  showTestNotification();
+                  
+                  const pushResult = await sendPushNotificationViaEdge(
+                    user.id,
+                    '💊 MediMind Test',
+                    'Your push notification system is working!'
                   );
-                  if (sent) {
-                    toast.success("Test notification sent!");
+                  if (pushResult.success) {
+                    toast.success("Test push notification sent to your device!");
                   } else {
-                    toast.error("Notifications blocked - check browser settings");
+                    toast.error(`Push failed: ${pushResult.error}`);
                   }
                 }
               }}
