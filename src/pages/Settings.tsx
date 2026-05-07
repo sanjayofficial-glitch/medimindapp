@@ -1,34 +1,78 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { User, ChevronLeft, LogOut, Bell, BellOff, ShieldCheck } from "lucide-react";
+import { User, ChevronLeft, LogOut, Bell, BellOff, ShieldCheck, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { requestNotificationPermission } from "@/utils/notifications";
+import { saveProfilePicture, getProfilePicture } from "@/utils/storage";
 
 const Settings = () => {
   const navigate = useNavigate();
   const { user, updateProfile, logout } = useAuth();
   const [mounted, setMounted] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [name, setName] = useState(user?.user_metadata?.name || "");
   const [email, setEmail] = useState(user?.email || "");
   const [isSaving, setIsSaving] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
     if ("Notification" in window) {
       setNotificationsEnabled(Notification.permission === "granted");
     }
+    const saved = getProfilePicture();
+    if (saved) {
+      setProfilePicture(saved);
+    }
   }, []);
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      saveProfilePicture(base64);
+      setProfilePicture(base64);
+      toast.success("Profile picture updated!");
+    };
+    reader.onerror = () => {
+      toast.error("Failed to read image");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const getInitials = () => {
+    if (name) {
+      return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+    }
+    if (email) {
+      return email[0].toUpperCase();
+    }
+    return "U";
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +125,38 @@ const Settings = () => {
         </div>
 
         <div className="space-y-6">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <Card className="dark:bg-slate-900 dark:border-slate-800">
+            <CardContent className="pt-6 flex flex-col items-center">
+              <div className="relative">
+                <button onClick={handleAvatarClick} className="relative group">
+                  <Avatar className="w-24 h-24 border-2 border-gray-200 dark:border-slate-700">
+                    {profilePicture ? (
+                      <AvatarImage src={profilePicture} alt="Profile" className="object-cover" />
+                    ) : (
+                      <AvatarFallback className="text-2xl bg-emerald-100 text-emerald-700">
+                        {getInitials()}
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                  <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Camera className="w-8 h-8 text-white" />
+                  </div>
+                </button>
+                <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-1.5 rounded-full shadow-md">
+                  <Camera className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <p className="mt-4 text-sm text-gray-500 dark:text-slate-400">Tap to change photo</p>
+            </CardContent>
+          </Card>
+
           <Card className="dark:bg-slate-900 dark:border-slate-800">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 dark:text-white">

@@ -209,3 +209,30 @@ export const getUserId = async (): Promise<string> => {
   if (error) throw new Error(error.message);
   return data.user?.id || "";
 };
+
+const PROFILE_PICTURE_KEY = "medi_mind_profile_picture";
+
+export const saveProfilePicture = (base64: string): void => {
+  try {
+    localStorage.setItem(PROFILE_PICTURE_KEY, base64);
+  } catch (err) {
+    console.error("Error saving profile picture:", err);
+  }
+};
+
+export const getProfilePicture = (): string | null => {
+  try {
+    return localStorage.getItem(PROFILE_PICTURE_KEY);
+  } catch (err) {
+    console.error("Error getting profile picture:", err);
+    return null;
+  }
+};
+
+export const removeProfilePicture = (): void => {
+  try {
+    localStorage.removeItem(PROFILE_PICTURE_KEY);
+  } catch (err) {
+    console.error("Error removing profile picture:", err);
+  }
+};
