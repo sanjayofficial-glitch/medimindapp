@@ -1,24 +1,53 @@
 -- Enable pg_cron extension
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 
--- Grant permissions (adjust for your security requirements)
+-- Grant permissions
 GRANT USAGE ON SCHEMA cron TO postgres;
 
--- Create the scheduled job to check due medications every 5 minutes
+-- Enable HTTP extension for calling edge functions
+CREATE EXTENSION IF NOT EXISTS http;
+
+-- Create a function to check and send due medication notifications
+CREATE OR REPLACE FUNCTION check_due_medications_and_notify()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  supabase_url text;
+  service_role_key text;
+  response RECORD;
+BEGIN
+  supabase_url := current_setting('app.settings.supabase_url', true);
+  service_role_key := current_setting('app.settings.service_role_key', true);
+  
+  IF supabase_url IS NULL OR service_role_key IS NULL THEN
+    RAISE NOTICE 'Supabase settings not configured';
+    RETURN;
+  END IF;
+
+  -- Call the edge function via HTTP
+  SELECT * INTO response
+  FROM http_post(
+    supabase_url || '/functions/v1/check-due-medications',
+    '{}',
+    'application/json',
+    format('Bearer %s', service_role_key)
+  );
+
+  RAISE NOTICE 'Check due medications function called';
+END;
+$$;
+
+-- Schedule the job to run every 5 minutes
+-- Note: This may need adjustments based on your Supabase plan
 SELECT cron.schedule(
-  'check-due-medications-every-5-minutes',
+  'check-due-medications',
   '*/5 * * * *',
   $$
-  SELECT 
-    supabase.invoke(
-      'check-due-medications',
-      headers := '{"Content-Type": "application/json", "Authorization": "Bearer ' || current_setting('app.settings.service_role_key') || '"}'
-    );
+  SELECT check_due_medications_and_notify();
   $$
 );
 
--- Alternative: Manually trigger the function via webhook
--- You can create a database webhook that calls the function periodically
-
--- List scheduled jobs
--- SELECT * FROM cron.job;
+-- Uncomment to test:
+-- SELECT check_due_medications_and_notify();
