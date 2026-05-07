@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, Variants } from "framer-motion";
 import { 
@@ -15,7 +15,8 @@ import {
   ShieldAlert,
   Trophy,
   Settings as SettingsIcon,
-  Loader2
+  Loader2,
+  Bell
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,10 +35,12 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import InteractionChecker from "@/components/InteractionChecker";
 import DynamicAIInsight from "@/components/DynamicAIInsight";
+import { scheduleAllNotifications, snoozeNotification, cancelAllNotifications, getNotificationPermissionStatus, cancelNotification } from "@/utils/notifications";
 
 const Dashboard = () => {
   const { user, logout, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   
   const today = new Date().toISOString().split('T')[0];
   const { data: todayLogs = [], isLoading: isDataLoading, refetch } = useDoseLogsForDate(today);
@@ -50,6 +53,45 @@ const Dashboard = () => {
       navigate("/login");
     }
   }, [user, isAuthLoading, navigate]);
+
+  useEffect(() => {
+    const isEnabled = getNotificationPermissionStatus();
+    setNotificationsEnabled(isEnabled);
+  }, []);
+
+  useEffect(() => {
+    if (notificationsEnabled && medicines.length > 0 && user) {
+      const userName = user.user_metadata?.name || "User";
+      scheduleAllNotifications(medicines, userName);
+      console.log("Notifications scheduled for", medicines.length, "medicines");
+    }
+    
+    return () => {
+      cancelAllNotifications();
+    };
+  }, [medicines, notificationsEnabled, user]);
+
+  useEffect(() => {
+    const handleNotificationAction = (event: CustomEvent) => {
+      const { type, medicineId, snoozeMinutes } = event.detail;
+      if (type === "taken") {
+        const log = todayLogs.find(l => l.medicineId === medicineId);
+        if (log) handleStatusUpdate(log, "taken");
+        cancelNotification(medicineId);
+      } else if (type === "snooze") {
+        const log = todayLogs.find(l => l.medicineId === medicineId);
+        if (log) {
+          snoozeNotification(medicineId, log.medicineName, user?.user_metadata?.name || "User", snoozeMinutes || 10);
+          toast.info(`Reminder snoozed for ${snoozeMinutes || 10} minutes`);
+        }
+      }
+    };
+
+    window.addEventListener("medimind_notification_action", handleNotificationAction as EventListener);
+    return () => {
+      window.removeEventListener("medimind_notification_action", handleNotificationAction as EventListener);
+    };
+  }, [todayLogs, user]);
 
   const handleStatusUpdate = async (log: DoseLog, status: "taken" | "missed") => {
     try {
@@ -143,6 +185,17 @@ const Dashboard = () => {
             >
               <ShieldAlert className="w-4 h-4 mr-1" /> Emergency
             </Button>
+
+            <div 
+              className={cn(
+                "p-2 rounded-full cursor-pointer transition-colors",
+                notificationsEnabled ? "bg-emerald-100 text-emerald-600" : "bg-gray-100 text-gray-400"
+              )}
+              onClick={() => navigate("/settings")}
+              title={notificationsEnabled ? "Notifications enabled" : "Notifications disabled - click to enable"}
+            >
+              <Bell className="w-4 h-4" />
+            </div>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

@@ -69,18 +69,18 @@ const MoodJournal = () => {
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="min-h-screen bg-indigo-50/30 pb-32 p-6"
+      className="min-h-screen bg-indigo-50/30 pb-32 px-4 sm:p-6"
     >
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <Button variant="ghost" onClick={() => navigate(-1)} className="mb-2 text-indigo-700 hover:bg-indigo-100">
             <ChevronLeft className="w-4 h-4 mr-1" /> Back
           </Button>
-          <h1 className="text-3xl font-bold text-gray-900">Mood Journal</h1>
-          <p className="text-indigo-600 font-medium">Track your emotional well-being alongside your treatment.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Mood Journal</h1>
+          <p className="text-indigo-600 font-medium text-sm sm:text-base">Track your emotional well-being alongside your treatment.</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           <div className="lg:col-span-2 space-y-6">
             <Card className="border-indigo-100 shadow-sm">
               <CardHeader>
@@ -94,7 +94,7 @@ const MoodJournal = () => {
                       <button 
                         key={m.id} 
                         onClick={() => setSelectedMember(m.id)} 
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                        className={`px-3 py-2 rounded-full text-sm font-medium transition-all ${
                           selectedMember === m.id 
                             ? "bg-indigo-600 text-white shadow-md" 
                             : "bg-white border border-gray-200 text-gray-600 hover:border-indigo-300"
@@ -108,19 +108,19 @@ const MoodJournal = () => {
 
                 <div className="space-y-3">
                   <p className="text-sm font-medium text-gray-500">Select Mood</p>
-                  <div className="flex justify-between gap-2">
+                  <div className="grid grid-cols-5 gap-1 sm:gap-2">
                     {moods.map(m => (
                       <button 
                         key={m.type} 
                         onClick={() => setSelectedMood(m.type)} 
-                        className={`flex flex-col items-center gap-2 p-4 rounded-2xl flex-1 border-2 transition-all ${
+                        className={`flex flex-col items-center gap-1 p-2 sm:p-4 rounded-xl sm:rounded-2xl border-2 transition-all ${
                           selectedMood === m.type 
                             ? `ring-2 ring-indigo-600 ring-offset-2 ${m.color}` 
                             : "bg-white border-gray-100 opacity-60 hover:opacity-100"
                         }`}
                       >
-                        <m.icon className="w-8 h-8" />
-                        <span className="text-[10px] font-bold uppercase tracking-wider">{m.label}</span>
+                        <m.icon className="w-5 h-5 sm:w-8 sm:h-8" />
+                        <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-wider">{m.label}</span>
                       </button>
                     ))}
                   </div>
@@ -132,14 +132,14 @@ const MoodJournal = () => {
                     placeholder="What's on your mind? Any symptoms or side effects?"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="min-h-[100px] border-gray-200 focus:ring-indigo-500"
+                    className="min-h-[100px] border-gray-200 focus:ring-indigo-500 text-sm"
                   />
                 </div>
 
                 <Button 
                   onClick={handleSave} 
                   disabled={addMoodLog.isPending || !selectedMember || !selectedMood}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 h-12 text-lg font-bold shadow-lg shadow-indigo-100"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 h-12 text-base font-bold shadow-lg shadow-indigo-100"
                 >
                   {addMoodLog.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Log Mood Entry"}
                 </Button>
@@ -157,21 +157,21 @@ const MoodJournal = () => {
               </CardHeader>
               <CardContent>
                 {isLoading ? (
-                  <div className="flex justify-center py-12">
+                  <div className="flex justify-center py-8 sm:py-12">
                     <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
                   </div>
                 ) : moodLogs.length === 0 ? (
-                  <div className="text-center py-12 text-gray-400">
-                    <Smile className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                  <div className="text-center py-8 sm:py-12 text-gray-400">
+                    <Smile className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4 opacity-20" />
                     <p className="text-sm">No mood entries yet.</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {moodLogs.slice().reverse().slice(0, 5).map((log) => {
                       const moodInfo = moods.find(m => m.type === log.mood);
                       const member = familyMembers.find(m => m.id === log.familyMemberId);
                       return (
-                        <div key={log.id} className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                        <div key={log.id} className="p-3 sm:p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
                               <div className={`p-1.5 rounded-lg ${moodInfo?.color}`}>

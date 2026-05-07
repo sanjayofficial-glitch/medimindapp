@@ -209,12 +209,12 @@ const AddMedicine = () => {
                 </div>
               </div>
 
-              <div className="space-y-4 p-6 bg-gray-50 rounded-2xl border border-gray-100">
+              <div className="space-y-4 p-4 sm:p-6 bg-gray-50 rounded-2xl border border-gray-100">
                 <Label className="text-sm font-bold text-gray-700">Dose Schedule</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                  <div className="sm:col-span-1">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
+                  <div className="col-span-1">
                     <Select value={newHour} onValueChange={setNewHour}>
-                      <SelectTrigger className="h-11 bg-white">
+                      <SelectTrigger className="h-11 sm:h-12 bg-white text-sm">
                         <SelectValue placeholder="Hour" />
                       </SelectTrigger>
                       <SelectContent>
@@ -225,9 +225,9 @@ const AddMedicine = () => {
                     </Select>
                   </div>
 
-                  <div className="sm:col-span-1">
+                  <div className="col-span-1">
                     <Select value={newMinute} onValueChange={setNewMinute}>
-                      <SelectTrigger className="h-11 bg-white">
+                      <SelectTrigger className="h-11 sm:h-12 bg-white text-sm">
                         <SelectValue placeholder="Min" />
                       </SelectTrigger>
                       <SelectContent>
@@ -238,9 +238,9 @@ const AddMedicine = () => {
                     </Select>
                   </div>
 
-                  <div className="sm:col-span-1">
+                  <div className="col-span-1">
                     <Select value={newPeriod} onValueChange={setNewPeriod}>
-                      <SelectTrigger className="h-11 bg-white">
+                      <SelectTrigger className="h-11 sm:h-12 bg-white text-sm">
                         <SelectValue placeholder="AM/PM" />
                       </SelectTrigger>
                       <SelectContent>
@@ -253,21 +253,21 @@ const AddMedicine = () => {
                   <Button
                     type="button"
                     onClick={addTime}
-                    className="h-11 bg-emerald-600 hover:bg-emerald-700"
+                    className="col-span-3 sm:col-span-4 h-11 sm:h-12 bg-emerald-600 hover:bg-emerald-700 text-sm font-medium"
                   >
-                    Add Time
+                    + Add Time
                   </Button>
                 </div>
 
                 {times.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-4">
                     {times.map((time, index) => (
-                      <div key={index} className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-emerald-100 text-sm shadow-sm">
+                      <div key={index} className="flex items-center gap-2 px-3 py-2 rounded-full bg-white border border-emerald-100 text-sm shadow-sm">
                         <span className="font-bold text-emerald-700">{time}</span>
                         <button
                           type="button"
                           onClick={() => removeTime(index)}
-                          className="text-gray-400 hover:text-rose-500 transition-colors"
+                          className="text-gray-400 hover:text-rose-500 transition-colors text-lg leading-none"
                         >
                           ×
                         </button>
