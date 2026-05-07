@@ -195,6 +195,8 @@ const MoodJournal = () => {
               </CardContent>
             </Card>
           </div>
+        </div>
+
         <Dialog open={showMessage} onOpenChange={setShowMessage}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>

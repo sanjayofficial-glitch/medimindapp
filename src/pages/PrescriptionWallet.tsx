@@ -305,7 +305,7 @@ const PrescriptionWallet = () => {
                             <Calendar className="w-3.5 h-3.5 text-purple-500" />
                             <span>Expires: {new Date(rx.expiryDate).toLocaleDateString()}</span>
                           </div>
-                        </div>
+                        </CardContent>
 
                         <div className="pt-2 flex justify-end">
                           <Button

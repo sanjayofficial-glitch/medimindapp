@@ -1,6 +1,12 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DoseLog } from "@/utils/storage";
 
+interface DayStatusInfo {
+  taken: number;
+  missed: number;
+  late: number;
+}
+
 interface HistoryCalendarProps {
   currentDate: Date;
   selectedDate: string;
@@ -29,22 +35,30 @@ const HistoryCalendar = ({
     "July", "August", "September", "October", "November", "December"
   ];
   
-  const getDayStatus = (day: number): "green" | "yellow" | "red" | "gray" | "none" => {
+  const getDayStatusInfo = (day: number): DayStatusInfo => {
     const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const checkDate = new Date(year, month, day);
     
-    if (checkDate > today) return "gray";
+    if (checkDate > today) return { taken: 0, missed: 0, late: 0 };
     
     const dayLogs = doseLogs.filter((log) => log.date === dateStr);
-    if (dayLogs.length === 0) return "none";
+    return {
+      taken: dayLogs.filter((l) => l.status === "taken").length,
+      missed: dayLogs.filter((l) => l.status === "missed").length,
+      late: dayLogs.filter((l) => l.status === "partial").length,
+    };
+  };
+  
+  const getDayStatus = (day: number): "green" | "yellow" | "red" | "gray" | "none" => {
+    const info = getDayStatusInfo(day);
+    const total = info.taken + info.missed + info.late;
     
-    const taken = dayLogs.filter((l) => l.status === "taken").length;
-    const total = dayLogs.length;
+    if (total === 0) return "none";
     
-    if (taken === total) return "green";
-    if (taken > 0) return "yellow";
+    if (info.taken === total) return "green";
+    if (info.taken > 0) return "yellow";
     return "red";
   };
   
@@ -68,22 +82,31 @@ const HistoryCalendar = ({
   
   const days = [];
   for (let i = 0; i < startDayOfWeek; i++) {
-    days.push(<div key={`empty-${i}`} className="h-10 w-10" />);
+    days.push(<div key={`empty-${i}`} className="w-9 h-9" />);
   }
   
   for (let day = 1; day <= daysInMonth; day++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const status = getDayStatus(day);
+    const statusInfo = getDayStatusInfo(day);
     const isSelected = selectedDate === dateStr;
     
     days.push(
-      <button
-        key={day}
-        onClick={() => onDateSelect(dateStr)}
-        className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-medium transition-all ${getDayColor(status)} ${isSelected ? "ring-2 ring-offset-2 ring-blue-500" : ""}`}
-      >
-        {day}
-      </button>
+      <div key={day} className="w-9 h-9 flex flex-col items-center justify-center">
+        <button
+          onClick={() => onDateSelect(dateStr)}
+          className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium transition-all ${getDayColor(status)} ${isSelected ? "ring-2 ring-offset-2 ring-blue-500" : ""}`}
+        >
+          {day}
+        </button>
+        {(statusInfo.taken > 0 || statusInfo.missed > 0 || statusInfo.late > 0) && (
+          <div className="flex items-center gap-0.5 mt-0.5">
+            {statusInfo.taken > 0 && <div className="w-1.5 h-1.5 rounded-full bg-green-500" />}
+            {statusInfo.missed > 0 && <div className="w-1.5 h-1.5 rounded-full bg-red-500" />}
+            {statusInfo.late > 0 && <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />}
+          </div>
+        )}
+      </div>
     );
   }
   
@@ -121,15 +144,15 @@ const HistoryCalendar = ({
       
       <div className="flex items-center justify-center gap-4 mt-6 pt-4 border-t border-gray-100">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-emerald-500" />
-          <span className="text-xs text-gray-600">All taken</span>
+          <div className="w-3 h-3 rounded-full bg-green-500" />
+          <span className="text-xs text-gray-600">Taken</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-amber-400" />
-          <span className="text-xs text-gray-600">Partial</span>
+          <div className="w-3 h-3 rounded-full bg-orange-400" />
+          <span className="text-xs text-gray-600">Late</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-rose-500" />
+          <div className="w-3 h-3 rounded-full bg-red-500" />
           <span className="text-xs text-gray-600">Missed</span>
         </div>
         <div className="flex items-center gap-2">
