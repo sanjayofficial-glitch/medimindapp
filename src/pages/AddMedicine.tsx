@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Plus, ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
+import { useFamilyMembers } from "@/hooks/use-queries";
+import { addMedicine, saveDoseLog, FamilyMember } from "@/utils/storage";
 import { medicineDatabase, MedicineDBEntry } from "@/data/medicineDatabase";
-import { addMedicine, saveDoseLog } from "@/utils/storage";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -20,7 +20,7 @@ const AddMedicine = () => {
   const [selectedMed, setSelectedMed] = useState<MedicineDBEntry | null>(null);
   const [dosage, setDosage] = useState("");
   const [frequency, setFrequency] = useState("");
-  const [times, setTimes] = useState<string[]>([]); // stores formatted strings like "08:30 AM"
+  const [times, setTimes] = useState<string[]>([]);
   const [newHour, setNewHour] = useState("");
   const [newMinute, setNewMinute] = useState("");
   const [newPeriod, setNewPeriod] = useState("AM");
@@ -28,32 +28,20 @@ const AddMedicine = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const pad = (n: string) => n.padStart(2, "0");
-
-  const hourOptions = Array.from({ length: 12 }, (_, i) => `${i + 1}`); // 1-12
+  const hourOptions = Array.from({ length: 12 }, (_, i) => `${i + 1}`);
   const minuteOptions = ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"];
-
-  const handleHourChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setNewHour(e.target.value);
-  };
-  const handleMinuteChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setNewMinute(e.target.value);
-  };
-  const handlePeriodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setNewPeriod(e.target.value);
-  };
 
   const addTime = () => {
     if (!newHour || !newMinute) return toast.error("Select hour and minute");
     const formatted = `${pad(newHour)}:${pad(newMinute)} ${newPeriod}`;
     setTimes(prev => [...prev, formatted]);
-    // reset fields
     setNewHour("");
     setNewMinute("");
     setNewPeriod("AM");
   };
 
-  const removeTime = (timeToRemove: string) => {
-    setTimes(prev => prev.filter(t => t !== timeToRemove));
+  const removeTime = (index: number) => {
+    setTimes(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -62,9 +50,8 @@ const AddMedicine = () => {
     if (!dosage.trim()) return toast.error("Please enter a dosage");
     if (!frequency) return toast.error("Please select a frequency");
     if (times.length === 0) return toast.error("Please add at least one time");
-    
+
     setIsSubmitting(true);
-    
     try {
       const medicineName = selectedMed?.brand_name || "Custom Medicine";
       const newMedicine = await addMedicine({
@@ -75,10 +62,10 @@ const AddMedicine = () => {
         frequency: frequency,
       });
 
-      // Save dose schedule logs for each selected time      const today = new Date().toISOString().split('T')[0];
-      times.forEach((timeStr) => {
-        // Extract hour/minute/period from stored format "08:30 AM"
-        const [timePart, period] = timeStr.split(" ");
+      const today = new Date().toISOString().split("T")[0];
+      // Use for...of loop to properly handle async/await
+      for (const timeStr of times) {
+        const [timePart] = timeStr.split(" ");
         const [hour, minute] = timePart.split(":");
         const scheduledTime = `${hour}:${minute}`;
         await saveDoseLog({
@@ -90,7 +77,7 @@ const AddMedicine = () => {
           date: today,
           status: "partial",
         });
-      });
+      }
 
       toast.success(`Added ${times.length} dose schedule(s) for ${medicineName}`);
       navigate("/dashboard");
@@ -127,7 +114,7 @@ const AddMedicine = () => {
                       <SelectValue placeholder="Select member" />
                     </SelectTrigger>
                     <SelectContent>
-                      {familyMembers.map((member) => (
+                      {familyMembers.map((member: FamilyMember) => (
                         <SelectItem key={member.id} value={member.id}>
                           {member.name}
                         </SelectItem>
@@ -188,8 +175,10 @@ const AddMedicine = () => {
                   {/* Hour Picker */}
                   <div>
                     <Label className="text-sm font-medium">Hour</Label>
-                    <SelectTrigger>
-                      <SelectValue className="text-center" />
+                    <Select value={newHour} onValueChange={setNewHour}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Hour" />
+                      </SelectTrigger>
                       <SelectContent>
                         {hourOptions.map((hour) => (
                           <SelectItem key={hour} value={hour}>
@@ -197,13 +186,16 @@ const AddMedicine = () => {
                           </SelectItem>
                         ))}
                       </SelectContent>
-                    </SelectTrigger>
+                    </Select>
                   </div>
+
                   {/* Minute Picker */}
                   <div>
                     <Label className="text-sm font-medium">Minute</Label>
-                    <SelectTrigger>
-                      <SelectValue className="text-center" />
+                    <Select value={newMinute} onValueChange={setNewMinute}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Minute" />
+                      </SelectTrigger>
                       <SelectContent>
                         {minuteOptions.map((minute) => (
                           <SelectItem key={minute} value={minute}>
@@ -211,54 +203,58 @@ const AddMedicine = () => {
                           </SelectItem>
                         ))}
                       </SelectContent>
-                    </SelectTrigger>
+                    </Select>
                   </div>
+
                   {/* AM/PM Picker */}
                   <div>
                     <Label className="text-sm font-medium">Period</Label>
-                    <SelectTrigger>
-                      <SelectValue className="text-center" />
+                    <Select value={newPeriod} onValueChange={setNewPeriod}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="AM/PM" />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="AM">AM</SelectItem>
                         <SelectItem value="PM">PM</SelectItem>
                       </SelectContent>
-                    </SelectTrigger>
+                    </Select>
                   </div>
                 </div>
 
-                {/* Add Time Button */}
                 <Button
                   type="button"
                   variant="outline"
-                  className="col-span-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 rounded-md"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
                   onClick={addTime}
                 >
                   Add Time
                 </Button>
+
+                {/* Display Added Times */}
+                {times.length > 0 && (
+                  <div className="space-y-2 mt-2">
+                    <p className="text-xs text-gray-600">Scheduled times:</p>
+                    {times.map((time, index) => (
+                      <div key={index} className="flex items-center justify-between px-3 py-1 rounded-full bg-emerald-50 text-sm">
+                        <span className="font-medium">{time}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeTime(index)}
+                          className="text-emerald-600 hover:text-emerald-900"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* Display Added Times */}
-              {times.length > 0 && (
-                <div className="space-y-2 mt-2">
-                  <p className="text-xs text-gray-600">Scheduled times:</p>
-                  {times.map((time, index) => (
-                    <div key={index} className="flex items-center justify-between px-3 py-1 rounded-full bg-emerald-50 text-sm">
-                      <span className="font-medium">{time}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeTime(time)}
-                        className="text-emerald-600 hover:text-emerald-900"
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
               <Button 
-                type="submit"                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-lg shadow-emerald-100 transition-all active:scale-[0.98]"                 disabled={isSubmitting}
+                type="submit" 
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-lg shadow-emerald-100 transition-all active:scale-[0.98]" 
+                disabled={isSubmitting}
               >
                 {isSubmitting ? (
                   <>
