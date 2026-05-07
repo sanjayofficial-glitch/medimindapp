@@ -14,11 +14,9 @@ import { MedicineSelector } from "@/components/MedicineSelector";
 import { toast } from "sonner";
 import { queryClient } from "@/lib/query-client";
 import { QUERY_KEYS } from "@/lib/query-client";
-import { useAuth } from "@/context/AuthContext";
 
 const AddMedicine = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [selectedMember, setSelectedMember] = useState("");
   const [selectedMed, setSelectedMed] = useState<MedicineDBEntry | null>(null);
   const [customName, setCustomName] = useState("");
@@ -88,7 +86,7 @@ const AddMedicine = () => {
         const scheduledTime = convertTo24h(hour, minute, period);
         
         await saveDoseLogMutation.mutateAsync({
-          id: crypto.randomUUID(), // Ensure valid UUID
+          id: crypto.randomUUID(),
           medicineId: newMedicine.id,
           medicineName: newMedicine.name,
           familyMemberId: selectedMember,
@@ -101,7 +99,6 @@ const AddMedicine = () => {
 
       toast.success(`Added ${medicineName} with ${times.length} daily doses`);
       
-      // Invalidate dose logs queries so Dashboard refetches
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogs });
       
       navigate("/dashboard");

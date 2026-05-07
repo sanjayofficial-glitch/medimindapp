@@ -2,12 +2,11 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { User, ChevronLeft, LogOut, Bell, BellOff, ShieldCheck, Camera } from "lucide-react";
+import { User, ChevronLeft, LogOut, ShieldCheck, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
