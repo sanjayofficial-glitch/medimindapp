@@ -1,6 +1,15 @@
 declare global {
   interface Window {
-    OneSignal: any;
+    OneSignal: {
+      init: (options: OneSignalInitOptions) => Promise<void>;
+      Notifications: {
+        requestPermission: () => Promise<NotificationPermission>;
+        getPermissionStatus: () => Promise<NotificationPermission>;
+        addEventListener: (event: string, handler: (event: unknown) => void) => void;
+      };
+      getPlayerId: () => Promise<string | null>;
+      setExternalUserId: (userId: string) => Promise<void>;
+    };
   }
 }
 
@@ -142,9 +151,10 @@ export const sendTestNotification = async (): Promise<boolean> => {
 export const setupNotificationClickHandler = (onNotificationClick: (data: Record<string, unknown>) => void) => {
   if (!window.OneSignal) return;
 
-  window.OneSignal.Notifications.addEventListener('click', (event: any) => {
+  window.OneSignal.Notifications.addEventListener('click', (event: unknown) => {
     console.log('[OneSignal] Notification clicked:', event);
-    const data = event?.notification?.launchData || {};
+    const clickEvent = event as { notification?: { launchData?: Record<string, unknown> } };
+    const data = clickEvent?.notification?.launchData || {};
     onNotificationClick(data);
   });
 };
