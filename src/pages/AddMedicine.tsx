@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { useFamilyMembers } from "@/hooks/use-queries";
-import { addMedicine, saveDoseLog, FamilyMember } from "@/utils/storage";
+import { saveMedicine, saveDoseLog, FamilyMember } from "@/utils/storage";
 import { medicineDatabase, MedicineDBEntry } from "@/data/medicineDatabase";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
