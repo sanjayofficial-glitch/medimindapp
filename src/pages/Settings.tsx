@@ -164,31 +164,6 @@ const Settings = () => {
           <Card className="dark:bg-slate-900 dark:border-slate-800">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 dark:text-white">
-                <Bell className="w-5 h-5 text-emerald-600" />
-                Notifications
-              </CardTitle>
-              <CardDescription>Manage how you receive medication reminders.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-100 dark:border-slate-700">
-                <div className="flex items-center gap-3">
-                  {notificationsEnabled ? <Bell className="w-5 h-5 text-emerald-600" /> : <BellOff className="w-5 h-5 text-gray-400" />}
-                  <div>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">Dose Reminders</p>
-                    <p className="text-xs text-gray-500">Get notified when it's time for your meds</p>
-                  </div>
-                </div>
-                <Switch 
-                  checked={notificationsEnabled} 
-                  onCheckedChange={handleToggleNotifications}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="dark:bg-slate-900 dark:border-slate-800">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 dark:text-white">
                 <ShieldCheck className="w-5 h-5 text-emerald-600" />
                 Security & Privacy
               </CardTitle>
