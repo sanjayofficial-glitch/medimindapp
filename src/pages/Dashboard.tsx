@@ -78,8 +78,22 @@ const Dashboard = () => {
     if (notificationsEnabled && medicines.length > 0 && user) {
       const userName = user.user_metadata?.name || "User";
       console.log("[DASHBOARD] Scheduling notifications for medicines:", medicines.map(m => ({ name: m.name, times: m.times })));
+      
+      // Clear existing and reschedule
+      cancelAllNotifications();
       scheduleAllNotifications(medicines, userName);
-      console.log("[DASHBOARD] Total scheduled:", getScheduledNotificationCount());
+      
+      const count = getScheduledNotificationCount();
+      console.log("[DASHBOARD] Total scheduled:", count);
+      
+      if (count > 0) {
+        // Show toast with scheduled count (only first time)
+        const shownKey = `notif_shown_${new Date().toDateString()}`;
+        if (!sessionStorage.getItem(shownKey)) {
+          toast.info(`${count} reminder${count > 1 ? 's' : ''} scheduled for today`);
+          sessionStorage.setItem(shownKey, 'true');
+        }
+      }
     }
     
     return () => {
@@ -216,23 +230,21 @@ const Dashboard = () => {
                     await subscribeToPush(user.id);
                     setNotificationsEnabled(true);
                     showTestNotification();
-                    toast.success("Push notifications enabled!");
+                    toast.success("Notifications enabled!");
                   } else {
-                    toast.error("Please enable notifications in browser settings");
+                    toast.error("Please allow notifications in browser popup");
                   }
                 } else {
-                  if (user) {
-                    const success = await sendTestPushNotification(user.id);
-                    if (success) {
-                      toast.success("Test notification sent via push!");
-                    } else {
-                      sendImmediateNotification(
-                        "Test Notification",
-                        "Local notification working! Push will be available after edge function deployment.",
-                        "test"
-                      );
-                      toast.info("Local test notification sent");
-                    }
+                  // Test immediate notification
+                  const sent = sendImmediateNotification(
+                    "💊 MediMind Test",
+                    "Your notification system is working! You'll receive reminders at scheduled times.",
+                    "test"
+                  );
+                  if (sent) {
+                    toast.success("Test notification sent!");
+                  } else {
+                    toast.error("Notifications blocked - check browser settings");
                   }
                 }
               }}

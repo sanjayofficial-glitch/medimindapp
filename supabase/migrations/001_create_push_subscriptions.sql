@@ -1,31 +1,26 @@
--- Create push_subscriptions table
+-- =============================================
+-- MEDIMIND PUSH NOTIFICATIONS SETUP
+-- Run this in Supabase SQL Editor
+-- =============================================
+
+-- 1. Create push_subscriptions table
 CREATE TABLE IF NOT EXISTS push_subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL UNIQUE,
-  subscription TEXT NOT NULL,
+  subscription JSONB NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Enable Row Level Security
+-- 2. Enable Row Level Security
 ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
 
--- Create policy for users to manage their own subscription
+-- 3. Create policies
 CREATE POLICY "Users can manage own subscription" ON push_subscriptions
   FOR ALL
   USING (auth.uid() = user_id);
 
--- Create function to handle medication reminders
-CREATE OR REPLACE FUNCTION schedule_medication_reminder()
-RETURNS TRIGGER AS $$
-BEGIN
-  -- This function will be called when a dose_log is created or updated
-  -- It can trigger a background job or call an edge function
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Create a table to store scheduled reminders
+-- 4. Create scheduled_reminders table for tracking
 CREATE TABLE IF NOT EXISTS scheduled_reminders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
@@ -42,10 +37,6 @@ CREATE POLICY "Users can see own reminders" ON scheduled_reminders
   FOR SELECT
   USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can insert own reminders" ON scheduled_reminders
-  FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own reminders" ON scheduled_reminders
-  FOR UPDATE
-  USING (auth.uid() = user_id);
+-- 5. Add user_id column to dose_logs if not exists
+-- Run this separately if dose_logs doesn't have user_id
+-- ALTER TABLE dose_logs ADD COLUMN user_id UUID REFERENCES auth.users(id);
