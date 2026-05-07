@@ -66,6 +66,25 @@ export interface Appointment {
   notes?: string;
 }
 
+export interface MoodLog {
+  id: string;
+  familyMemberId: string;
+  mood: string;
+  date: string;
+  notes?: string;
+  createdAt?: string;
+}
+
+export interface LabResult {
+  id: string;
+  familyMemberId: string;
+  testName: string;
+  value: string;
+  unit: string;
+  date: string;
+  notes?: string;
+}
+
 export interface Prescription {
   id: string;
   familyMemberId: string;
