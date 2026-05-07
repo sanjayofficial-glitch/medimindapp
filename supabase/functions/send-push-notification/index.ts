@@ -18,7 +18,7 @@ async function sendWebPush(subscription: string, payload: PushNotificationPayloa
       headers: {
         "TTL": "86400",
         "Content-Type": "application/json",
-        "Authorization": ` vapid t=${VAPID_PRIVATE_KEY}`
+        "Authorization": `vapid t=${VAPID_PRIVATE_KEY}`
       },
       body: JSON.stringify({
         notification: {

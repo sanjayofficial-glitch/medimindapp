@@ -11,16 +11,16 @@ interface DoseLog {
   user_id: string;
 }
 
-function sendWebPush(subscription: string, title: string, body: string): boolean {
+async function sendWebPush(subscription: string, title: string, body: string): Promise<boolean> {
   try {
     const sub = JSON.parse(subscription);
     
-    fetch(sub.endpoint, {
+    const response = await fetch(sub.endpoint, {
       method: "POST",
       headers: {
         "TTL": "86400",
         "Content-Type": "application/json",
-        "Authorization": ` vapid t=${VAPID_PRIVATE_KEY}`
+        "Authorization": `vapid t=${VAPID_PRIVATE_KEY}`
       },
       body: JSON.stringify({
         notification: {
@@ -31,7 +31,7 @@ function sendWebPush(subscription: string, title: string, body: string): boolean
         }
       })
     });
-    return true;
+    return response.ok;
   } catch {
     return false;
   }
@@ -70,7 +70,7 @@ const handler = async (req: Request): Promise<Response> => {
         .single();
 
       if (subscription) {
-        const sent = sendWebPush(
+        const sent = await sendWebPush(
           subscription.subscription,
           "Time for your medicine",
           `It's time to take ${log.medicine_name}!`

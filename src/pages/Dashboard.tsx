@@ -35,8 +35,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import InteractionChecker from "@/components/InteractionChecker";
 import DynamicAIInsight from "@/components/DynamicAIInsight";
-import { scheduleAllNotifications, snoozeNotification, cancelAllNotifications, getNotificationPermissionStatus, cancelNotification, requestNotificationPermission, showTestNotification, sendImmediateNotification, getScheduledNotificationCount } from "@/utils/notifications";
-import { subscribeToPush, sendTestPushNotification, isPushSupported, requestPushPermission, getServiceWorkerRegistration } from "@/utils/push-notifications";
+import { scheduleAllNotifications, snoozeNotification, cancelAllNotifications, getNotificationPermissionStatus, cancelNotification, showTestNotification, sendImmediateNotification, getScheduledNotificationCount } from "@/utils/notifications";
+import { subscribeToPush, isPushSupported, requestPushPermission, getServiceWorkerRegistration } from "@/utils/push-notifications";
 import { iconPop, cardInteractive, chevronSlide, buttonTap, scaleIn } from "@/lib/animations";
 
 const Dashboard = () => {

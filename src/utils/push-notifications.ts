@@ -155,7 +155,7 @@ export const getPushSubscription = async (userId: string): Promise<string | null
 
 export const sendTestPushNotification = async (userId: string): Promise<boolean> => {
   try {
-    const { data, error } = await supabase.functions.invoke('send-push-notification', {
+    const { error } = await supabase.functions.invoke('send-push-notification', {
       body: {
         userId,
         title: 'MediMind Test',
