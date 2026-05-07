@@ -26,7 +26,7 @@ const Settings = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
 
-  const { isEnabled: notificationsEnabled, isLoading: isCheckingNotifications, isSubscribing, isSupported, subscribe, unsubscribe } = useOneSignal();
+  const { isEnabled: notificationsEnabled, isLoading: isCheckingNotifications, isSubscribing, isSupported, isConfigured, subscribe, unsubscribe } = useOneSignal();
 
   useEffect(() => {
     setMounted(true);
@@ -164,7 +164,27 @@ const Settings = () => {
             </CardContent>
           </Card>
 
-          {isSupported && (
+          {!isConfigured ? (
+            <Card className="dark:bg-slate-900 dark:border-slate-800">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 dark:text-white">
+                  <BellOff className="w-5 h-5 text-gray-400" />
+                  Push Notifications
+                </CardTitle>
+                <CardDescription>Receive reminders when it's time to take your medicine</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    <strong>Setup Required:</strong> Push notifications are not configured. Please add your OneSignal App ID to the environment variables.
+                  </p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-2">
+                    Add <code>VITE_ONESIGNAL_APP_ID</code> to your .env file
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : isSupported ? (
             <Card className="dark:bg-slate-900 dark:border-slate-800">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 dark:text-white">
@@ -211,7 +231,7 @@ const Settings = () => {
                 </div>
               </CardContent>
             </Card>
-          )}
+          ) : null}
 
           <Card className="dark:bg-slate-900 dark:border-slate-800">
             <CardHeader>

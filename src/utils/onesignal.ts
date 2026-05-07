@@ -9,6 +9,7 @@ declare global {
       };
       getPlayerId: () => Promise<string | null>;
       setExternalUserId: (userId: string) => Promise<void>;
+      isPushNotificationsEnabled: () => Promise<boolean>;
     };
   }
 }
@@ -22,23 +23,55 @@ interface OneSignalInitOptions {
 
 const ONESIGNAL_APP_ID = import.meta.env.VITE_ONESIGNAL_APP_ID;
 
+let oneSignalInitialized = false;
+let oneSignalLoading = false;
+let oneSignalInitPromise: Promise<boolean> | null = null;
+
 export const isOneSignalSupported = (): boolean => {
-  return typeof window !== 'undefined' && 'serviceWorker' in navigator;
+  if (typeof window === 'undefined') return false;
+  return 'serviceWorker' in navigator && typeof window.OneSignal !== 'undefined';
 };
 
 export const initOneSignal = async (userId: string): Promise<boolean> => {
   if (!ONESIGNAL_APP_ID) {
-    console.warn('[OneSignal] App ID not configured');
+    console.warn('[OneSignal] App ID not configured. Add VITE_ONESIGNAL_APP_ID to your .env file');
     return false;
+  }
+
+  if (oneSignalInitialized && window.OneSignal) {
+    return true;
+  }
+
+  if (oneSignalInitPromise) {
+    return oneSignalInitPromise;
   }
 
   if (typeof window === 'undefined') return false;
 
-  return new Promise((resolve) => {
+  oneSignalInitPromise = new Promise((resolve) => {
+    if (window.OneSignal) {
+      oneSignalInitialized = true;
+      window.OneSignal.init({
+        appId: ONESIGNAL_APP_ID,
+        allowLocalhostAsSecureOrigin: true,
+        notifyButton: { enable: false },
+        welcomeNotification: { disable: true },
+      } as OneSignalInitOptions).then(() => {
+        console.log('[OneSignal] Initialized successfully');
+        window.OneSignal.setExternalUserId(userId).catch(console.error);
+        resolve(true);
+      }).catch((err) => {
+        console.error('[OneSignal] Init error:', err);
+        resolve(false);
+      });
+      return;
+    }
+
     const script = document.createElement('script');
     script.src = 'https://cdn.onesignal.com/sdks/OneSignalSDK.js';
     script.async = true;
     script.onload = () => {
+      console.log('[OneSignal] SDK script loaded');
       if (window.OneSignal) {
         window.OneSignal.init({
           appId: ONESIGNAL_APP_ID,
@@ -47,21 +80,26 @@ export const initOneSignal = async (userId: string): Promise<boolean> => {
           welcomeNotification: { disable: true },
         } as OneSignalInitOptions).then(() => {
           console.log('[OneSignal] Initialized successfully');
-          
-          window.OneSignal.setExternalUserId(userId).then(() => {
-            console.log('[OneSignal] External user ID set:', userId);
-          });
-          
+          oneSignalInitialized = true;
+          window.OneSignal.setExternalUserId(userId).catch(console.error);
           resolve(true);
+        }).catch((err) => {
+          console.error('[OneSignal] Init error:', err);
+          resolve(false);
         });
+      } else {
+        console.error('[OneSignal] SDK not available after load');
+        resolve(false);
       }
     };
     script.onerror = () => {
-      console.error('[OneSignal] Failed to load SDK');
+      console.error('[OneSignal] Failed to load SDK from CDN');
       resolve(false);
     };
     document.head.appendChild(script);
   });
+
+  return oneSignalInitPromise;
 };
 
 export const requestNotificationPermission = async (): Promise<boolean> => {
@@ -96,22 +134,40 @@ export const isOneSignalEnabled = async (): Promise<boolean> => {
   if (!window.OneSignal) return false;
 
   try {
-    return await window.OneSignal.Notifications.getPermissionStatus() === 'granted';
+    const enabled = await window.OneSignal.isPushNotificationsEnabled();
+    return enabled;
   } catch {
-    return false;
+    try {
+      const status = await window.OneSignal.Notifications.getPermissionStatus();
+      return status === 'granted';
+    } catch {
+      return false;
+    }
   }
 };
 
 export const subscribeToPush = async (userId: string): Promise<string | null> => {
+  console.log('[OneSignal] Starting subscription for user:', userId);
+  
   const initialized = await initOneSignal(userId);
-  if (!initialized) return null;
+  if (!initialized) {
+    console.error('[OneSignal] Failed to initialize');
+    return null;
+  }
 
+  console.log('[OneSignal] Requesting notification permission');
   const hasPermission = await requestNotificationPermission();
-  if (!hasPermission) return null;
+  if (!hasPermission) {
+    console.warn('[OneSignal] Permission not granted');
+    return null;
+  }
 
+  console.log('[OneSignal] Getting player ID');
   const playerId = await getOneSignalPlayerId();
   if (playerId) {
     console.log('[OneSignal] Subscribed with player ID:', playerId);
+  } else {
+    console.warn('[OneSignal] No player ID returned');
   }
   
   return playerId;
@@ -130,24 +186,6 @@ export const unsubscribeFromPush = async (): Promise<boolean> => {
   }
 };
 
-export const sendTestNotification = async (): Promise<boolean> => {
-  if (!window.OneSignal || !ONESIGNAL_APP_ID) return false;
-
-  try {
-    const playerId = await getOneSignalPlayerId();
-    if (!playerId) {
-      console.warn('[OneSignal] No player ID available');
-      return false;
-    }
-
-    console.log('[OneSignal] Test notification sent to:', playerId);
-    return true;
-  } catch (error) {
-    console.error('[OneSignal] Test notification error:', error);
-    return false;
-  }
-};
-
 export const setupNotificationClickHandler = (onNotificationClick: (data: Record<string, unknown>) => void) => {
   if (!window.OneSignal) return;
 
@@ -157,4 +195,8 @@ export const setupNotificationClickHandler = (onNotificationClick: (data: Record
     const data = clickEvent?.notification?.launchData || {};
     onNotificationClick(data);
   });
+};
+
+export const isConfigured = (): boolean => {
+  return !!ONESIGNAL_APP_ID;
 };
