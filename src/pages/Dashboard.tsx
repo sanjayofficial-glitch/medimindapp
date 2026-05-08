@@ -125,7 +125,7 @@ const Dashboard = () => {
             scheduledTime,
             actualTime: null,
             date: today,
-            status: "partial",
+            status: "pending",
           } as DoseLog))
       );
 
@@ -181,7 +181,7 @@ const Dashboard = () => {
       const nextTimeSet = new Set(editTimes);
       const currentMedicineLogs = todayLogs.filter((log: DoseLog) => log.medicineId === editingMedicine.id);
       const removableLogs = currentMedicineLogs.filter(
-        (log: DoseLog) => log.status === "partial" && !nextTimeSet.has(log.scheduledTime)
+        (log: DoseLog) => (log.status === "pending" || log.status === "partial") && !nextTimeSet.has(log.scheduledTime)
       );
 
       if (removableLogs.length > 0) {
@@ -203,7 +203,7 @@ const Dashboard = () => {
           scheduledTime,
           actualTime: null,
           date: today,
-          status: "partial",
+          status: "pending",
         });
       }
 
@@ -231,32 +231,54 @@ const Dashboard = () => {
     }
   };
 
+  const to24h = (time: string): number => {
+    const normalized = /^\d{2}:\d{2}$/.test(time) ? time : (() => {
+      const [tp, p = "AM"] = time.trim().split(" ");
+      const [h = "0", m = "0"] = tp.split(":");
+      let hour = Number(h);
+      if (Number.isNaN(hour)) return time;
+      if (p.toUpperCase() === "PM" && hour < 12) hour += 12;
+      if (p.toUpperCase() === "AM" && hour === 12) hour = 0;
+      return `${hour.toString().padStart(2, "0")}:${m.padStart(2, "0")}`;
+    })();
+    const [h = "0", m = "0"] = normalized.split(":");
+    return Number(h) * 60 + Number(m);
+  };
+
+  const nowMinutes = (): number => new Date().getHours() * 60 + new Date().getMinutes();
+  const isOverdue = (log: DoseLog): boolean => log.status === "pending" && to24h(log.scheduledTime) < nowMinutes();
+
+  const handleSnooze = async (log: DoseLog) => {
+    await supabase
+      .from("dose_logs")
+      .update({ notification_sent_at: null, notification_error: null })
+      .eq("id", log.id)
+      .eq("status", "pending");
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogsForDate(today) });
+    toast.info(`Reminder snoozed for 10 minutes — we'll remind you again soon`, { duration: 4000 });
+  };
+
   const handleStatusUpdate = async (log: DoseLog, status: "taken" | "missed") => {
     try {
       const updatedLog: DoseLog = {
         ...log,
         status,
-        actualTime: status === "taken" ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : null
+        actualTime: status === "taken" ? new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : null
       };
-      
+
       await saveDoseLog.mutateAsync(updatedLog);
 
-      // Automatic stock decrement
       if (status === "taken") {
         const medicine = medicines.find(m => m.id === log.medicineId);
         if (medicine && medicine.stock !== undefined && medicine.stock > 0) {
-          await updateMedicine.mutateAsync({
-            ...medicine,
-            stock: medicine.stock - 1
-          });
-          
+          await updateMedicine.mutateAsync({ ...medicine, stock: medicine.stock - 1 });
           if (medicine.stock - 1 <= (medicine.refillAt || 5)) {
-            toast.warning(`Low stock alert: ${medicine.name} (${medicine.stock - 1} left)`);
+            toast.warning(`Low stock: ${medicine.name} (${medicine.stock - 1} left)`);
           }
         }
+        toast.success(`${log.medicineName} marked as taken`);
       }
 
-      toast.success(`Marked ${log.medicineName} as ${status}`);
       refetch();
     } catch (error) {
       toast.error("Failed to update status");
@@ -272,8 +294,17 @@ const Dashboard = () => {
   const takenCount = todayLogs.filter((l: DoseLog) => l.status === "taken").length;
   const pendingLogs = useMemo(
     () => todayLogs
-      .filter((l: DoseLog) => l.status === "partial")
+      .filter((l: DoseLog) => l.status === "pending")
       .sort((a: DoseLog, b: DoseLog) => a.scheduledTime.localeCompare(b.scheduledTime)),
+    [todayLogs]
+  );
+  const missedLogs = useMemo(
+    () => {
+      const nowMins = nowMinutes();
+      return todayLogs
+        .filter((l: DoseLog) => l.status === "missed" || (l.status === "pending" && to24h(l.scheduledTime) < nowMins))
+        .sort((a: DoseLog, b: DoseLog) => a.scheduledTime.localeCompare(b.scheduledTime));
+    },
     [todayLogs]
   );
   const currentTime = getCurrentTime24();
@@ -281,7 +312,12 @@ const Dashboard = () => {
     () => pendingLogs.filter((l: DoseLog) => l.scheduledTime >= currentTime),
     [pendingLogs, currentTime]
   );
+  const overdueDoseLogs = useMemo(
+    () => pendingLogs.filter((l: DoseLog) => l.scheduledTime < currentTime),
+    [pendingLogs, currentTime]
+  );
   const visibleNextDoseLogs = upcomingDoseLogs.length > 0 ? upcomingDoseLogs : pendingLogs;
+  const takenLogs = todayLogs.filter((l: DoseLog) => l.status === "taken");
   const pendingCount = pendingLogs.length;
   const totalToday = todayLogs.length;
   const progress = totalToday > 0 ? (takenCount / totalToday) * 100 : 0;
@@ -417,19 +453,20 @@ const Dashboard = () => {
                   <div className="space-y-3">
                     <div className="flex gap-2 overflow-x-auto pb-1">
                       {visibleNextDoseLogs.slice(0, 5).map((log: DoseLog) => {
-                        const isOverdue = log.scheduledTime < currentTime;
+                        const overdue = log.scheduledTime < currentTime;
                         return (
-                          <div key={log.id} className="min-w-[9rem] rounded-lg border border-border bg-background px-3 py-2">
-                            <div className={cn("text-2xl font-bold", isOverdue ? "text-amber-600" : "text-foreground")}>
+                          <div key={log.id} className={cn("min-w-[9rem] rounded-lg border bg-background px-3 py-2", overdue ? "border-rose-200" : "border-border")}>
+                            <div className={cn("text-2xl font-bold", overdue ? "text-rose-600" : "text-foreground")}>
                               {toDisplayTime(log.scheduledTime)}
                             </div>
                             <p className="mt-1 truncate text-xs font-medium text-muted-foreground">{log.medicineName}</p>
+                            {overdue && <div className="text-[10px] font-bold text-rose-500 mt-1">OVERDUE</div>}
                           </div>
                         );
                       })}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {upcomingDoseLogs.length > 0 ? `${upcomingDoseLogs.length} upcoming dose${upcomingDoseLogs.length !== 1 ? "s" : ""}` : "Overdue pending dose"}
+                      {upcomingDoseLogs.length > 0 ? `${upcomingDoseLogs.length} upcoming dose${upcomingDoseLogs.length !== 1 ? "s" : ""}` : "Overdue — needs attention"}
                     </p>
                   </div>
                 ) : (
@@ -451,19 +488,25 @@ const Dashboard = () => {
                 <Link to="/add-medicine"><Button size="sm" className="rounded-full bg-primary text-primary-foreground"><Plus className="w-4 h-4 mr-1" /> Add New</Button></Link>
               </div>
               <div className="space-y-4">
-                {todayLogs.length === 0 ? (
-                  <div className="bg-card rounded-3xl p-12 text-center border-2 border-dashed border-border">
-                    <Pill className="w-8 h-8 text-muted-foreground/30 mx-auto mb-4" />
-                    <h4 className="text-lg font-bold text-foreground mb-2">No medications scheduled</h4>
-                    <Link to="/add-medicine"><Button variant="outline" className="rounded-full">Get Started</Button></Link>
-                  </div>
-                ) : (
-                  [...todayLogs].sort((a: DoseLog, b: DoseLog) => a.scheduledTime.localeCompare(b.scheduledTime)).map((log: DoseLog, i: number) => {
+                {(() => {
+                  const allSorted = [...todayLogs].sort((a: DoseLog, b: DoseLog) => a.scheduledTime.localeCompare(b.scheduledTime));
+
+                  if (allSorted.length === 0) return (
+                    <div className="bg-card rounded-3xl p-12 text-center border-2 border-dashed border-border">
+                      <Pill className="w-8 h-8 text-muted-foreground/30 mx-auto mb-4" />
+                      <h4 className="text-lg font-bold text-foreground mb-2">No medications scheduled</h4>
+                      <Link to="/add-medicine"><Button variant="outline" className="rounded-full">Get Started</Button></Link>
+                    </div>
+                  );
+
+                  return allSorted.map((log: DoseLog, i: number) => {
                     const medicine = medicines.find((med: Medicine) => med.id === log.medicineId);
+                    const overdue = log.status === "pending" && to24h(log.scheduledTime) < nowMinutes();
+                    const statusLabel = log.status === "taken" ? "taken" : log.status === "missed" ? "missed" : overdue ? "overdue" : "pending";
 
                     return (
-                    <motion.div 
-                      key={log.id} 
+                    <motion.div
+                      key={log.id}
                       layout
                       variants={scaleIn}
                       initial="hidden"
@@ -471,24 +514,31 @@ const Dashboard = () => {
                       custom={i}
                       whileHover={{ scale: 1.01, transition: { duration: 0.15 } }}
                       whileTap={{ scale: 0.99 }}
-                      className={cn("flex items-center justify-between p-4 bg-card rounded-2xl border border-border shadow-sm hover:shadow-md transition-shadow", log.status === "taken" && "opacity-70")}
+                      className={cn(
+                        "flex items-center justify-between p-4 bg-card rounded-2xl border shadow-sm hover:shadow-md transition-shadow",
+                        log.status === "taken" ? "opacity-60 border-border" : "",
+                        log.status === "missed" ? "border-rose-200 bg-rose-50/30" : "",
+                        (log.status === "pending" && overdue) ? "border-rose-300 bg-rose-50/20" : "",
+                        log.status === "pending" && !overdue ? "border-amber-100" : ""
+                      )}
                     >
                       <div className="flex items-center gap-4">
-                        <motion.div 
+                        <motion.div
                           whileHover={{ scale: 1.1, rotate: 5 }}
-                          className={cn("w-12 h-12 rounded-xl flex items-center justify-center", log.status === "taken" ? "bg-primary/20 text-primary" : "bg-primary/10 text-primary")}
+                          className={cn("w-12 h-12 rounded-xl flex items-center justify-center",
+                            log.status === "taken" ? "bg-primary/20 text-primary" :
+                            log.status === "missed" ? "bg-rose-100 text-rose-600" :
+                            overdue ? "bg-rose-100 text-rose-600" :
+                            "bg-amber-100 text-amber-600"
+                          )}
                         >
-                          <Pill className="w-6 h-6" />
+                          {log.status === "taken" ? <CheckCircle2 className="w-6 h-6" /> : <Pill className="w-6 h-6" />}
                         </motion.div>
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="font-bold text-foreground">{log.medicineName}</p>
                             {log.status === "taken" && (
-                              <motion.div 
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                              >
+                              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 25 }}>
                                 <CheckCircle2 className="w-4 h-4 text-primary" />
                               </motion.div>
                             )}
@@ -499,52 +549,40 @@ const Dashboard = () => {
                       <div className="flex items-center gap-2">
                         {medicine ? (
                           <>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-9 w-9 rounded-full"
-                              onClick={() => openEditSchedule(medicine)}
-                              title="Edit reminder times"
-                            >
+                            <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={() => openEditSchedule(medicine)} title="Edit reminder times">
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-9 w-9 rounded-full text-destructive hover:text-destructive"
-                              onClick={() => setMedicineToDelete(medicine)}
-                              title="Delete medicine reminders"
-                            >
+                            <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-full text-destructive hover:text-destructive" onClick={() => setMedicineToDelete(medicine)} title="Delete medicine reminders">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </>
                         ) : null}
-                        {log.status === "partial" ? (
-                          <motion.div variants={buttonTap} whileTap="tap">
-                            <Button 
-                              className="h-10 px-6 rounded-full bg-primary text-primary-foreground" 
-                              onClick={() => handleStatusUpdate(log, "taken")}
-                              disabled={saveDoseLog.isPending}
-                            >
+                        {log.status === "pending" ? (
+                          <div className="flex items-center gap-2">
+                            <Button size="sm" variant="outline" className="h-9 rounded-full text-xs border-amber-200 text-amber-700 hover:bg-amber-50" onClick={() => handleSnooze(log)} title="Snooze for 10 minutes">
+                              <Clock className="w-3 h-3 mr-1" /> Snooze
+                            </Button>
+                            <Button className="h-10 px-6 rounded-full bg-primary text-primary-foreground" onClick={() => handleStatusUpdate(log, "taken")} disabled={saveDoseLog.isPending}>
                               {saveDoseLog.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Take Now"}
                             </Button>
-                          </motion.div>
+                          </div>
                         ) : (
-                          <motion.div 
+                          <motion.div
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            className={cn("px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest", log.status === "taken" ? "bg-primary/20 text-primary" : "bg-destructive/20 text-destructive")}
+                            className={cn("px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest",
+                              log.status === "taken" ? "bg-primary/20 text-primary" :
+                              "bg-rose-100 text-rose-600"
+                            )}
                           >
-                            {log.status}
+                            {statusLabel}
                           </motion.div>
                         )}
                       </div>
                     </motion.div>
                     );
-                  })
-                )}
+                  });
+                })()}
               </div>
             </section>
 

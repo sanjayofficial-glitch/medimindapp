@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const NOTIFICATION_WINDOW_MINUTES = 3;
+const NOTIFICATION_WINDOW_MINUTES = 30;
 
 interface PushSubscription {
   user_id: string;
@@ -35,12 +35,12 @@ interface DoseLogWithMedicine {
   scheduled_time: string;
   date: string;
   status: string;
+  notification_sent_at: string | null;
   medicines: MedicineDetails | MedicineDetails[] | null;
 }
 
 const normalizeTimezone = (timezone?: string | null) => {
   const candidate = timezone?.trim() || 'UTC';
-
   try {
     new Intl.DateTimeFormat('en-US', { timeZone: candidate }).format(new Date());
     return candidate;
@@ -60,7 +60,8 @@ const getZonedDateTime = (date: Date, timeZone: string) => {
     hourCycle: 'h23',
   }).formatToParts(date);
 
-  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value || '00';
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value || '00';
   return {
     date: `${value('year')}-${value('month')}-${value('day')}`,
     time: `${value('hour')}:${value('minute')}`,
@@ -69,15 +70,12 @@ const getZonedDateTime = (date: Date, timeZone: string) => {
 
 const to24HourTime = (time: string) => {
   if (/^\d{2}:\d{2}$/.test(time)) return time;
-
   const [timePart, period = 'AM'] = time.trim().split(' ');
   const [hourPart, minute = '00'] = timePart.split(':');
   let hour = Number(hourPart);
   if (Number.isNaN(hour)) return time;
-
   if (period.toUpperCase() === 'PM' && hour < 12) hour += 12;
   if (period.toUpperCase() === 'AM' && hour === 12) hour = 0;
-
   return `${hour.toString().padStart(2, '0')}:${minute.padStart(2, '0')}`;
 };
 
@@ -99,7 +97,7 @@ Deno.serve(async (req) => {
     const ONESIGNAL_API_KEY = Deno.env.get('ONESIGNAL_API_KEY');
 
     if (!ONESIGNAL_APP_ID || !ONESIGNAL_API_KEY) {
-      throw new Error('OneSignal not configured');
+      throw new Error('OneSignal not configured (missing ONESIGNAL_APP_ID or ONESIGNAL_API_KEY env vars)');
     }
 
     const { data: activeSubscriptions, error: subscriptionError } = await supabase
@@ -110,6 +108,8 @@ Deno.serve(async (req) => {
     if (subscriptionError) throw subscriptionError;
 
     const subscriptions = (activeSubscriptions || []) as PushSubscription[];
+    console.log(`[check-due-medications] Active subscriptions: ${subscriptions.length}`);
+
     if (subscriptions.length === 0) {
       return new Response(
         JSON.stringify({ success: true, checked: 0, sent: 0, failed: 0, message: 'No active push subscriptions' }),
@@ -152,7 +152,10 @@ Deno.serve(async (req) => {
       if (existingLogsError) throw existingLogsError;
 
       const existingDoseKeys = new Set(
-        (existingLogs || []).map((log: { medicine_id: string; scheduled_time: string }) => `${log.medicine_id}-${log.scheduled_time}`),
+        (existingLogs || []).map(
+          (log: { medicine_id: string; scheduled_time: string }) =>
+            `${log.medicine_id}-${log.scheduled_time}`
+        )
       );
 
       const missingDoseLogs = ((medicines || []) as MedicineSchedule[]).flatMap((medicine) =>
@@ -166,21 +169,18 @@ Deno.serve(async (req) => {
             medicine_id: medicine.id,
             medicine_name: medicine.name,
             scheduled_time: scheduledTime,
-            actual_time: null,
+            actual_time: null as string | null,
             date: localNow.date,
-            status: 'partial',
-            notification_sent_at: null,
-            notification_error: null,
+            status: 'pending',
+            notification_sent_at: null as string | null,
+            notification_error: null as string | null,
           }))
       );
 
       if (missingDoseLogs.length > 0) {
-        const { error: insertLogsError } = await supabase
-          .from('dose_logs')
-          .insert(missingDoseLogs);
-
+        const { error: insertLogsError } = await supabase.from('dose_logs').insert(missingDoseLogs);
         if (insertLogsError) throw insertLogsError;
-        console.log(`[check-due-medications] Created ${missingDoseLogs.length} daily dose logs for user ${userId}`);
+        console.log(`[check-due-medications] Created ${missingDoseLogs.length} dose logs for user ${userId} on ${localNow.date}`);
       }
 
       let dueDoseQuery = supabase
@@ -193,6 +193,7 @@ Deno.serve(async (req) => {
           scheduled_time,
           date,
           status,
+          notification_sent_at,
           medicines (
             name,
             dosage,
@@ -201,7 +202,7 @@ Deno.serve(async (req) => {
         `)
         .eq('user_id', userId)
         .eq('date', localNow.date)
-        .eq('status', 'partial')
+        .eq('status', 'pending')
         .is('notification_sent_at', null)
         .lte('scheduled_time', localNow.time);
 
@@ -214,6 +215,10 @@ Deno.serve(async (req) => {
 
       const dosesWithReminders = ((dueDoses || []) as unknown as DoseLogWithMedicine[])
         .filter((dose) => getMedicine(dose)?.reminder_enabled !== false);
+
+      console.log(
+        `[check-due-medications] User ${userId} (${timezone}): ${localNow.date} ${localNow.time} — ${dosesWithReminders.length} due doses`
+      );
 
       checkedCount += dosesWithReminders.length;
 
@@ -229,32 +234,39 @@ Deno.serve(async (req) => {
         }
 
         const medicineName = medicine?.name || dose.medicine_name;
-        const message = medicine?.dosage
-          ? `Time to take ${medicineName} (${medicine.dosage})`
+        const dosage = medicine?.dosage;
+        const message = dosage
+          ? `Time to take ${medicineName} (${dosage})`
           : `Time to take ${medicineName}`;
 
-        const oneSignalResponse = await fetch('https://api.onesignal.com/notifications?c=push', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Key ${ONESIGNAL_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            app_id: ONESIGNAL_APP_ID,
-            include_subscription_ids: userSubscriptions,
-            target_channel: 'push',
-            contents: { en: message },
-            headings: { en: 'Medication Reminder' },
-            data: {
-              action: 'medication_reminder',
-              medicine_id: dose.medicine_id,
-              dose_log_id: dose.id,
-              scheduled_time: dose.scheduled_time,
+        console.log(`[check-due-medications] Sending push for dose ${dose.id} (${medicineName})`);
+
+        const oneSignalResponse = await fetch(
+          'https://api.onesignal.com/notifications?c=push',
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Key ${ONESIGNAL_API_KEY}`,
+              'Content-Type': 'application/json',
             },
-            priority: 10,
-            ttl: 3600,
-          }),
-        });
+            body: JSON.stringify({
+              app_id: ONESIGNAL_APP_ID,
+              include_subscription_ids: userSubscriptions,
+              target_channel: 'push',
+              contents: { en: message },
+              headings: { en: 'MediMind Reminder' },
+              data: {
+                action: 'medication_reminder',
+                medicine_id: dose.medicine_id,
+                dose_log_id: dose.id,
+                scheduled_time: dose.scheduled_time,
+                medicine_name: medicineName,
+              },
+              priority: 10,
+              ttl: 86400,
+            }),
+          }
+        );
 
         const result = await oneSignalResponse.json().catch(() => ({}));
 
@@ -262,16 +274,19 @@ Deno.serve(async (req) => {
           sentNotifications.push(dose.id);
           await supabase
             .from('dose_logs')
-            .update({ notification_sent_at: new Date().toISOString(), notification_error: null })
+            .update({
+              notification_sent_at: new Date().toISOString(),
+              notification_error: null,
+            })
             .eq('id', dose.id);
-          console.log(`[check-due-medications] Sent notification for dose ${dose.id}`);
+          console.log(`[check-due-medications] Sent and marked dose ${dose.id}`);
         } else {
           failedNotifications.push(dose.id);
           await supabase
             .from('dose_logs')
             .update({ notification_error: JSON.stringify(result) })
             .eq('id', dose.id);
-          console.log(`[check-due-medications] Failed for dose ${dose.id}:`, result);
+          console.log(`[check-due-medications] Failed for dose ${dose.id}:`, JSON.stringify(result));
         }
       }
     }
@@ -282,6 +297,7 @@ Deno.serve(async (req) => {
         checked: checkedCount,
         sent: sentNotifications.length,
         failed: failedNotifications.length,
+        sentIds: sentNotifications,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
@@ -289,7 +305,7 @@ Deno.serve(async (req) => {
     console.error('[check-due-medications] Error:', error.message);
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 },
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     );
   }
 });

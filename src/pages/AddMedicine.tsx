@@ -94,7 +94,7 @@ const AddMedicine = () => {
           scheduledTime: scheduledTime,
           actualTime: null,
           date: today,
-          status: "partial",
+          status: "pending",
         });
       }
 

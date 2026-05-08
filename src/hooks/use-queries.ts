@@ -289,8 +289,9 @@ return {
         notificationError: data.notification_error
       } as DoseLog;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogs });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogsForDate(variables.date) });
     },
   });
 };

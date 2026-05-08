@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
@@ -8,97 +8,130 @@ import { queryClient, QUERY_KEYS } from "@/lib/query-client";
 import { DoseLog } from "@/utils/storage";
 import { getLocalDateString } from "@/utils/datetime";
 
-const NOTIFICATION_LOOKBACK_MINUTES = 2;
+const NOTIFY_LOOKBACK_MINUTES = 30;
+const POLL_INTERVAL_MS = 15_000;
+const SNOOZE_MS = 10 * 60 * 1000;
 
-const to24HourTime = (time: string) => {
-  if (/^\d{2}:\d{2}$/.test(time)) return time;
-  const [timePart, period = "AM"] = time.trim().split(" ");
-  const [hourPart, minute = "00"] = timePart.split(":");
-  let hour = Number(hourPart);
-  if (Number.isNaN(hour)) return time;
-  if (period.toUpperCase() === "PM" && hour < 12) hour += 12;
-  if (period.toUpperCase() === "AM" && hour === 12) hour = 0;
-  return `${hour.toString().padStart(2, "0")}:${minute.padStart(2, "0")}`;
-};
-
-const to24h = (time: string) => {
-  const normalized = to24HourTime(time);
+const to24h = (time: string): number => {
+  const normalized =
+    /^\d{2}:\d{2}$/.test(time)
+      ? time
+      : (() => {
+          const [tp, p = "AM"] = time.trim().split(" ");
+          const [h = "0", m = "0"] = tp.split(":");
+          let hour = Number(h);
+          if (Number.isNaN(hour)) return time;
+          if (p.toUpperCase() === "PM" && hour < 12) hour += 12;
+          if (p.toUpperCase() === "AM" && hour === 12) hour = 0;
+          return `${hour.toString().padStart(2, "0")}:${m.padStart(2, "0")}`;
+        })();
   const [h = "0", m = "0"] = normalized.split(":");
   return Number(h) * 60 + Number(m);
 };
 
-const shouldNotifyNow = (log: DoseLog, now = new Date()) => {
-  if (log.status !== "partial" || log.notificationSentAt) return false;
+const nowMinutes = (): number => {
+  const d = new Date();
+  return d.getHours() * 60 + d.getMinutes();
+};
 
-  const hour = String(now.getHours()).padStart(2, "0");
-  const minute = String(now.getMinutes()).padStart(2, "0");
-  const currentMinutes = Number(hour) * 60 + Number(minute);
-  const scheduledMinutes = to24h(log.scheduledTime);
-  const minutesSinceScheduled = currentMinutes - scheduledMinutes;
+const isDue = (log: DoseLog): boolean => {
+  if (log.status !== "pending" || log.notificationSentAt) return false;
+  const scheduled = to24h(log.scheduledTime);
+  const current = nowMinutes();
+  return current >= scheduled && current <= scheduled + NOTIFY_LOOKBACK_MINUTES;
+};
 
-  return minutesSinceScheduled >= 0 && minutesSinceScheduled <= NOTIFICATION_LOOKBACK_MINUTES;
+const isOverdue = (log: DoseLog): boolean => {
+  if (log.status !== "pending") return false;
+  return to24h(log.scheduledTime) < nowMinutes();
 };
 
 const MedicationNotificationScheduler = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const today = getLocalDateString();
-  const { data: todayLogs = [] } = useDoseLogsForDate(today);
-  const notifiedDoseIds = useRef(new Set<string>());
+  const [today] = useState(() => getLocalDateString());
+  const { data: todayLogs = [], refetch } = useDoseLogsForDate(today);
+  const notifiedDoseIds = useRef<Set<string>>(new Set());
+  const locallyCreatedDoseKeys = useRef(new Set<string>());
 
-  useEffect(() => {
-    if (!user || typeof Notification === "undefined" || Notification.permission !== "granted") return;
-
-    const showDueNotifications = async () => {
-      const dueLogs = todayLogs.filter((log: DoseLog) => shouldNotifyNow(log) && !notifiedDoseIds.current.has(log.id));
-      if (dueLogs.length === 0) return;
-
-      for (const log of dueLogs) {
-        notifiedDoseIds.current.add(log.id);
-
-        const body = `Time to take ${log.medicineName}`;
-        const notification = new Notification("Medication Reminder", {
-          body,
-          icon: "/favicon.ico",
-          tag: `dose-${log.id}`,
-          requireInteraction: true,
-          data: {
-            doseLogId: log.id,
-            medicineId: log.medicineId,
-          },
-        });
-
-        notification.onclick = () => {
-          window.focus();
-          navigate("/dashboard");
-          notification.close();
-        };
-
-        toast.info(body, {
-          action: {
-            label: "Open",
-            onClick: () => navigate("/dashboard"),
-          },
-        });
-
-        const { error } = await supabase
-          .from("dose_logs")
-          .update({ notification_sent_at: new Date().toISOString(), notification_error: null })
-          .eq("id", log.id);
-
-        if (error) {
-          console.error("[MedicationNotificationScheduler] Failed to mark notification as sent:", error);
-        }
-      }
+  const handleTakeNow = useCallback(async (log: DoseLog) => {
+    try {
+      await supabase
+        .from("dose_logs")
+        .update({ status: "taken", actual_time: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) })
+        .eq("id", log.id);
 
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogsForDate(today) });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogs });
-    };
+      toast.success(`${log.medicineName} marked as taken`);
+    } catch (err) {
+      console.error("[MedicationNotificationScheduler] Take now failed:", err);
+      toast.error("Failed to mark dose as taken");
+    }
+  }, [today]);
 
-    showDueNotifications();
-    const intervalId = window.setInterval(showDueNotifications, 30_000);
+  const checkAndNotify = useCallback(async () => {
+    if (!user) return;
+    await refetch();
+    const dueLogs = todayLogs.filter(
+      (log: DoseLog) => isDue(log) && !notifiedDoseIds.current.has(log.id) && !locallyCreatedDoseKeys.current.has(log.id)
+    );
+
+    if (dueLogs.length === 0) return;
+
+    for (const log of dueLogs) {
+      notifiedDoseIds.current.add(log.id);
+
+      const body = `Time to take ${log.medicineName}`;
+      const notif = new Notification("Medication Reminder", {
+        body,
+        icon: "/favicon.ico",
+        tag: `dose-${log.id}`,
+        requireInteraction: false,
+        data: { doseLogId: log.id, medicineId: log.medicineId },
+      });
+
+      notif.onclick = () => {
+        window.focus();
+        navigate("/dashboard");
+        notif.close();
+      };
+
+      toast.info(body, {
+        duration: Infinity,
+        action: { label: "Take Now", onClick: () => handleTakeNow(log) },
+      });
+
+      await supabase
+        .from("dose_logs")
+        .update({ notification_sent_at: new Date().toISOString() })
+        .eq("id", log.id)
+        .eq("status", "pending");
+
+      console.log(`[MedicationNotificationScheduler] Notified dose ${log.id}`);
+    }
+
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogsForDate(today) });
+  }, [user, todayLogs, today, navigate, refetch, handleTakeNow]);
+
+  useEffect(() => {
+    if (!user) return;
+    if (typeof Notification === "undefined") return;
+    if (Notification.permission !== "granted") return;
+
+    checkAndNotify();
+    const intervalId = window.setInterval(checkAndNotify, POLL_INTERVAL_MS);
     return () => window.clearInterval(intervalId);
-  }, [todayLogs, today, user, navigate]);
+  }, [user, checkAndNotify]);
+
+  useEffect(() => {
+    const lastDate = sessionStorage.getItem("scheduler_date");
+    const currentDate = getLocalDateString();
+    if (lastDate !== currentDate) {
+      notifiedDoseIds.current.clear();
+      locallyCreatedDoseKeys.current.clear();
+      sessionStorage.setItem("scheduler_date", currentDate);
+    }
+  }, []);
 
   return null;
 };
