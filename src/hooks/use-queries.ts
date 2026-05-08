@@ -186,12 +186,16 @@ export const useRemoveMedicine = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      const { error: doseLogError } = await supabase.from('dose_logs').delete().eq('medicine_id', id);
+      if (doseLogError) throw new Error(doseLogError.message);
+
       const { error } = await supabase.from('medicines').delete().eq('id', id);
       if (error) throw new Error(error.message);
       return id;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.medicines });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogs });
     },
   });
 };
@@ -210,7 +214,9 @@ export const useDoseLogs = () => {
         scheduledTime: d.scheduled_time,
         actualTime: d.actual_time,
         date: d.date,
-        status: d.status
+        status: d.status,
+        notificationSentAt: d.notification_sent_at,
+        notificationError: d.notification_error
       })) as DoseLog[];
     },
   });
@@ -235,7 +241,9 @@ export const useDoseLogsForDate = (date: string) => {
         scheduledTime: d.scheduled_time,
         actualTime: d.actual_time,
         date: d.date,
-        status: d.status
+        status: d.status,
+        notificationSentAt: d.notification_sent_at,
+        notificationError: d.notification_error
       })) as DoseLog[];
     },
     staleTime: 0,
@@ -272,7 +280,9 @@ return {
         scheduledTime: data.scheduled_time,
         actualTime: data.actual_time,
         date: data.date,
-        status: data.status
+        status: data.status,
+        notificationSentAt: data.notification_sent_at,
+        notificationError: data.notification_error
       } as DoseLog;
     },
     onSuccess: () => {

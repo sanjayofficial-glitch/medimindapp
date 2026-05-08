@@ -32,6 +32,8 @@ export interface DoseLog {
   actualTime: string | null;
   date: string;
   status: string;
+  notificationSentAt?: string | null;
+  notificationError?: string | null;
 }
 
 export interface VitalLog {
@@ -207,7 +209,9 @@ export const getDoseLogs = async (): Promise<DoseLog[]> => {
     scheduledTime: d.scheduled_time,
     actualTime: d.actual_time,
     date: d.date,
-    status: d.status
+    status: d.status,
+    notificationSentAt: d.notification_sent_at,
+    notificationError: d.notification_error
   }));
 };
 

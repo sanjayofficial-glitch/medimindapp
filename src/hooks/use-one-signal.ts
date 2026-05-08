@@ -17,7 +17,11 @@ export const useOneSignal = () => {
 
     console.log('[useOneSignal] Saving subscription to Supabase...');
     const { error } = await supabase.functions.invoke('save-onesignal-subscription', {
-      body: { player_id: playerId, device_type: 'web' }
+      body: {
+        player_id: playerId,
+        device_type: 'web',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      }
     });
 
     if (error) {

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, Variants } from "framer-motion";
 import { 
@@ -15,10 +15,25 @@ import {
   ShieldAlert,
   Trophy,
   Settings as SettingsIcon,
-  Loader2
+  Loader2,
+  Pencil,
+  Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -28,30 +43,193 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/AuthContext";
-import { useDoseLogsForDate, useSaveDoseLog, useMedicines, useUpdateMedicine } from "@/hooks/use-queries";
-import { DoseLog } from "@/utils/storage";
+import { useDoseLogsForDate, useSaveDoseLog, useMedicines, useUpdateMedicine, useRemoveMedicine } from "@/hooks/use-queries";
+import { DoseLog, Medicine } from "@/utils/storage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import InteractionChecker from "@/components/InteractionChecker";
 import DynamicAIInsight from "@/components/DynamicAIInsight";
+import { supabase } from "@/integrations/supabase/client";
+import { queryClient, QUERY_KEYS } from "@/lib/query-client";
+import { getCurrentTime24, getLocalDateString } from "@/utils/datetime";
 
 import { iconPop, cardInteractive, chevronSlide, buttonTap, scaleIn } from "@/lib/animations";
+
+const to24HourTime = (time: string) => {
+  if (/^\d{2}:\d{2}$/.test(time)) return time;
+
+  const [timePart, period = "AM"] = time.trim().split(" ");
+  const [hourPart, minute = "00"] = timePart.split(":");
+  let hour = Number(hourPart);
+  if (Number.isNaN(hour)) return time;
+
+  if (period.toUpperCase() === "PM" && hour < 12) hour += 12;
+  if (period.toUpperCase() === "AM" && hour === 12) hour = 0;
+
+  return `${hour.toString().padStart(2, "0")}:${minute.padStart(2, "0")}`;
+};
+
+const toDisplayTime = (time: string) => {
+  const normalized = to24HourTime(time);
+  const [hourStr, minute = "00"] = normalized.split(":");
+  const hour = Number(hourStr);
+  if (Number.isNaN(hour)) return time;
+
+  const period = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${minute} ${period}`;
+};
 
 const Dashboard = () => {
   const { user, logout, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
   
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateString();
   const { data: todayLogs = [], isLoading: isDataLoading, refetch } = useDoseLogsForDate(today);
   const { data: medicines = [] } = useMedicines();
   const saveDoseLog = useSaveDoseLog();
   const updateMedicine = useUpdateMedicine();
+  const removeMedicine = useRemoveMedicine();
+  const [editingMedicine, setEditingMedicine] = useState<Medicine | null>(null);
+  const [editTimes, setEditTimes] = useState<string[]>([]);
+  const [newEditTime, setNewEditTime] = useState("");
+  const [medicineToDelete, setMedicineToDelete] = useState<Medicine | null>(null);
+  const [isSyncingSchedule, setIsSyncingSchedule] = useState(false);
+  const dailySyncInFlight = useRef(false);
+  const locallyCreatedDoseKeys = useRef(new Set<string>());
 
   useEffect(() => {
     if (!isAuthLoading && !user) {
       navigate("/login");
     }
   }, [user, isAuthLoading, navigate]);
+
+  useEffect(() => {
+    if (!user || isDataLoading || medicines.length === 0 || isSyncingSchedule || dailySyncInFlight.current) return;
+
+    const createMissingDailyDoseLogs = async () => {
+      const existingKeys = new Set([
+        ...todayLogs.map((log: DoseLog) => `${log.medicineId}-${log.scheduledTime}`),
+        ...locallyCreatedDoseKeys.current,
+      ]);
+
+      const missingLogs = medicines.flatMap((medicine: Medicine) =>
+        (medicine.times || [])
+          .map(to24HourTime)
+          .filter((scheduledTime) => !existingKeys.has(`${medicine.id}-${scheduledTime}`))
+          .map((scheduledTime) => ({
+            id: crypto.randomUUID(),
+            medicineId: medicine.id,
+            medicineName: medicine.name,
+            familyMemberId: medicine.familyMemberId,
+            scheduledTime,
+            actualTime: null,
+            date: today,
+            status: "partial",
+          } as DoseLog))
+      );
+
+      if (missingLogs.length === 0) return;
+
+      missingLogs.forEach((log) => locallyCreatedDoseKeys.current.add(`${log.medicineId}-${log.scheduledTime}`));
+      dailySyncInFlight.current = true;
+      setIsSyncingSchedule(true);
+      try {
+        for (const log of missingLogs) {
+          await saveDoseLog.mutateAsync(log);
+        }
+        await refetch();
+      } catch (error) {
+        console.error("Failed to create daily dose logs:", error);
+        toast.error("Could not refresh today's reminder schedule");
+      } finally {
+        dailySyncInFlight.current = false;
+        setIsSyncingSchedule(false);
+      }
+    };
+
+    createMissingDailyDoseLogs();
+  }, [user, medicines, todayLogs, today, isDataLoading, isSyncingSchedule, saveDoseLog, refetch]);
+
+  const openEditSchedule = (medicine: Medicine) => {
+    setEditingMedicine(medicine);
+    setEditTimes((medicine.times || []).map(to24HourTime).sort());
+    setNewEditTime("");
+  };
+
+  const addEditTime = () => {
+    if (!newEditTime) return;
+    setEditTimes((prev) => Array.from(new Set([...prev, newEditTime])).sort());
+    setNewEditTime("");
+  };
+
+  const removeEditTime = (time: string) => {
+    setEditTimes((prev) => prev.filter((item) => item !== time));
+  };
+
+  const handleSaveSchedule = async () => {
+    if (!editingMedicine) return;
+    if (editTimes.length === 0) {
+      toast.error("Add at least one reminder time");
+      return;
+    }
+
+    try {
+      const nextTimes = editTimes.map(toDisplayTime);
+      await updateMedicine.mutateAsync({ ...editingMedicine, times: nextTimes });
+
+      const nextTimeSet = new Set(editTimes);
+      const currentMedicineLogs = todayLogs.filter((log: DoseLog) => log.medicineId === editingMedicine.id);
+      const removableLogs = currentMedicineLogs.filter(
+        (log: DoseLog) => log.status === "partial" && !nextTimeSet.has(log.scheduledTime)
+      );
+
+      if (removableLogs.length > 0) {
+        const { error } = await supabase
+          .from("dose_logs")
+          .delete()
+          .in("id", removableLogs.map((log: DoseLog) => log.id));
+        if (error) throw new Error(error.message);
+      }
+
+      const existingTimes = new Set(currentMedicineLogs.map((log: DoseLog) => log.scheduledTime));
+      for (const scheduledTime of editTimes) {
+        if (existingTimes.has(scheduledTime)) continue;
+        await saveDoseLog.mutateAsync({
+          id: crypto.randomUUID(),
+          medicineId: editingMedicine.id,
+          medicineName: editingMedicine.name,
+          familyMemberId: editingMedicine.familyMemberId,
+          scheduledTime,
+          actualTime: null,
+          date: today,
+          status: "partial",
+        });
+      }
+
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogsForDate(today) });
+      await refetch();
+      setEditingMedicine(null);
+      toast.success("Reminder schedule updated");
+    } catch (error) {
+      console.error("Failed to update reminder schedule:", error);
+      toast.error("Failed to update reminder schedule");
+    }
+  };
+
+  const handleDeleteMedicine = async () => {
+    if (!medicineToDelete) return;
+
+    try {
+      await removeMedicine.mutateAsync(medicineToDelete.id);
+      await refetch();
+      toast.success(`${medicineToDelete.name} reminders deleted`);
+      setMedicineToDelete(null);
+    } catch (error) {
+      console.error("Failed to delete medicine:", error);
+      toast.error("Failed to delete reminder");
+    }
+  };
 
   const handleStatusUpdate = async (log: DoseLog, status: "taken" | "missed") => {
     try {
@@ -92,7 +270,19 @@ const Dashboard = () => {
   };
 
   const takenCount = todayLogs.filter((l: DoseLog) => l.status === "taken").length;
-  const pendingCount = todayLogs.filter((l: DoseLog) => l.status === "partial").length;
+  const pendingLogs = useMemo(
+    () => todayLogs
+      .filter((l: DoseLog) => l.status === "partial")
+      .sort((a: DoseLog, b: DoseLog) => a.scheduledTime.localeCompare(b.scheduledTime)),
+    [todayLogs]
+  );
+  const currentTime = getCurrentTime24();
+  const upcomingDoseLogs = useMemo(
+    () => pendingLogs.filter((l: DoseLog) => l.scheduledTime >= currentTime),
+    [pendingLogs, currentTime]
+  );
+  const visibleNextDoseLogs = upcomingDoseLogs.length > 0 ? upcomingDoseLogs : pendingLogs;
+  const pendingCount = pendingLogs.length;
   const totalToday = todayLogs.length;
   const progress = totalToday > 0 ? (takenCount / totalToday) * 100 : 0;
 
@@ -223,10 +413,31 @@ const Dashboard = () => {
             <Card className="border-none shadow-sm bg-card h-full">
               <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Next Dose</CardTitle></CardHeader>
               <CardContent>
-                <div className={cn("text-3xl font-bold", pendingCount > 0 ? "text-foreground" : "text-primary")}>
-                  {pendingCount > 0 ? todayLogs.find((l: DoseLog) => l.status === "partial")?.scheduledTime : "All Clear"}
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">Stay on schedule</p>
+                {visibleNextDoseLogs.length > 0 ? (
+                  <div className="space-y-3">
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {visibleNextDoseLogs.slice(0, 5).map((log: DoseLog) => {
+                        const isOverdue = log.scheduledTime < currentTime;
+                        return (
+                          <div key={log.id} className="min-w-[9rem] rounded-lg border border-border bg-background px-3 py-2">
+                            <div className={cn("text-2xl font-bold", isOverdue ? "text-amber-600" : "text-foreground")}>
+                              {toDisplayTime(log.scheduledTime)}
+                            </div>
+                            <p className="mt-1 truncate text-xs font-medium text-muted-foreground">{log.medicineName}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {upcomingDoseLogs.length > 0 ? `${upcomingDoseLogs.length} upcoming dose${upcomingDoseLogs.length !== 1 ? "s" : ""}` : "Overdue pending dose"}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-3xl font-bold text-primary">All Clear</div>
+                    <p className="text-xs text-muted-foreground mt-2">No pending doses today</p>
+                  </>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -247,7 +458,10 @@ const Dashboard = () => {
                     <Link to="/add-medicine"><Button variant="outline" className="rounded-full">Get Started</Button></Link>
                   </div>
                 ) : (
-                  todayLogs.sort((a: DoseLog, b: DoseLog) => a.scheduledTime.localeCompare(b.scheduledTime)).map((log: DoseLog, i: number) => (
+                  [...todayLogs].sort((a: DoseLog, b: DoseLog) => a.scheduledTime.localeCompare(b.scheduledTime)).map((log: DoseLog, i: number) => {
+                    const medicine = medicines.find((med: Medicine) => med.id === log.medicineId);
+
+                    return (
                     <motion.div 
                       key={log.id} 
                       layout
@@ -279,10 +493,34 @@ const Dashboard = () => {
                               </motion.div>
                             )}
                           </div>
-                          <p className="text-xs font-medium text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" /> {log.scheduledTime}</p>
+                          <p className="text-xs font-medium text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" /> {toDisplayTime(log.scheduledTime)}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        {medicine ? (
+                          <>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 rounded-full"
+                              onClick={() => openEditSchedule(medicine)}
+                              title="Edit reminder times"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 rounded-full text-destructive hover:text-destructive"
+                              onClick={() => setMedicineToDelete(medicine)}
+                              title="Delete medicine reminders"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        ) : null}
                         {log.status === "partial" ? (
                           <motion.div variants={buttonTap} whileTap="tap">
                             <Button 
@@ -304,7 +542,8 @@ const Dashboard = () => {
                         )}
                       </div>
                     </motion.div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </section>
@@ -363,6 +602,83 @@ const Dashboard = () => {
           </div>
         </div>
       </main>
+
+      <Dialog open={!!editingMedicine} onOpenChange={(open) => !open && setEditingMedicine(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Reminder Times</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-semibold text-foreground">{editingMedicine?.name}</p>
+              <p className="text-xs text-muted-foreground">{editingMedicine?.dosage}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new-reminder-time">Add time</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="new-reminder-time"
+                  type="time"
+                  value={newEditTime}
+                  onChange={(event) => setNewEditTime(event.target.value)}
+                />
+                <Button type="button" onClick={addEditTime}>Add</Button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {editTimes.map((time) => (
+                <button
+                  key={time}
+                  type="button"
+                  onClick={() => removeEditTime(time)}
+                  className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+                  title="Remove this reminder time"
+                >
+                  {toDisplayTime(time)} x
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setEditingMedicine(null)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleSaveSchedule} disabled={updateMedicine.isPending || saveDoseLog.isPending}>
+              {(updateMedicine.isPending || saveDoseLog.isPending) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Save Schedule
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!medicineToDelete} onOpenChange={(open) => !open && setMedicineToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this medicine reminder?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes {medicineToDelete?.name || "this medicine"} and its dose reminders. Use this when the course is completed or no longer needed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removeMedicine.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                handleDeleteMedicine();
+              }}
+              disabled={removeMedicine.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {removeMedicine.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   );
 };

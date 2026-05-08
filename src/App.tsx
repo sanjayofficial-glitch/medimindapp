@@ -3,6 +3,7 @@ import { Suspense, lazy } from "react";
 import BottomTabBar from "./components/BottomTabBar";
 import AIButton from "./components/AIButton";
 import NotificationPermissionPrompt from "./components/NotificationPermissionPrompt";
+import MedicationNotificationScheduler from "./components/MedicationNotificationScheduler";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Index = lazy(() => import("./pages/Index"));
@@ -69,6 +70,7 @@ const App = () => {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+      <MedicationNotificationScheduler />
       <NotificationPermissionPrompt />
       <BottomTabBar />
       <AIButton />

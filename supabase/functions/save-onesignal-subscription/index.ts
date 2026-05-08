@@ -27,18 +27,27 @@ Deno.serve(async (req) => {
       throw new Error('Invalid authentication');
     }
 
-    const { player_id, device_type } = await req.json();
+    const { player_id, device_type, timezone } = await req.json();
 
     if (!player_id) {
       throw new Error('Missing player_id');
     }
 
-    const { data: existingSub } = await supabase
+    let subscriptionTimezone = typeof timezone === 'string' && timezone.trim() ? timezone.trim() : 'UTC';
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: subscriptionTimezone }).format(new Date());
+    } catch {
+      subscriptionTimezone = 'UTC';
+    }
+
+    const { data: existingSub, error: existingError } = await supabase
       .from('onesignal_subscriptions')
       .select('id')
       .eq('user_id', user.id)
       .eq('player_id', player_id)
-      .single();
+      .maybeSingle();
+
+    if (existingError) throw existingError;
 
     let result;
     if (existingSub) {
@@ -46,6 +55,8 @@ Deno.serve(async (req) => {
         .from('onesignal_subscriptions')
         .update({ 
           is_active: true, 
+          timezone: subscriptionTimezone,
+          device_type: device_type || 'web',
           updated_at: new Date().toISOString() 
         })
         .eq('id', existingSub.id)
@@ -61,6 +72,7 @@ Deno.serve(async (req) => {
           user_id: user.id,
           player_id,
           device_type: device_type || 'web',
+          timezone: subscriptionTimezone,
           is_active: true
         })
         .select()

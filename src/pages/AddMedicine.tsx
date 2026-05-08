@@ -14,6 +14,7 @@ import { MedicineSelector } from "@/components/MedicineSelector";
 import { toast } from "sonner";
 import { queryClient } from "@/lib/query-client";
 import { QUERY_KEYS } from "@/lib/query-client";
+import { getLocalDateString } from "@/utils/datetime";
 
 const AddMedicine = () => {
   const navigate = useNavigate();
@@ -77,7 +78,7 @@ const AddMedicine = () => {
         frequency: frequency,
       });
 
-      const today = new Date().toISOString().split("T")[0];
+      const today = getLocalDateString();
       
       // Create dose logs for today
       for (const timeStr of times) {
