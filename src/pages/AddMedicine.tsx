@@ -8,13 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { useFamilyMembers, useAddMedicine, useSaveDoseLog } from "@/hooks/use-queries";
+import { useFamilyMembers, useAddMedicine, useMedicines } from "@/hooks/use-queries";
 import { MedicineDBEntry } from "@/data/medicineDatabase";
 import { MedicineSelector } from "@/components/MedicineSelector";
 import { toast } from "sonner";
 import { queryClient } from "@/lib/query-client";
 import { QUERY_KEYS } from "@/lib/query-client";
-import { getLocalDateString, normalizeTime } from "@/utils/datetime";
+import { normalizeTime } from "@/utils/datetime";
 
 const AddMedicine = () => {
   const navigate = useNavigate();
@@ -30,8 +30,8 @@ const AddMedicine = () => {
   const [newPeriod, setNewPeriod] = useState("AM");
   
   const { data: familyMembers = [] } = useFamilyMembers();
+  const { data: existingMedicines = [] } = useMedicines();
   const addMedicineMutation = useAddMedicine();
-  const saveDoseLogMutation = useSaveDoseLog();
 
   const pad = (n: string) => n.padStart(2, "0");
   const hourOptions = Array.from({ length: 12 }, (_, i) => `${i + 1}`);
@@ -62,8 +62,18 @@ const AddMedicine = () => {
     if (!frequency) return toast.error("Please select a frequency");
     if (times.length === 0) return toast.error("Please add at least one time");
 
+    // Check for duplicates
+    const isDuplicate = existingMedicines.some(
+      m => m.familyMemberId === selectedMember && 
+      m.name.toLowerCase() === medicineName.toLowerCase()
+    );
+
+    if (isDuplicate) {
+      return toast.error(`${medicineName} is already scheduled for this family member`);
+    }
+
     try {
-      const newMedicine = await addMedicineMutation.mutateAsync({
+      await addMedicineMutation.mutateAsync({
         familyMemberId: selectedMember,
         name: medicineName,
         dosage: dosage.trim(),
@@ -71,26 +81,10 @@ const AddMedicine = () => {
         frequency: frequency,
       });
 
-      const today = getLocalDateString();
+      toast.success(`Added ${medicineName} to schedule`);
       
-      // Create dose logs for today
-      for (const timeStr of times) {
-        const scheduledTime = normalizeTime(timeStr);
-        
-        await saveDoseLogMutation.mutateAsync({
-          id: crypto.randomUUID(),
-          medicineId: newMedicine.id,
-          medicineName: newMedicine.name,
-          familyMemberId: selectedMember,
-          scheduledTime: scheduledTime,
-          actualTime: null,
-          date: today,
-          status: "pending",
-        });
-      }
-
-      toast.success(`Added ${medicineName} with ${times.length} daily doses`);
-      
+      // Invalidate queries to ensure dashboard sees the new medicine
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.medicines });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogs });
       
       navigate("/dashboard");
@@ -100,7 +94,7 @@ const AddMedicine = () => {
     }
   };
 
-  const isSubmitting = addMedicineMutation.isPending || saveDoseLogMutation.isPending;
+  const isSubmitting = addMedicineMutation.isPending;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-32 p-6">
@@ -276,7 +270,7 @@ const AddMedicine = () => {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Creating Schedule...
+                    Saving Medication...
                   </>
                 ) : (
                   "Save Medication Schedule"
