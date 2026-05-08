@@ -128,6 +128,11 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
   }
 
   try {
+    if (Notification.permission === 'denied') {
+      console.warn('[OneSignal] Browser notification permission is blocked');
+      return false;
+    }
+
     await window.OneSignal.Notifications.requestPermission();
     const hasPermission = window.OneSignal.Notifications.permission || Notification.permission === 'granted';
     console.log('[OneSignal] Permission granted:', hasPermission);
@@ -136,6 +141,10 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
     console.error('[OneSignal] Permission error:', error);
     return false;
   }
+};
+
+export const hasNotificationPermission = (): boolean => {
+  return typeof Notification !== 'undefined' && Notification.permission === 'granted';
 };
 
 export const getOneSignalPlayerId = async (): Promise<string | null> => {
@@ -159,20 +168,37 @@ export const isOneSignalEnabled = async (): Promise<boolean> => {
   }
 };
 
-const waitForSubscriptionId = async (timeoutMs = 10000): Promise<string | null> => {
+const waitForSubscriptionId = async (timeoutMs = 20000): Promise<string | null> => {
   const existingId = await getOneSignalPlayerId();
   if (existingId) return existingId;
 
   if (!window.OneSignal) return null;
 
   return new Promise((resolve) => {
-    const timeout = window.setTimeout(() => resolve(null), timeoutMs);
+    let settled = false;
+    let poll = 0;
+    let timeout = 0;
+
+    const finish = (subscriptionId: string | null) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      window.clearInterval(poll);
+      resolve(subscriptionId);
+    };
+
+    timeout = window.setTimeout(() => finish(null), timeoutMs);
+    poll = window.setInterval(() => {
+      const subscriptionId = window.OneSignal?.User.PushSubscription.id || null;
+      if (subscriptionId) {
+        finish(subscriptionId);
+      }
+    }, 500);
 
     window.OneSignal?.User.PushSubscription.addEventListener('change', (event) => {
       const subscriptionId = event.current?.id || window.OneSignal?.User.PushSubscription.id || null;
       if (subscriptionId) {
-        window.clearTimeout(timeout);
-        resolve(subscriptionId);
+        finish(subscriptionId);
       }
     });
   });
@@ -205,6 +231,14 @@ export const subscribeToPush = async (userId: string): Promise<string | null> =>
   }
 
   return playerId;
+};
+
+export const restorePushSubscription = async (userId: string): Promise<string | null> => {
+  const initialized = await initOneSignal(userId);
+  if (!initialized || !hasNotificationPermission()) return null;
+
+  await window.OneSignal?.User.PushSubscription.optIn();
+  return waitForSubscriptionId();
 };
 
 export const unsubscribeFromPush = async (): Promise<boolean> => {

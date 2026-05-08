@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { initOneSignal, subscribeToPush, unsubscribeFromPush, isOneSignalEnabled, getOneSignalPlayerId, isOneSignalSupported, isConfigured } from '@/utils/onesignal';
+import { initOneSignal, subscribeToPush, unsubscribeFromPush, restorePushSubscription, isOneSignalEnabled, getOneSignalPlayerId, isOneSignalSupported, isConfigured } from '@/utils/onesignal';
 import { useAuth } from '@/context/AuthContext';
+
+const PUSH_PREFERENCE_KEY = 'medimind_push_notifications_enabled';
 
 export const useOneSignal = () => {
   const { user } = useAuth();
@@ -9,6 +11,24 @@ export const useOneSignal = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isConfiguredOneSignal, setIsConfiguredOneSignal] = useState(true);
+
+  const saveSubscription = useCallback(async (playerId: string) => {
+    if (!user) return false;
+
+    console.log('[useOneSignal] Saving subscription to Supabase...');
+    const { error } = await supabase.functions.invoke('save-onesignal-subscription', {
+      body: { player_id: playerId, device_type: 'web' }
+    });
+
+    if (error) {
+      console.error('[useOneSignal] Error saving subscription:', error);
+      return false;
+    }
+
+    console.log('[useOneSignal] Subscription saved successfully');
+    localStorage.setItem(PUSH_PREFERENCE_KEY, 'true');
+    return true;
+  }, [user]);
 
   const checkSubscriptionStatus = useCallback(async () => {
     console.log('[useOneSignal] Checking subscription status...', { user: !!user, supported: isOneSignalSupported() });
@@ -45,6 +65,35 @@ export const useOneSignal = () => {
     checkSubscriptionStatus();
   }, [checkSubscriptionStatus]);
 
+  useEffect(() => {
+    if (!user || !isConfigured() || !isOneSignalSupported()) return;
+    if (localStorage.getItem(PUSH_PREFERENCE_KEY) === 'false') return;
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+
+    let cancelled = false;
+
+    const restoreExistingPermission = async () => {
+      setIsSubscribing(true);
+      try {
+        const playerId = await restorePushSubscription(user.id);
+        if (!playerId || cancelled) return;
+
+        const saved = await saveSubscription(playerId);
+        if (saved && !cancelled) setIsEnabled(true);
+      } catch (error) {
+        console.error('[useOneSignal] Auto-enable error:', error);
+      } finally {
+        if (!cancelled) setIsSubscribing(false);
+      }
+    };
+
+    restoreExistingPermission();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, saveSubscription]);
+
   const subscribe = useCallback(async () => {
     console.log('[useOneSignal] Subscribe called');
     
@@ -65,17 +114,9 @@ export const useOneSignal = () => {
       console.log('[useOneSignal] Got playerId:', playerId);
       
       if (playerId) {
-        console.log('[useOneSignal] Saving subscription to Supabase...');
-        const { error } = await supabase.functions.invoke('save-onesignal-subscription', {
-          body: { player_id: playerId, device_type: 'web' }
-        });
+        const saved = await saveSubscription(playerId);
+        if (!saved) return false;
 
-        if (error) {
-          console.error('[useOneSignal] Error saving subscription:', error);
-          return false;
-        }
-
-        console.log('[useOneSignal] Subscription saved successfully');
         setIsEnabled(true);
         return true;
       }
@@ -88,7 +129,7 @@ export const useOneSignal = () => {
     } finally {
       setIsSubscribing(false);
     }
-  }, [user]);
+  }, [user, saveSubscription]);
 
   const unsubscribe = useCallback(async () => {
     if (!user) return false;
@@ -105,6 +146,7 @@ export const useOneSignal = () => {
       }
 
       await unsubscribeFromPush();
+      localStorage.setItem(PUSH_PREFERENCE_KEY, 'false');
       setIsEnabled(false);
       return true;
     } catch (error) {
