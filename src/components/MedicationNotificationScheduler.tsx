@@ -13,16 +13,22 @@ const POLL_INTERVAL_MS = 15_000;
 const SNOOZE_MS = 10 * 60 * 1000;
 
 const to24h = (time: string): number => {
+  if (!time) return 0;
+  
   const normalized =
     /^\d{2}:\d{2}$/.test(time)
       ? time
       : (() => {
-          const [tp, p = "AM"] = time.trim().split(" ");
+          const trimmed = time.trim();
+          const [tp, p = "AM"] = trimmed.split(" ");
           const [h = "0", m = "0"] = tp.split(":");
           let hour = Number(h);
-          if (Number.isNaN(hour)) return time;
-          if (p.toUpperCase() === "PM" && hour < 12) hour += 12;
-          if (p.toUpperCase() === "AM" && hour === 12) hour = 0;
+          if (Number.isNaN(hour)) hour = 0;
+          
+          const periodUpper = p.toUpperCase();
+          if (periodUpper === "PM" && hour < 12) hour += 12;
+          if (periodUpper === "AM" && hour === 12) hour = 0;
+          
           return `${hour.toString().padStart(2, "0")}:${m.padStart(2, "0")}`;
         })();
   const [h = "0", m = "0"] = normalized.split(":");
@@ -35,13 +41,18 @@ const nowMinutes = (): number => {
 };
 
 const isDue = (log: DoseLog): boolean => {
+  // Must be pending and not yet sent notification
   if (log.status !== "pending" || log.notificationSentAt) return false;
+  
   const scheduled = to24h(log.scheduledTime);
   const current = nowMinutes();
+  
+  // Due if current time is within the window after scheduled time
   return current >= scheduled && current <= scheduled + NOTIFY_LOOKBACK_MINUTES;
 };
 
 const isOverdue = (log: DoseLog): boolean => {
+  // Only pending doses can be overdue
   if (log.status !== "pending") return false;
   return to24h(log.scheduledTime) < nowMinutes();
 };
@@ -71,43 +82,79 @@ const MedicationNotificationScheduler = () => {
 
   const checkAndNotify = useCallback(async () => {
     if (!user) return;
-    await refetch();
+    
+    try {
+      await refetch();
+    } catch (error) {
+      console.error("[MedicationNotificationScheduler] Failed to refetch dose logs:", error);
+      return;
+    }
+    
+    // Check for due doses (within notification window)
     const dueLogs = todayLogs.filter(
       (log: DoseLog) => isDue(log) && !notifiedDoseIds.current.has(log.id) && !locallyCreatedDoseKeys.current.has(log.id)
     );
 
-    if (dueLogs.length === 0) return;
+    // Check for overdue doses that haven't been notified
+    const overdueLogs = todayLogs.filter(
+      (log: DoseLog) => isOverdue(log) && !log.notificationSentAt && !notifiedDoseIds.current.has(log.id)
+    );
 
-    for (const log of dueLogs) {
+    // Combine due and overdue, prioritizing overdue
+    const logsToNotify = [...overdueLogs, ...dueLogs].filter(
+      (log) => !notifiedDoseIds.current.has(log.id)
+    );
+
+    if (logsToNotify.length === 0) return;
+
+    for (const log of logsToNotify) {
+      // Mark as notified immediately to prevent duplicates
       notifiedDoseIds.current.add(log.id);
 
-      const body = `Time to take ${log.medicineName}`;
-      const notif = new Notification("Medication Reminder", {
-        body,
-        icon: "/favicon.ico",
-        tag: `dose-${log.id}`,
-        requireInteraction: false,
-        data: { doseLogId: log.id, medicineId: log.medicineId },
-      });
+      const isOverdueLog = isOverdue(log);
+      const body = isOverdueLog 
+        ? `Overdue: Take ${log.medicineName}` 
+        : `Time to take ${log.medicineName}`;
 
-      notif.onclick = () => {
-        window.focus();
-        navigate("/dashboard");
-        notif.close();
-      };
+      // Try to show browser notification
+      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+        try {
+          const notif = new Notification("MediMind Reminder", {
+            body,
+            icon: "/favicon.ico",
+            tag: `dose-${log.id}`,
+            requireInteraction: false,
+            data: { doseLogId: log.id, medicineId: log.medicineId },
+          });
 
+          notif.onclick = () => {
+            window.focus();
+            navigate("/dashboard");
+            notif.close();
+          };
+        } catch (notifError) {
+          console.error("[MedicationNotificationScheduler] Failed to show notification:", notifError);
+        }
+      }
+
+      // Always show in-app toast
       toast.info(body, {
         duration: Infinity,
         action: { label: "Take Now", onClick: () => handleTakeNow(log) },
       });
 
-      await supabase
-        .from("dose_logs")
-        .update({ notification_sent_at: new Date().toISOString() })
-        .eq("id", log.id)
-        .eq("status", "pending");
-
-      console.log(`[MedicationNotificationScheduler] Notified dose ${log.id}`);
+      // Update the database to mark notification as sent
+      try {
+        await supabase
+          .from("dose_logs")
+          .update({ notification_sent_at: new Date().toISOString() })
+          .eq("id", log.id)
+          .eq("status", "pending");
+        
+        console.log(`[MedicationNotificationScheduler] Notified dose ${log.id}`);
+      } catch (updateError) {
+        console.error("[MedicationNotificationScheduler] Failed to update notification_sent_at:", updateError);
+      }
     }
 
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogsForDate(today) });

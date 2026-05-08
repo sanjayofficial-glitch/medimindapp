@@ -5,6 +5,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const to24HourTime = (time: string): string => {
+  if (!time) return '08:00';
+  if (/^\d{2}:\d{2}$/.test(time)) return time;
+  const trimmed = time.trim();
+  const [timePart, period = 'AM'] = trimmed.split(' ');
+  const [hourPart, minute = '00'] = timePart.split(':');
+  let hour = Number(hourPart);
+  if (Number.isNaN(hour)) return '08:00';
+  const periodUpper = period.toUpperCase();
+  if (periodUpper === 'PM' && hour < 12) hour += 12;
+  if (periodUpper === 'AM' && hour === 12) hour = 0;
+  return `${hour.toString().padStart(2, '0')}:${minute.padStart(2, '0')}`;
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -67,8 +81,7 @@ Deno.serve(async (req) => {
       times: string[];
     }>).flatMap((med) =>
       (med.times || [])
-        .map((t) => t.trim())
-        .filter((t) => t.length > 0)
+        .map((t) => to24HourTime(t || '08:00'))
         .filter((scheduledTime) => !existingKeys.has(`${med.user_id}-${med.id}-${scheduledTime}`))
         .map((scheduledTime) => ({
           id: crypto.randomUUID(),

@@ -68,14 +68,29 @@ const getZonedDateTime = (date: Date, timeZone: string) => {
   };
 };
 
-const to24HourTime = (time: string) => {
+const to24HourTime = (time: string): string => {
+  if (!time) return '00:00';
+  
+  // Already in 24h format
   if (/^\d{2}:\d{2}$/.test(time)) return time;
-  const [timePart, period = 'AM'] = time.trim().split(' ');
+  
+  const trimmed = time.trim();
+  const [timePart, period = 'AM'] = trimmed.split(' ');
   const [hourPart, minute = '00'] = timePart.split(':');
+  
   let hour = Number(hourPart);
-  if (Number.isNaN(hour)) return time;
-  if (period.toUpperCase() === 'PM' && hour < 12) hour += 12;
-  if (period.toUpperCase() === 'AM' && hour === 12) hour = 0;
+  if (Number.isNaN(hour)) return '08:00'; // Default fallback
+  
+  // Handle period
+  const periodUpper = period.toUpperCase();
+  if (periodUpper === 'PM' && hour < 12) hour += 12;
+  if (periodUpper === 'AM' && hour === 12) hour = 0;
+  
+  // Handle single digit hour without period (e.g., "8:00" should be 08:00)
+  if (hourPart.length === 1 && !period) {
+    hour = Number(hourPart);
+  }
+  
   return `${hour.toString().padStart(2, '0')}:${minute.padStart(2, '0')}`;
 };
 
@@ -135,13 +150,17 @@ Deno.serve(async (req) => {
       const localWindowStart = getZonedDateTime(windowStart, timezone);
       const crossesMidnight = localWindowStart.date !== localNow.date;
 
+      // Get medicines with reminder enabled (or default to true if column doesn't exist)
       const { data: medicines, error: medicinesError } = await supabase
         .from('medicines')
-        .select('id, user_id, family_member_id, name, times')
-        .eq('user_id', userId)
-        .eq('reminder_enabled', true);
+        .select('id, user_id, family_member_id, name, times, reminder_enabled')
+        .eq('user_id', userId);
 
       if (medicinesError) throw medicinesError;
+      
+      // Filter to only medicines with reminders enabled (default to true if null)
+      const activeMedicines = ((medicines || []) as (MedicineSchedule & { reminder_enabled: boolean | null })[])
+        .filter(m => m.reminder_enabled !== false);
 
       const { data: existingLogs, error: existingLogsError } = await supabase
         .from('dose_logs')
@@ -158,9 +177,9 @@ Deno.serve(async (req) => {
         )
       );
 
-      const missingDoseLogs = ((medicines || []) as MedicineSchedule[]).flatMap((medicine) =>
+      const missingDoseLogs = (activeMedicines).flatMap((medicine) =>
         (medicine.times || [])
-          .map(to24HourTime)
+          .map((t) => to24HourTime(t || '08:00'))
           .filter((scheduledTime) => !existingDoseKeys.has(`${medicine.id}-${scheduledTime}`))
           .map((scheduledTime) => ({
             id: crypto.randomUUID(),

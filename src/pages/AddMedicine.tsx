@@ -8,13 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { useFamilyMembers, useAddMedicine, useMedicines } from "@/hooks/use-queries";
+import { useFamilyMembers, useAddMedicine, useMedicines, useSaveDoseLog } from "@/hooks/use-queries";
 import { MedicineDBEntry } from "@/data/medicineDatabase";
 import { MedicineSelector } from "@/components/MedicineSelector";
 import { toast } from "sonner";
-import { queryClient } from "@/lib/query-client";
-import { QUERY_KEYS } from "@/lib/query-client";
-import { normalizeTime } from "@/utils/datetime";
+import { queryClient, QUERY_KEYS } from "@/lib/query-client";
+import { normalizeTime, getLocalDateString } from "@/utils/datetime";
 
 const AddMedicine = () => {
   const navigate = useNavigate();
@@ -32,6 +31,8 @@ const AddMedicine = () => {
   const { data: familyMembers = [] } = useFamilyMembers();
   const { data: existingMedicines = [] } = useMedicines();
   const addMedicineMutation = useAddMedicine();
+  const saveDoseLog = useSaveDoseLog();
+  const today = getLocalDateString();
 
   const pad = (n: string) => n.padStart(2, "0");
   const hourOptions = Array.from({ length: 12 }, (_, i) => `${i + 1}`);
@@ -74,7 +75,7 @@ const AddMedicine = () => {
     }
 
     try {
-      await addMedicineMutation.mutateAsync({
+      const result = await addMedicineMutation.mutateAsync({
         familyMemberId: selectedMember,
         name: medicineName,
         dosage: dosage.trim(),
@@ -82,11 +83,30 @@ const AddMedicine = () => {
         frequency: frequency,
       });
 
-      toast.success(`Added ${medicineName} to schedule`);
+      // Immediately create dose logs for today
+      const normalizedTimes = times.map(normalizeTime);
+      const doseLogsToCreate = normalizedTimes.map((scheduledTime) => ({
+        id: crypto.randomUUID(),
+        medicineId: result.id,
+        medicineName: medicineName,
+        familyMemberId: selectedMember,
+        scheduledTime,
+        actualTime: null,
+        date: today,
+        status: "pending" as const,
+      }));
+
+      // Create all dose logs for today in parallel
+      await Promise.all(
+        doseLogsToCreate.map((log) => saveDoseLog.mutateAsync(log))
+      );
+
+      toast.success(`Added ${medicineName} to schedule with ${doseLogsToCreate.length} reminder(s) for today`);
       
-      // Invalidate queries to ensure dashboard sees the new medicine
+      // Invalidate queries to ensure dashboard sees the new medicine and dose logs
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.medicines });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogs });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogsForDate(today) });
       
       navigate("/dashboard");
     } catch (error) {
