@@ -39,9 +39,10 @@ const AddMedicine = () => {
 
   const addTime = () => {
     if (!newHour || !newMinute) return toast.error("Select hour and minute");
-    const formatted = `${pad(newHour)}:${pad(newMinute)} ${newPeriod}`;
-    if (times.includes(formatted)) return toast.error("Time already added");
-    setTimes(prev => [...prev, formatted].sort());
+    const timeStr = `${pad(newHour)}:${pad(newMinute)} ${newPeriod}`;
+    const normalized = normalizeTime(timeStr);
+    if (times.includes(normalized)) return toast.error("Time already added");
+    setTimes(prev => [...prev, normalized].sort());
     setNewHour("");
     setNewMinute("");
     setNewPeriod("AM");

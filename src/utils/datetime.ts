@@ -11,28 +11,24 @@ export const getCurrentTime24 = (date = new Date()) => {
   return `${hour}:${minute}`;
 };
 
-/**
- * Normalizes time strings to HH:mm format for consistent comparison.
- * Handles HH:mm:ss, HH:mm, and "HH:mm AM/PM" formats.
- */
-export const normalizeTime = (time: string | null | undefined): string => {
-  if (!time) return "";
-  
-  // Remove seconds if present (HH:mm:ss -> HH:mm)
-  const timeOnly = time.split(' ')[0];
-  const parts = timeOnly.split(':');
-  
-  if (parts.length >= 2) {
-    let hour = parseInt(parts[0]);
-    const minute = parts[1];
-    const isPM = time.toUpperCase().includes("PM");
-    const isAM = time.toUpperCase().includes("AM");
-    
-    if (isPM && hour < 12) hour += 12;
-    if (isAM && hour === 12) hour = 0;
-    
-    return `${hour.toString().padStart(2, "0")}:${minute.padStart(2, "0")}`;
-  }
-  
-  return time;
+export const normalizeTime = (time: string): string => {
+  if (/^\d{2}:\d{2}$/.test(time)) return time;
+  const [timePart, period = "AM"] = time.trim().split(" ");
+  const [hourPart, minute = "00"] = timePart.split(":");
+  let hour = Number(hourPart);
+  if (Number.isNaN(hour)) return time;
+  if (period.toUpperCase() === "PM" && hour < 12) hour += 12;
+  if (period.toUpperCase() === "AM" && hour === 12) hour = 0;
+  return `${hour.toString().padStart(2, "0")}:${minute.padStart(2, "0")}`;
+};
+export const to24Hour = normalizeTime;
+
+export const toDisplayTime = (time: string): string => {
+  const normalized = to24Hour(time);
+  const [hourStr, minute = "00"] = normalized.split(":");
+  const hour = Number(hourStr);
+  if (Number.isNaN(hour)) return time;
+  const period = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${minute} ${period}`;
 };
