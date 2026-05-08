@@ -48,15 +48,16 @@ Deno.serve(async (req) => {
       ? `Time to take ${medicine_name} (${dosage})` 
       : `Time to take ${medicine_name}`;
 
-    const oneSignalResponse = await fetch('https://onesignal.com/api/v1/notifications', {
+    const oneSignalResponse = await fetch('https://api.onesignal.com/notifications?c=push', {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${ONESIGNAL_API_KEY}`,
+        'Authorization': `Key ${ONESIGNAL_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         app_id: ONESIGNAL_APP_ID,
-        include_player_ids: playerIds,
+        include_subscription_ids: playerIds,
+        target_channel: 'push',
         contents: { en: message },
         headings: { en: '💊 Medication Reminder' },
         data: {
@@ -71,6 +72,10 @@ Deno.serve(async (req) => {
     });
 
     const result = await oneSignalResponse.json();
+
+    if (!oneSignalResponse.ok) {
+      throw new Error(`OneSignal error: ${JSON.stringify(result)}`);
+    }
 
     console.log('[send-medication-notification] Sent to:', playerIds, 'Response:', result);
 

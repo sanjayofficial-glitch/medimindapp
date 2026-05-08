@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { initOneSignal, subscribeToPush, isOneSignalEnabled, getOneSignalPlayerId, isOneSignalSupported, isConfigured } from '@/utils/onesignal';
+import { initOneSignal, subscribeToPush, unsubscribeFromPush, isOneSignalEnabled, getOneSignalPlayerId, isOneSignalSupported, isConfigured } from '@/utils/onesignal';
 import { useAuth } from '@/context/AuthContext';
 
 export const useOneSignal = () => {
@@ -104,6 +104,7 @@ export const useOneSignal = () => {
           .eq('player_id', playerId);
       }
 
+      await unsubscribeFromPush();
       setIsEnabled(false);
       return true;
     } catch (error) {
