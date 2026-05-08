@@ -66,7 +66,7 @@ const NotificationPermissionPrompt = () => {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-x-4 bottom-24 z-50 mx-auto max-w-md rounded-lg border border-emerald-100 bg-white p-4 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+    <div className="fixed inset-x-4 bottom-40 z-[70] mx-auto max-w-md rounded-lg border border-emerald-100 bg-white p-4 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
       <button
         type="button"
         onClick={handleDismiss}

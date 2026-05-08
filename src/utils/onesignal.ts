@@ -161,6 +161,24 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
   }
 };
 
+export const requestBrowserNotificationPermission = async (): Promise<boolean> => {
+  if (typeof Notification === 'undefined') {
+    console.warn('[OneSignal] Browser notifications are not available');
+    return false;
+  }
+
+  if (Notification.permission === 'granted') return true;
+
+  if (Notification.permission === 'denied') {
+    console.warn('[OneSignal] Browser notification permission is blocked');
+    return false;
+  }
+
+  const permission = await Notification.requestPermission();
+  console.log('[OneSignal] Browser permission:', permission);
+  return permission === 'granted';
+};
+
 export const hasNotificationPermission = (): boolean => {
   return typeof Notification !== 'undefined' && Notification.permission === 'granted';
 };
@@ -224,6 +242,12 @@ const waitForSubscriptionId = async (timeoutMs = 20000): Promise<string | null> 
 
 export const subscribeToPush = async (userId: string): Promise<string | null> => {
   console.log('[OneSignal] Starting subscription for user:', userId);
+
+  const browserPermission = await requestBrowserNotificationPermission();
+  if (!browserPermission) {
+    console.warn('[OneSignal] Browser permission not granted');
+    return null;
+  }
 
   const initialized = await initOneSignal(userId);
   if (!initialized) {
