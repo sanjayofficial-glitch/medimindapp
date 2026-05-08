@@ -14,7 +14,7 @@ import { MedicineSelector } from "@/components/MedicineSelector";
 import { toast } from "sonner";
 import { queryClient } from "@/lib/query-client";
 import { QUERY_KEYS } from "@/lib/query-client";
-import { normalizeTime, toDisplayTime } from "@/utils/datetime";
+import { getLocalDateString, normalizeTime, toDisplayTime } from "@/utils/datetime";
 
 const AddMedicine = () => {
   const navigate = useNavigate();
@@ -93,9 +93,9 @@ const AddMedicine = () => {
 
       toast.success(`Added ${medicineName} to schedule`);
       
-      // Invalidate queries to ensure dashboard sees the new medicine
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.medicines });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogs });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.medicines });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogs });
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogsForDate(getLocalDateString()) });
       
       navigate("/dashboard");
     } catch (error) {
