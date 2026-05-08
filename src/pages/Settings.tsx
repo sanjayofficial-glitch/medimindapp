@@ -213,14 +213,18 @@ const Settings = () => {
                       disabled={isSubscribing}
                       onCheckedChange={async (checked) => {
                         if (checked) {
+                          const toastId = toast.loading("Enabling notifications...");
                           const success = await subscribe();
+                          toast.dismiss(toastId);
                           if (success) {
                             toast.success("Notifications enabled! You'll receive medication reminders.");
                           } else {
-                            toast.error("Failed to enable notifications. Please check your browser settings.");
+                            toast.error("Failed to enable notifications. Allow notifications in your browser and try again.");
                           }
                         } else {
+                          const toastId = toast.loading("Disabling notifications...");
                           const success = await unsubscribe();
+                          toast.dismiss(toastId);
                           if (success) {
                             toast.info("Notifications disabled.");
                           }

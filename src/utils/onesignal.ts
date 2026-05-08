@@ -81,6 +81,8 @@ export const initOneSignal = async (userId: string): Promise<boolean> => {
   oneSignalInitPromise = new Promise((resolve) => {
     const initialize = async (oneSignal: OneSignalSdk) => {
       try {
+        window.OneSignal = oneSignal;
+
         await oneSignal.init({
           appId: ONESIGNAL_APP_ID,
           allowLocalhostAsSecureOrigin: true,
@@ -116,6 +118,14 @@ export const initOneSignal = async (userId: string): Promise<boolean> => {
       resolve(false);
     };
     document.head.appendChild(script);
+
+    window.setTimeout(() => {
+      if (!oneSignalInitialized) {
+        console.error('[OneSignal] SDK initialization timed out');
+        oneSignalInitPromise = null;
+        resolve(false);
+      }
+    }, 12000);
   });
 
   return oneSignalInitPromise;
@@ -131,6 +141,14 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
     if (Notification.permission === 'denied') {
       console.warn('[OneSignal] Browser notification permission is blocked');
       return false;
+    }
+
+    if (Notification.permission === 'default') {
+      const browserPermission = await Notification.requestPermission();
+      if (browserPermission !== 'granted') {
+        console.warn('[OneSignal] Browser permission prompt was not granted:', browserPermission);
+        return false;
+      }
     }
 
     await window.OneSignal.Notifications.requestPermission();
