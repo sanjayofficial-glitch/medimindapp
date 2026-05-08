@@ -14,7 +14,7 @@ import { MedicineSelector } from "@/components/MedicineSelector";
 import { toast } from "sonner";
 import { queryClient } from "@/lib/query-client";
 import { QUERY_KEYS } from "@/lib/query-client";
-import { getLocalDateString } from "@/utils/datetime";
+import { getLocalDateString, normalizeTime } from "@/utils/datetime";
 
 const AddMedicine = () => {
   const navigate = useNavigate();
@@ -36,13 +36,6 @@ const AddMedicine = () => {
   const pad = (n: string) => n.padStart(2, "0");
   const hourOptions = Array.from({ length: 12 }, (_, i) => `${i + 1}`);
   const minuteOptions = ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"];
-
-  const convertTo24h = (hour: string, minute: string, period: string) => {
-    let h = parseInt(hour);
-    if (period === "PM" && h < 12) h += 12;
-    if (period === "AM" && h === 12) h = 0;
-    return `${pad(h.toString())}:${pad(minute)}`;
-  };
 
   const addTime = () => {
     if (!newHour || !newMinute) return toast.error("Select hour and minute");
@@ -74,7 +67,7 @@ const AddMedicine = () => {
         familyMemberId: selectedMember,
         name: medicineName,
         dosage: dosage.trim(),
-        times: times,
+        times: times.map(normalizeTime),
         frequency: frequency,
       });
 
@@ -82,9 +75,7 @@ const AddMedicine = () => {
       
       // Create dose logs for today
       for (const timeStr of times) {
-        const [timePart, period] = timeStr.split(" ");
-        const [hour, minute] = timePart.split(":");
-        const scheduledTime = convertTo24h(hour, minute, period);
+        const scheduledTime = normalizeTime(timeStr);
         
         await saveDoseLogMutation.mutateAsync({
           id: crypto.randomUUID(),

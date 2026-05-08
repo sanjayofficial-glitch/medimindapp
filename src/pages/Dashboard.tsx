@@ -51,26 +51,12 @@ import InteractionChecker from "@/components/InteractionChecker";
 import DynamicAIInsight from "@/components/DynamicAIInsight";
 import { supabase } from "@/integrations/supabase/client";
 import { queryClient, QUERY_KEYS } from "@/lib/query-client";
-import { getCurrentTime24, getLocalDateString } from "@/utils/datetime";
+import { getCurrentTime24, getLocalDateString, normalizeTime } from "@/utils/datetime";
 
 import { iconPop, cardInteractive, chevronSlide, buttonTap, scaleIn } from "@/lib/animations";
 
-const to24HourTime = (time: string) => {
-  if (/^\d{2}:\d{2}$/.test(time)) return time;
-
-  const [timePart, period = "AM"] = time.trim().split(" ");
-  const [hourPart, minute = "00"] = timePart.split(":");
-  let hour = Number(hourPart);
-  if (Number.isNaN(hour)) return time;
-
-  if (period.toUpperCase() === "PM" && hour < 12) hour += 12;
-  if (period.toUpperCase() === "AM" && hour === 12) hour = 0;
-
-  return `${hour.toString().padStart(2, "0")}:${minute.padStart(2, "0")}`;
-};
-
 const toDisplayTime = (time: string) => {
-  const normalized = to24HourTime(time);
+  const normalized = normalizeTime(time);
   const [hourStr, minute = "00"] = normalized.split(":");
   const hour = Number(hourStr);
   if (Number.isNaN(hour)) return time;
@@ -109,13 +95,13 @@ const Dashboard = () => {
 
     const createMissingDailyDoseLogs = async () => {
       const existingKeys = new Set([
-        ...todayLogs.map((log: DoseLog) => `${log.medicineId}-${log.scheduledTime}`),
-        ...locallyCreatedDoseKeys.current,
+        ...todayLogs.map((log: DoseLog) => `${log.medicineId}-${normalizeTime(log.scheduledTime)}`),
+        ...Array.from(locallyCreatedDoseKeys.current),
       ]);
 
       const missingLogs = medicines.flatMap((medicine: Medicine) =>
         (medicine.times || [])
-          .map(to24HourTime)
+          .map(normalizeTime)
           .filter((scheduledTime) => !existingKeys.has(`${medicine.id}-${scheduledTime}`))
           .map((scheduledTime) => ({
             id: crypto.randomUUID(),
@@ -141,7 +127,7 @@ const Dashboard = () => {
         await refetch();
       } catch (error) {
         console.error("Failed to create daily dose logs:", error);
-        toast.error("Could not refresh today's reminder schedule");
+        // Silent fail for background sync to avoid annoying the user
       } finally {
         dailySyncInFlight.current = false;
         setIsSyncingSchedule(false);
@@ -153,13 +139,13 @@ const Dashboard = () => {
 
   const openEditSchedule = (medicine: Medicine) => {
     setEditingMedicine(medicine);
-    setEditTimes((medicine.times || []).map((t: string) => to24HourTime(t)).sort());
+    setEditTimes((medicine.times || []).map((t: string) => normalizeTime(t)).sort());
     setNewEditTime("");
   };
 
   const addEditTime = () => {
     if (!newEditTime) return;
-    const normalized = to24HourTime(newEditTime);
+    const normalized = normalizeTime(newEditTime);
     setEditTimes((prev) => Array.from(new Set([...prev, normalized])).sort());
     setNewEditTime("");
   };
@@ -179,10 +165,10 @@ const Dashboard = () => {
       const sortedTimes = [...editTimes].sort();
       await updateMedicine.mutateAsync({ ...editingMedicine, times: sortedTimes });
 
-      const nextTimeSet = new Set(editTimes.map((t: string) => to24HourTime(t)));
+      const nextTimeSet = new Set(editTimes.map((t: string) => normalizeTime(t)));
       const currentMedicineLogs = todayLogs.filter((log: DoseLog) => log.medicineId === editingMedicine.id);
       const removableLogs = currentMedicineLogs.filter(
-        (log: DoseLog) => (log.status === "pending" || log.status === "partial") && !nextTimeSet.has(to24HourTime(log.scheduledTime))
+        (log: DoseLog) => (log.status === "pending" || log.status === "partial") && !nextTimeSet.has(normalizeTime(log.scheduledTime))
       );
 
       if (removableLogs.length > 0) {
@@ -194,16 +180,16 @@ const Dashboard = () => {
       }
 
       const existingTimesNormalized = new Set(
-        currentMedicineLogs.map((log: DoseLog) => to24HourTime(log.scheduledTime))
+        currentMedicineLogs.map((log: DoseLog) => normalizeTime(log.scheduledTime))
       );
       for (const scheduledTime of editTimes) {
-        if (existingTimesNormalized.has(to24HourTime(scheduledTime))) continue;
+        if (existingTimesNormalized.has(normalizeTime(scheduledTime))) continue;
         await saveDoseLog.mutateAsync({
           id: crypto.randomUUID(),
           medicineId: editingMedicine.id,
           medicineName: editingMedicine.name,
           familyMemberId: editingMedicine.familyMemberId,
-          scheduledTime: to24HourTime(scheduledTime),
+          scheduledTime: normalizeTime(scheduledTime),
           actualTime: null,
           date: today,
           status: "pending",
@@ -235,21 +221,12 @@ const Dashboard = () => {
   };
 
   const to24h = (time: string): number => {
-    const normalized = /^\d{2}:\d{2}$/.test(time) ? time : (() => {
-      const [tp, p = "AM"] = time.trim().split(" ");
-      const [h = "0", m = "0"] = tp.split(":");
-      let hour = Number(h);
-      if (Number.isNaN(hour)) return time;
-      if (p.toUpperCase() === "PM" && hour < 12) hour += 12;
-      if (p.toUpperCase() === "AM" && hour === 12) hour = 0;
-      return `${hour.toString().padStart(2, "0")}:${m.padStart(2, "0")}`;
-    })();
+    const normalized = normalizeTime(time);
     const [h = "0", m = "0"] = normalized.split(":");
     return Number(h) * 60 + Number(m);
   };
 
   const nowMinutes = (): number => new Date().getHours() * 60 + new Date().getMinutes();
-  const isOverdue = (log: DoseLog): boolean => log.status === "pending" && to24h(log.scheduledTime) < nowMinutes();
 
   const handleSnooze = async (log: DoseLog) => {
     await supabase
@@ -301,27 +278,14 @@ const Dashboard = () => {
       .sort((a: DoseLog, b: DoseLog) => a.scheduledTime.localeCompare(b.scheduledTime)),
     [todayLogs]
   );
-  const missedLogs = useMemo(
-    () => {
-      const nowMins = nowMinutes();
-      return todayLogs
-        .filter((l: DoseLog) => l.status === "missed" || (l.status === "pending" && to24h(l.scheduledTime) < nowMins))
-        .sort((a: DoseLog, b: DoseLog) => a.scheduledTime.localeCompare(b.scheduledTime));
-    },
-    [todayLogs]
-  );
+  
   const currentTime = getCurrentTime24();
   const upcomingDoseLogs = useMemo(
-    () => pendingLogs.filter((l: DoseLog) => l.scheduledTime >= currentTime),
+    () => pendingLogs.filter((l: DoseLog) => normalizeTime(l.scheduledTime) >= currentTime),
     [pendingLogs, currentTime]
   );
-  const overdueDoseLogs = useMemo(
-    () => pendingLogs.filter((l: DoseLog) => l.scheduledTime < currentTime),
-    [pendingLogs, currentTime]
-  );
+  
   const visibleNextDoseLogs = upcomingDoseLogs.length > 0 ? upcomingDoseLogs : pendingLogs;
-  const takenLogs = todayLogs.filter((l: DoseLog) => l.status === "taken");
-  const pendingCount = pendingLogs.length;
   const totalToday = todayLogs.length;
   const progress = totalToday > 0 ? (takenCount / totalToday) * 100 : 0;
 
@@ -456,7 +420,7 @@ const Dashboard = () => {
                   <div className="space-y-3">
                     <div className="flex gap-2 overflow-x-auto pb-1">
                       {visibleNextDoseLogs.slice(0, 5).map((log: DoseLog) => {
-                        const overdue = log.scheduledTime < currentTime;
+                        const overdue = normalizeTime(log.scheduledTime) < currentTime;
                         return (
                           <div key={log.id} className={cn("min-w-[9rem] rounded-lg border bg-background px-3 py-2", overdue ? "border-rose-200" : "border-border")}>
                             <div className={cn("text-2xl font-bold", overdue ? "text-rose-600" : "text-foreground")}>
