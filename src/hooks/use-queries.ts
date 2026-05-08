@@ -97,12 +97,7 @@ export const useMedicines = () => {
         frequency: m.frequency,
         additionalText: m.additional_text,
         stock: m.stock,
-        refillAt: m.refill_at,
-        reminderEnabled: m.reminder_enabled ?? true,
-        reminderMinutesBefore: m.reminder_minutes_before ?? 5,
-        startDate: m.start_date,
-        endDate: m.end_date,
-        userId: m.user_id
+        refillAt: m.refill_at
       })) as Medicine[];
     },
   });
@@ -124,11 +119,7 @@ export const useAddMedicine = () => {
           additional_text: medicine.additionalText,
           stock: medicine.stock ?? 0,
           refill_at: medicine.refillAt,
-          user_id: userId,
-          reminder_enabled: medicine.reminderEnabled ?? true,
-          reminder_minutes_before: medicine.reminderMinutesBefore ?? 5,
-          start_date: medicine.startDate ?? new Date().toISOString().split('T')[0],
-          end_date: medicine.endDate
+          user_id: userId
         }])
         .select()
         .single();
@@ -143,12 +134,7 @@ export const useAddMedicine = () => {
         frequency: data.frequency,
         additionalText: data.additional_text,
         stock: data.stock,
-        refillAt: data.refill_at,
-        reminderEnabled: data.reminder_enabled ?? true,
-        reminderMinutesBefore: data.reminder_minutes_before ?? 5,
-        startDate: data.start_date,
-        endDate: data.end_date,
-        userId: data.user_id
+        refillAt: data.refill_at
       } as Medicine;
     },
     onSuccess: () => {
@@ -171,11 +157,7 @@ export const useUpdateMedicine = () => {
           frequency: medicine.frequency,
           additional_text: medicine.additionalText,
           stock: medicine.stock,
-          refill_at: medicine.refillAt,
-          reminder_enabled: medicine.reminderEnabled ?? true,
-          reminder_minutes_before: medicine.reminderMinutesBefore ?? 5,
-          start_date: medicine.startDate,
-          end_date: medicine.endDate
+          refill_at: medicine.refillAt
         })
         .eq('id', medicine.id)
         .select()
@@ -191,12 +173,7 @@ export const useUpdateMedicine = () => {
         frequency: data.frequency,
         additionalText: data.additional_text,
         stock: data.stock,
-        refillAt: data.refill_at,
-        reminderEnabled: data.reminder_enabled ?? true,
-        reminderMinutesBefore: data.reminder_minutes_before ?? 5,
-        startDate: data.start_date,
-        endDate: data.end_date,
-        userId: data.user_id
+        refillAt: data.refill_at
       } as Medicine;
     },
     onSuccess: () => {
