@@ -137,6 +137,7 @@ const Dashboard = () => {
         await saveDoseLogsBatch.mutateAsync(newLogs);
       }
 
+      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.medicines });
       await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogsForDate(today) });
       await refetch();
       setEditingMedicine(null);
