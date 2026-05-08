@@ -312,5 +312,3 @@ SELECT
 FROM public.dose_logs
 WHERE status = 'pending'
 AND notification_sent_at IS NULL;
-
-RAISE NOTICE 'Medicine reminder system reset complete!';
