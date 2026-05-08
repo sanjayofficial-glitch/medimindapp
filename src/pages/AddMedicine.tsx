@@ -1,19 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, Loader2, Pill } from "lucide-react";
+import { ChevronLeft, Loader2, Pill, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { useFamilyMembers, useAddMedicine, useMedicines, useSaveDoseLog } from "@/hooks/use-queries";
+import { useFamilyMembers, useAddMedicine, useMedicines } from "@/hooks/use-queries";
 import { MedicineDBEntry } from "@/data/medicineDatabase";
 import { MedicineSelector } from "@/components/MedicineSelector";
 import { toast } from "sonner";
-import { queryClient, QUERY_KEYS } from "@/lib/query-client";
-import { normalizeTime, getLocalDateString } from "@/utils/datetime";
+import { queryClient } from "@/lib/query-client";
+import { QUERY_KEYS } from "@/lib/query-client";
+import { normalizeTime, toDisplayTime } from "@/utils/datetime";
 
 const AddMedicine = () => {
   const navigate = useNavigate();
@@ -31,8 +32,6 @@ const AddMedicine = () => {
   const { data: familyMembers = [] } = useFamilyMembers();
   const { data: existingMedicines = [] } = useMedicines();
   const addMedicineMutation = useAddMedicine();
-  const saveDoseLog = useSaveDoseLog();
-  const today = getLocalDateString();
 
   const pad = (n: string) => n.padStart(2, "0");
   const hourOptions = Array.from({ length: 12 }, (_, i) => `${i + 1}`);
@@ -40,8 +39,8 @@ const AddMedicine = () => {
 
   const addTime = () => {
     if (!newHour || !newMinute) return toast.error("Select hour and minute");
-    const timeStr = `${pad(newHour)}:${pad(newMinute)} ${newPeriod}`;
-    const normalized = normalizeTime(timeStr);
+    const formatted = `${pad(newHour)}:${pad(newMinute)} ${newPeriod}`;
+    const normalized = normalizeTime(formatted);
     if (times.includes(normalized)) return toast.error("Time already added");
     setTimes(prev => [...prev, normalized].sort());
     setNewHour("");
@@ -51,6 +50,15 @@ const AddMedicine = () => {
 
   const removeTime = (index: number) => {
     setTimes(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleCopySchedule = (medicineId: string) => {
+    const sourceMed = existingMedicines.find(m => m.id === medicineId);
+    if (sourceMed && sourceMed.times) {
+      setTimes(sourceMed.times.map(normalizeTime).sort());
+      setFrequency(sourceMed.frequency);
+      toast.success(`Copied schedule from ${sourceMed.name}`);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,7 +83,7 @@ const AddMedicine = () => {
     }
 
     try {
-      const result = await addMedicineMutation.mutateAsync({
+      await addMedicineMutation.mutateAsync({
         familyMemberId: selectedMember,
         name: medicineName,
         dosage: dosage.trim(),
@@ -83,30 +91,11 @@ const AddMedicine = () => {
         frequency: frequency,
       });
 
-      // Immediately create dose logs for today
-      const normalizedTimes = times.map(normalizeTime);
-      const doseLogsToCreate = normalizedTimes.map((scheduledTime) => ({
-        id: crypto.randomUUID(),
-        medicineId: result.id,
-        medicineName: medicineName,
-        familyMemberId: selectedMember,
-        scheduledTime,
-        actualTime: null,
-        date: today,
-        status: "pending" as const,
-      }));
-
-      // Create all dose logs for today in parallel
-      await Promise.all(
-        doseLogsToCreate.map((log) => saveDoseLog.mutateAsync(log))
-      );
-
-      toast.success(`Added ${medicineName} to schedule with ${doseLogsToCreate.length} reminder(s) for today`);
+      toast.success(`Added ${medicineName} to schedule`);
       
-      // Invalidate queries to ensure dashboard sees the new medicine and dose logs
+      // Invalidate queries to ensure dashboard sees the new medicine
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.medicines });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogs });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogsForDate(today) });
       
       navigate("/dashboard");
     } catch (error) {
@@ -216,7 +205,25 @@ const AddMedicine = () => {
               </div>
 
               <div className="space-y-4 p-4 sm:p-6 bg-gray-50 rounded-2xl border border-gray-100">
-                <Label className="text-sm font-bold text-gray-700">Dose Schedule</Label>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm font-bold text-gray-700">Dose Schedule</Label>
+                  {existingMedicines.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Copy className="w-3 h-3 text-emerald-600" />
+                      <Select onValueChange={handleCopySchedule}>
+                        <SelectTrigger className="h-8 text-[10px] bg-white border-emerald-100 text-emerald-700 w-[140px]">
+                          <SelectValue placeholder="Copy schedule from..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {existingMedicines.map(m => (
+                            <SelectItem key={m.id} value={m.id} className="text-xs">{m.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+                
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
                   <div className="col-span-1">
                     <Select value={newHour} onValueChange={setNewHour}>
@@ -269,7 +276,7 @@ const AddMedicine = () => {
                   <div className="flex flex-wrap gap-2 mt-4">
                     {times.map((time, index) => (
                       <div key={index} className="flex items-center gap-2 px-3 py-2 rounded-full bg-white border border-emerald-100 text-sm shadow-sm">
-                        <span className="font-bold text-emerald-700">{time}</span>
+                        <span className="font-bold text-emerald-700">{toDisplayTime(time)}</span>
                         <button
                           type="button"
                           onClick={() => removeTime(index)}

@@ -43,7 +43,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/AuthContext";
-import { useDoseLogsForDate, useSaveDoseLog, useMedicines, useUpdateMedicine, useRemoveMedicine } from "@/hooks/use-queries";
+import { useDoseLogsForDate, useSaveDoseLog, useSaveDoseLogsBatch, useMedicines, useUpdateMedicine, useRemoveMedicine } from "@/hooks/use-queries";
 import { DoseLog, Medicine } from "@/utils/storage";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -74,6 +74,7 @@ const Dashboard = () => {
   const { data: todayLogs = [], isLoading: isDataLoading, refetch } = useDoseLogsForDate(today);
   const { data: medicines = [] } = useMedicines();
   const saveDoseLog = useSaveDoseLog();
+  const saveDoseLogsBatch = useSaveDoseLogsBatch();
   const updateMedicine = useUpdateMedicine();
   const removeMedicine = useRemoveMedicine();
   const [editingMedicine, setEditingMedicine] = useState<Medicine | null>(null);
@@ -121,13 +122,10 @@ const Dashboard = () => {
       dailySyncInFlight.current = true;
       setIsSyncingSchedule(true);
       try {
-        for (const log of missingLogs) {
-          await saveDoseLog.mutateAsync(log);
-        }
+        await saveDoseLogsBatch.mutateAsync(missingLogs);
         await refetch();
       } catch (error) {
         console.error("Failed to create daily dose logs:", error);
-        // Silent fail for background sync to avoid annoying the user
       } finally {
         dailySyncInFlight.current = false;
         setIsSyncingSchedule(false);
@@ -135,7 +133,7 @@ const Dashboard = () => {
     };
 
     createMissingDailyDoseLogs();
-  }, [user, medicines, todayLogs, today, isDataLoading, isSyncingSchedule, saveDoseLog, refetch]);
+  }, [user, medicines, todayLogs, today, isDataLoading, isSyncingSchedule, saveDoseLogsBatch, refetch]);
 
   const openEditSchedule = (medicine: Medicine) => {
     setEditingMedicine(medicine);
@@ -182,9 +180,11 @@ const Dashboard = () => {
       const existingTimesNormalized = new Set(
         currentMedicineLogs.map((log: DoseLog) => normalizeTime(log.scheduledTime))
       );
+      
+      const newLogs: DoseLog[] = [];
       for (const scheduledTime of editTimes) {
         if (existingTimesNormalized.has(normalizeTime(scheduledTime))) continue;
-        await saveDoseLog.mutateAsync({
+        newLogs.push({
           id: crypto.randomUUID(),
           medicineId: editingMedicine.id,
           medicineName: editingMedicine.name,
@@ -194,6 +194,10 @@ const Dashboard = () => {
           date: today,
           status: "pending",
         });
+      }
+
+      if (newLogs.length > 0) {
+        await saveDoseLogsBatch.mutateAsync(newLogs);
       }
 
       await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogsForDate(today) });
@@ -652,8 +656,8 @@ const Dashboard = () => {
             <Button type="button" variant="outline" onClick={() => setEditingMedicine(null)}>
               Cancel
             </Button>
-            <Button type="button" onClick={handleSaveSchedule} disabled={updateMedicine.isPending || saveDoseLog.isPending}>
-              {(updateMedicine.isPending || saveDoseLog.isPending) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            <Button type="button" onClick={handleSaveSchedule} disabled={updateMedicine.isPending || saveDoseLogsBatch.isPending}>
+              {(updateMedicine.isPending || saveDoseLogsBatch.isPending) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Save Schedule
             </Button>
           </DialogFooter>

@@ -231,6 +231,26 @@ export const saveDoseLog = async (log: DoseLog) => {
   return log;
 };
 
+export const saveDoseLogsBatch = async (logs: DoseLog[]) => {
+  if (logs.length === 0) return [];
+  const userId = await getUserId();
+  const { error } = await supabase.from('dose_logs').upsert(
+    logs.map(log => ({
+      id: log.id,
+      medicine_id: log.medicineId,
+      medicine_name: log.medicineName,
+      family_member_id: log.familyMemberId,
+      scheduled_time: log.scheduledTime,
+      actual_time: log.actualTime,
+      date: log.date,
+      status: log.status,
+      user_id: userId
+    }))
+  );
+  if (error) throw new Error(error.message);
+  return logs;
+};
+
 export const getVitalLogs = async (): Promise<VitalLog[]> => {
   const { data, error } = await supabase.from('vital_logs').select('*');
   if (error) throw new Error(error.message);

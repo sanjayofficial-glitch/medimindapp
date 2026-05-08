@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { QUERY_KEYS } from "@/lib/query-client";
-import { FamilyMember, Medicine, DoseLog, Prescription, VitalLog, SymptomLog, MoodLog, Appointment, LabResult } from "@/utils/storage";
+import { FamilyMember, Medicine, DoseLog, Prescription, VitalLog, SymptomLog, MoodLog, Appointment, LabResult, saveDoseLogsBatch } from "@/utils/storage";
 
 const getUserId = async (): Promise<string> => {
   const { data, error } = await supabase.auth.getUser();
@@ -296,6 +296,19 @@ return {
   });
 };
 
+export const useSaveDoseLogsBatch = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: saveDoseLogsBatch,
+    onSuccess: (_, variables) => {
+      if (variables.length > 0) {
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogs });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogsForDate(variables[0].date) });
+      }
+    },
+  });
+};
+
 export const usePrescriptions = () => {
   return useQuery({
     queryKey: QUERY_KEYS.prescriptions,
@@ -332,7 +345,7 @@ export const useAddPrescription = () => {
           image_url: rx.imageUrl,
           pharmacy_name: rx.pharmacyName,
           pharmacy_phone: rx.pharmacyPhone,
-          expiry_date: rx.expiryDate,
+          expiry_date: rx.expiry_date,
           user_id: userId,
         }])
         .select()
