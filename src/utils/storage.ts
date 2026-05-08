@@ -21,6 +21,11 @@ export interface Medicine {
   additionalText?: string;
   stock?: number;
   refillAt?: number;
+  reminderEnabled?: boolean;
+  reminderMinutesBefore?: number;
+  startDate?: string;
+  endDate?: string | null;
+  userId?: string;
 }
 
 export interface DoseLog {

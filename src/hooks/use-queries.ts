@@ -87,7 +87,7 @@ export const useMedicines = () => {
         .select('*')
         .eq('user_id', userId);
       if (error) throw new Error(error.message);
-      
+
       return (data || []).map(m => ({
         id: m.id,
         familyMemberId: m.family_member_id,
@@ -97,7 +97,12 @@ export const useMedicines = () => {
         frequency: m.frequency,
         additionalText: m.additional_text,
         stock: m.stock,
-        refillAt: m.refill_at
+        refillAt: m.refill_at,
+        reminderEnabled: m.reminder_enabled ?? true,
+        reminderMinutesBefore: m.reminder_minutes_before ?? 5,
+        startDate: m.start_date,
+        endDate: m.end_date,
+        userId: m.user_id
       })) as Medicine[];
     },
   });
@@ -110,21 +115,25 @@ export const useAddMedicine = () => {
       const userId = await getUserId();
       const { data, error } = await supabase
         .from('medicines')
-        .insert([{ 
+        .insert([{
           family_member_id: medicine.familyMemberId,
           name: medicine.name,
           dosage: medicine.dosage,
           times: medicine.times,
           frequency: medicine.frequency,
           additional_text: medicine.additionalText,
-          stock: medicine.stock,
+          stock: medicine.stock ?? 0,
           refill_at: medicine.refillAt,
-          user_id: userId 
+          user_id: userId,
+          reminder_enabled: medicine.reminderEnabled ?? true,
+          reminder_minutes_before: medicine.reminderMinutesBefore ?? 5,
+          start_date: medicine.startDate ?? new Date().toISOString().split('T')[0],
+          end_date: medicine.endDate
         }])
         .select()
         .single();
       if (error) throw new Error(error.message);
-      
+
       return {
         id: data.id,
         familyMemberId: data.family_member_id,
@@ -134,7 +143,12 @@ export const useAddMedicine = () => {
         frequency: data.frequency,
         additionalText: data.additional_text,
         stock: data.stock,
-        refillAt: data.refill_at
+        refillAt: data.refill_at,
+        reminderEnabled: data.reminder_enabled ?? true,
+        reminderMinutesBefore: data.reminder_minutes_before ?? 5,
+        startDate: data.start_date,
+        endDate: data.end_date,
+        userId: data.user_id
       } as Medicine;
     },
     onSuccess: () => {
@@ -157,13 +171,17 @@ export const useUpdateMedicine = () => {
           frequency: medicine.frequency,
           additional_text: medicine.additionalText,
           stock: medicine.stock,
-          refill_at: medicine.refillAt
+          refill_at: medicine.refillAt,
+          reminder_enabled: medicine.reminderEnabled ?? true,
+          reminder_minutes_before: medicine.reminderMinutesBefore ?? 5,
+          start_date: medicine.startDate,
+          end_date: medicine.endDate
         })
         .eq('id', medicine.id)
         .select()
         .single();
       if (error) throw new Error(error.message);
-      
+
       return {
         id: data.id,
         familyMemberId: data.family_member_id,
@@ -173,7 +191,12 @@ export const useUpdateMedicine = () => {
         frequency: data.frequency,
         additionalText: data.additional_text,
         stock: data.stock,
-        refillAt: data.refill_at
+        refillAt: data.refill_at,
+        reminderEnabled: data.reminder_enabled ?? true,
+        reminderMinutesBefore: data.reminder_minutes_before ?? 5,
+        startDate: data.start_date,
+        endDate: data.end_date,
+        userId: data.user_id
       } as Medicine;
     },
     onSuccess: () => {
