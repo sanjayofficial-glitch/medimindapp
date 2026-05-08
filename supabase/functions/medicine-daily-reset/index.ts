@@ -28,59 +28,96 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabase = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
-    // 1. Get all users and their timezones
-    const { data: subscriptions, error: subError } = await supabase
-      .from('onesignal_subscriptions')
-      .select('user_id, timezone')
-      .eq('is_active', true);
+    // 1. Mark all pending dose_logs as 'missed' for yesterday
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yyyy = yesterday.getFullYear();
+    const mm = String(yesterday.getMonth() + 1).padStart(2, '0');
+    const dd = String(yesterday.getDate()).padStart(2, '0');
+    const yesterdayDate = `${yyyy}-${mm}-${dd}`;
 
-    if (subError) throw subError;
+    const { error: missError } = await supabase
+      .from('dose_logs')
+      .update({ status: 'missed' })
+      .eq('date', yesterdayDate)
+      .eq('status', 'pending');
 
-    const userTimezones = new Map<string, string>();
-    subscriptions?.forEach(s => {
-      if (!userTimezones.has(s.user_id)) userTimezones.set(s.user_id, s.timezone || 'UTC');
-    });
+    if (missError) throw missError;
+    console.log(`[medicine-daily-reset] Marked pending as missed for ${yesterdayDate}`);
 
-    // 2. Process each user based on their local date
-    for (const [userId, timezone] of userTimezones.entries()) {
-      const localDate = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
-      const yesterdayDate = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date(Date.now() - 86400000));
+    // 2. Get all users with active medicines that have no dose_log for today
+    const today = new Date();
+    const todayYYYY = today.getFullYear();
+    const todayMM = String(today.getMonth() + 1).padStart(2, '0');
+    const todayDD = String(today.getDate()).padStart(2, '0');
+    const todayDate = `${todayYYYY}-${todayMM}-${todayDD}`;
 
-      // Mark yesterday's pending as missed
-      await supabase
-        .from('dose_logs')
-        .update({ status: 'missed' })
-        .eq('user_id', userId)
-        .eq('date', yesterdayDate)
-        .eq('status', 'pending');
+    const { data: existingTodayLogs, error: existingError } = await supabase
+      .from('dose_logs')
+      .select('user_id, medicine_id, scheduled_time')
+      .eq('date', todayDate);
 
-      // Create today's logs if they don't exist
-      const { data: meds } = await supabase.from('medicines').select('*').eq('user_id', userId);
-      const { data: existing } = await supabase.from('dose_logs').select('medicine_id, scheduled_time').eq('user_id', userId).eq('date', localDate);
+    if (existingError) throw existingError;
 
-      const existingKeys = new Set(existing?.map(e => `${e.medicine_id}-${e.scheduled_time}`));
-      
-      const toInsert = (meds || []).flatMap(med => 
-        (med.times || []).map(t => to24HourTime(t))
-          .filter(time => !existingKeys.has(`${med.id}-${time}`))
-          .map(time => ({
-            user_id: userId,
-            family_member_id: med.family_member_id,
-            medicine_id: med.id,
-            medicine_name: med.name,
-            scheduled_time: time,
-            date: localDate,
-            status: 'pending'
-          }))
-      );
+    const { data: allMedicines, error: medicinesError } = await supabase
+      .from('medicines')
+      .select('id, user_id, family_member_id, name, times')
+      .or('end_date.is.null,end_date.gte.' + todayDate);
 
-      if (toInsert.length > 0) {
-        await supabase.from('dose_logs').insert(toInsert);
-      }
+    if (medicinesError) throw medicinesError;
+
+    const existingKeys = new Set(
+      (existingTodayLogs || []).map(
+        (l: { user_id: string; medicine_id: string; scheduled_time: string }) =>
+          `${l.user_id}-${l.medicine_id}-${l.scheduled_time}`
+      )
+    );
+
+    const toInsert = ((allMedicines || []) as Array<{
+      id: string;
+      user_id: string;
+      family_member_id: string;
+      name: string;
+      times: string[];
+    }>).flatMap((med) =>
+      (med.times || [])
+        .map((t) => to24HourTime(t || '08:00'))
+        .filter((scheduledTime) => !existingKeys.has(`${med.user_id}-${med.id}-${scheduledTime}`))
+        .map((scheduledTime) => ({
+          id: crypto.randomUUID(),
+          user_id: med.user_id,
+          family_member_id: med.family_member_id,
+          medicine_id: med.id,
+          medicine_name: med.name,
+          scheduled_time: scheduledTime,
+          actual_time: null,
+          date: todayDate,
+          status: 'pending',
+          notification_sent_at: null,
+          notification_error: null,
+        }))
+    );
+
+    if (toInsert.length > 0) {
+      const { error: insertError } = await supabase.from('dose_logs').insert(toInsert);
+      if (insertError) throw insertError;
+      console.log(`[medicine-daily-reset] Created ${toInsert.length} dose logs for ${todayDate}`);
     }
 
-    return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        missedCount: existingTodayLogs?.filter((l: { status: string }) => l.status === 'pending').length || 0,
+        createdCount: toInsert.length,
+        date: todayDate,
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 400, headers: corsHeaders });
+    console.error('[medicine-daily-reset] Error:', error.message);
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+    );
   }
 });
