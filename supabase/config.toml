@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.check-due-medications]
 verify_jwt = false
+
+[functions.scheduled-notifications]
+verify_jwt = false

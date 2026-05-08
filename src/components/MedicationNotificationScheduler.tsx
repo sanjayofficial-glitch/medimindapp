@@ -6,11 +6,11 @@ import { useDoseLogsForDate } from "@/hooks/use-queries";
 import { supabase } from "@/integrations/supabase/client";
 import { queryClient, QUERY_KEYS } from "@/lib/query-client";
 import { DoseLog } from "@/utils/storage";
-import { getLocalDateString } from "@/utils/datetime";
+import { getLocalDateString, toDisplayTime } from "@/utils/datetime";
 
 const NOTIFY_LOOKBACK_MINUTES = 30;
 const POLL_INTERVAL_MS = 15_000;
-const SNOOZE_MS = 10 * 60 * 1000;
+const DEFAULT_SNOOZE_MINUTES = 10;
 
 const to24h = (time: string): number => {
   if (!time) return 0;
@@ -80,6 +80,49 @@ const MedicationNotificationScheduler = () => {
     }
   }, [today]);
 
+  const handleSnooze = useCallback(async (log: DoseLog, minutes: number = DEFAULT_SNOOZE_MINUTES) => {
+    try {
+      const snoozeUntil = new Date(Date.now() + minutes * 60 * 1000);
+      
+      // Update the dose log snooze time
+      await supabase
+        .from("dose_logs")
+        .update({ 
+          notification_sent_at: null,
+          snooze_duration_minutes: minutes
+        })
+        .eq("id", log.id)
+        .eq("status", "pending");
+
+      // Also create a snoozed scheduled notification for server-side handling
+      await supabase
+        .from("scheduled_notifications")
+        .insert({
+          dose_log_id: log.id,
+          medicine_id: log.medicineId,
+          user_id: user?.id,
+          scheduled_for: snoozeUntil.toISOString(),
+          status: 'snoozed',
+          notification_type: 'snooze'
+        })
+        .catch(() => {
+          // Table might not exist yet - that's OK for now
+          console.log("[MedicationNotificationScheduler] scheduled_notifications table not available");
+        });
+
+      // Remove from notified set so it can be notified again after snooze
+      notifiedDoseIds.current.delete(log.id);
+      
+      // Refresh the data
+      await refetch();
+      
+      toast.info(`Snoozed for ${minutes} minutes — we'll remind you again at ${toDisplayTime(snoozeUntil.toTimeString().slice(0, 5))}`, { duration: 4000 });
+    } catch (err) {
+      console.error("[MedicationNotificationScheduler] Snooze failed:", err);
+      toast.error("Failed to snooze reminder");
+    }
+  }, [user, refetch]);
+
   const checkAndNotify = useCallback(async () => {
     if (!user) return;
     
@@ -137,10 +180,17 @@ const MedicationNotificationScheduler = () => {
         }
       }
 
-      // Always show in-app toast
+      // Always show in-app toast with custom actions
       toast.info(body, {
         duration: Infinity,
-        action: { label: "Take Now", onClick: () => handleTakeNow(log) },
+        action: { 
+          label: "✓ Take", 
+          onClick: () => handleTakeNow(log) 
+        },
+        cancel: { 
+          label: `Snooze 10m`, 
+          onClick: () => handleSnooze(log, 10) 
+        },
       });
 
       // Update the database to mark notification as sent
