@@ -26,7 +26,12 @@ const NotificationPermissionPrompt = () => {
       return;
     }
 
-    if (typeof Notification === "undefined" || Notification.permission !== "default") {
+    if (typeof Notification === "undefined") {
+      setIsVisible(false);
+      return;
+    }
+
+    if (Notification.permission === "denied") {
       setIsVisible(false);
       return;
     }

@@ -204,7 +204,11 @@ export const useDoseLogs = () => {
   return useQuery({
     queryKey: QUERY_KEYS.doseLogs,
     queryFn: async () => {
-      const { data, error } = await supabase.from('dose_logs').select('*');
+      const userId = await getUserId();
+      const { data, error } = await supabase
+        .from('dose_logs')
+        .select('*')
+        .eq('user_id', userId);
       if (error) throw new Error(error.message);
       return (data || []).map(d => ({
         id: d.id,

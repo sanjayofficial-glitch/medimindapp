@@ -39,3 +39,17 @@ SELECT cron.schedule(
 
 -- Uncomment to test:
 -- SELECT check_due_medications_and_notify();
+
+-- Also schedule every minute for faster notification delivery
+-- Note: This may need adjustments based on your Supabase plan
+SELECT cron.schedule(
+  'check-due-medications-minute',
+  '* * * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://tokndrkhxgmckuffbtrd.supabase.co/functions/v1/check-due-medications',
+    headers := jsonb_build_object('Content-Type', 'application/json'),
+    body := '{}'::jsonb
+  );
+  $$
+);

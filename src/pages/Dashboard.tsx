@@ -175,8 +175,8 @@ const Dashboard = () => {
     }
 
     try {
-      const nextTimes = editTimes.map(toDisplayTime);
-      await updateMedicine.mutateAsync({ ...editingMedicine, times: nextTimes });
+      const sortedTimes = [...editTimes].sort();
+      await updateMedicine.mutateAsync({ ...editingMedicine, times: sortedTimes });
 
       const nextTimeSet = new Set(editTimes);
       const currentMedicineLogs = todayLogs.filter((log: DoseLog) => log.medicineId === editingMedicine.id);

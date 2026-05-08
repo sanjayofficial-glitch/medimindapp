@@ -6,20 +6,34 @@ import { useDoseLogsForDate } from "@/hooks/use-queries";
 import { supabase } from "@/integrations/supabase/client";
 import { queryClient, QUERY_KEYS } from "@/lib/query-client";
 import { DoseLog } from "@/utils/storage";
-import { getCurrentTime24, getLocalDateString } from "@/utils/datetime";
+import { getLocalDateString } from "@/utils/datetime";
 
 const NOTIFICATION_LOOKBACK_MINUTES = 2;
 
-const timeToMinutes = (time: string) => {
-  const [hour = "0", minute = "0"] = time.split(":");
-  return Number(hour) * 60 + Number(minute);
+const to24HourTime = (time: string) => {
+  if (/^\d{2}:\d{2}$/.test(time)) return time;
+  const [timePart, period = "AM"] = time.trim().split(" ");
+  const [hourPart, minute = "00"] = timePart.split(":");
+  let hour = Number(hourPart);
+  if (Number.isNaN(hour)) return time;
+  if (period.toUpperCase() === "PM" && hour < 12) hour += 12;
+  if (period.toUpperCase() === "AM" && hour === 12) hour = 0;
+  return `${hour.toString().padStart(2, "0")}:${minute.padStart(2, "0")}`;
+};
+
+const to24h = (time: string) => {
+  const normalized = to24HourTime(time);
+  const [h = "0", m = "0"] = normalized.split(":");
+  return Number(h) * 60 + Number(m);
 };
 
 const shouldNotifyNow = (log: DoseLog, now = new Date()) => {
   if (log.status !== "partial" || log.notificationSentAt) return false;
 
-  const currentMinutes = timeToMinutes(getCurrentTime24(now));
-  const scheduledMinutes = timeToMinutes(log.scheduledTime);
+  const hour = String(now.getHours()).padStart(2, "0");
+  const minute = String(now.getMinutes()).padStart(2, "0");
+  const currentMinutes = Number(hour) * 60 + Number(minute);
+  const scheduledMinutes = to24h(log.scheduledTime);
   const minutesSinceScheduled = currentMinutes - scheduledMinutes;
 
   return minutesSinceScheduled >= 0 && minutesSinceScheduled <= NOTIFICATION_LOOKBACK_MINUTES;

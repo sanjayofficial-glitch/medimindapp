@@ -1,9 +1,10 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import BottomTabBar from "./components/BottomTabBar";
 import AIButton from "./components/AIButton";
 import NotificationPermissionPrompt from "./components/NotificationPermissionPrompt";
 import MedicationNotificationScheduler from "./components/MedicationNotificationScheduler";
+import { setupNotificationClickHandler } from "@/utils/onesignal";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Index = lazy(() => import("./pages/Index"));
@@ -36,6 +37,15 @@ const Loading = () => (
 );
 
 const App = () => {
+  useEffect(() => {
+    setupNotificationClickHandler((data) => {
+      console.log("[App] Notification clicked:", data);
+      if (data.dose_log_id || data.medicine_id) {
+        window.location.href = "/dashboard";
+      }
+    });
+  }, []);
+
   return (
     <BrowserRouter
       future={{
