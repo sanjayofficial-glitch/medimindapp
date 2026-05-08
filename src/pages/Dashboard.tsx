@@ -153,13 +153,14 @@ const Dashboard = () => {
 
   const openEditSchedule = (medicine: Medicine) => {
     setEditingMedicine(medicine);
-    setEditTimes((medicine.times || []).map(to24HourTime).sort());
+    setEditTimes((medicine.times || []).map((t: string) => to24HourTime(t)).sort());
     setNewEditTime("");
   };
 
   const addEditTime = () => {
     if (!newEditTime) return;
-    setEditTimes((prev) => Array.from(new Set([...prev, newEditTime])).sort());
+    const normalized = to24HourTime(newEditTime);
+    setEditTimes((prev) => Array.from(new Set([...prev, normalized])).sort());
     setNewEditTime("");
   };
 
@@ -178,10 +179,10 @@ const Dashboard = () => {
       const sortedTimes = [...editTimes].sort();
       await updateMedicine.mutateAsync({ ...editingMedicine, times: sortedTimes });
 
-      const nextTimeSet = new Set(editTimes);
+      const nextTimeSet = new Set(editTimes.map((t: string) => to24HourTime(t)));
       const currentMedicineLogs = todayLogs.filter((log: DoseLog) => log.medicineId === editingMedicine.id);
       const removableLogs = currentMedicineLogs.filter(
-        (log: DoseLog) => (log.status === "pending" || log.status === "partial") && !nextTimeSet.has(log.scheduledTime)
+        (log: DoseLog) => (log.status === "pending" || log.status === "partial") && !nextTimeSet.has(to24HourTime(log.scheduledTime))
       );
 
       if (removableLogs.length > 0) {
@@ -192,15 +193,17 @@ const Dashboard = () => {
         if (error) throw new Error(error.message);
       }
 
-      const existingTimes = new Set(currentMedicineLogs.map((log: DoseLog) => log.scheduledTime));
+      const existingTimesNormalized = new Set(
+        currentMedicineLogs.map((log: DoseLog) => to24HourTime(log.scheduledTime))
+      );
       for (const scheduledTime of editTimes) {
-        if (existingTimes.has(scheduledTime)) continue;
+        if (existingTimesNormalized.has(to24HourTime(scheduledTime))) continue;
         await saveDoseLog.mutateAsync({
           id: crypto.randomUUID(),
           medicineId: editingMedicine.id,
           medicineName: editingMedicine.name,
           familyMemberId: editingMedicine.familyMemberId,
-          scheduledTime,
+          scheduledTime: to24HourTime(scheduledTime),
           actualTime: null,
           date: today,
           status: "pending",
