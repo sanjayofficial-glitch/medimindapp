@@ -157,7 +157,7 @@ const AddMedicine = () => {
                       <Button 
                         type="button" 
                         variant="ghost" 
-                        onClick={() => { setIsCustom(false); setCustomName(""); }}
+                        onClick={() => { setIsCustom(false); setCustomName(""); setSelectedMed(null); }}
                         className="text-xs text-emerald-600"
                       >
                         Search DB
