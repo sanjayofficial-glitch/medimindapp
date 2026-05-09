@@ -41,30 +41,30 @@ const HealthHub = () => {
   return (
     <div className="min-h-screen bg-background pb-32">
       <header className="bg-card border-b border-border sticky top-0 z-40 px-4 h-16 flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full md:hidden">
           <ChevronLeft className="w-6 h-6" />
         </Button>
         <h1 className="text-xl font-bold text-foreground">Health Hub</h1>
       </header>
 
-      <main className="max-w-md mx-auto px-4 py-8">
+      <main className="container max-w-6xl mx-auto px-4 py-8">
         <motion.div 
           variants={staggerContainer}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-2 gap-4"
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
         >
           {features.map((feature, idx) => (
             <motion.div key={idx} variants={staggerItem}>
               <Card 
-                className="border-none shadow-sm hover:shadow-md transition-all cursor-pointer active:scale-95 overflow-hidden"
+                className="border-none shadow-sm hover:shadow-lg transition-all cursor-pointer active:scale-95 overflow-hidden group"
                 onClick={() => navigate(feature.path)}
               >
-                <CardContent className="p-6 flex flex-col items-center text-center gap-3">
-                  <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center", feature.bg, feature.color)}>
-                    <feature.icon className="w-6 h-6" />
+                <CardContent className="p-6 md:p-8 flex flex-col items-center text-center gap-4">
+                  <div className={cn("w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110", feature.bg, feature.color)}>
+                    <feature.icon className="w-7 h-7 md:w-8 md:h-8" />
                   </div>
-                  <span className="text-xs font-bold text-foreground leading-tight">{feature.title}</span>
+                  <span className="text-sm font-bold text-foreground leading-tight">{feature.title}</span>
                 </CardContent>
               </Card>
             </motion.div>

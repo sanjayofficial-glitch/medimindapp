@@ -157,66 +157,71 @@ const Dashboard = () => {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center">
-      <div className="w-full max-w-md flex flex-col min-h-screen pb-32">
-        <DashboardHeader user={user} onLogout={handleLogout} />
+    <div className="min-h-screen bg-background flex flex-col">
+      <DashboardHeader user={user} onLogout={handleLogout} />
 
-        <main className="flex-1 px-4 py-6 space-y-8">
-          <motion.div 
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="flex items-center justify-between"
+      <main className="flex-1 container max-w-6xl mx-auto px-4 py-6 space-y-8">
+        <motion.div 
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="flex items-center justify-between"
+        >
+          <div>
+            <p className="text-sm font-medium text-primary mb-1">Good morning,</p>
+            <h2 className="text-3xl font-bold text-foreground">{user?.user_metadata?.name || "Patient"}</h2>
+          </div>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="md:hidden rounded-2xl h-12 w-12 border-emerald-100 text-emerald-600"
+            onClick={() => navigate("/hub")}
           >
-            <div>
-              <p className="text-sm font-medium text-primary mb-1">Good morning,</p>
-              <h2 className="text-3xl font-bold text-foreground">{user?.user_metadata?.name || "Patient"}</h2>
-            </div>
-            <Button 
-              variant="outline" 
-              size="icon" 
-              className="rounded-2xl h-12 w-12 border-emerald-100 text-emerald-600"
-              onClick={() => navigate("/hub")}
-            >
-              <LayoutGrid className="w-6 h-6" />
-            </Button>
-          </motion.div>
+            <LayoutGrid className="w-6 h-6" />
+          </Button>
+        </motion.div>
 
-          <DashboardStats 
-            progress={progress}
-            takenCount={takenCount}
-            totalToday={totalToday}
-            visibleNextDoseLogs={pendingLogs}
-            currentTime={currentTime}
-          />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          {/* Left Column: Schedule */}
+          <div className="lg:col-span-2 space-y-6">
+            <section className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-foreground">Today's Schedule</h3>
+                <Button 
+                  size="sm" 
+                  variant="ghost"
+                  className="text-primary font-bold"
+                  onClick={() => navigate("/add-medicine")}
+                >
+                  <Plus className="w-4 h-4 mr-1" /> Add
+                </Button>
+              </div>
+              
+              <MedicationSchedule 
+                todayLogs={todayLogs}
+                medicines={medicines}
+                onSnooze={handleSnooze}
+                onStatusUpdate={handleStatusUpdate}
+                onEdit={setEditingMedicine}
+                onDelete={setMedicineToDelete}
+                isSaving={saveDoseLog.isPending}
+              />
+            </section>
+          </div>
 
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold text-foreground">Today's Schedule</h3>
-              <Button 
-                size="sm" 
-                variant="ghost"
-                className="text-primary font-bold"
-                onClick={() => navigate("/add-medicine")}
-              >
-                <Plus className="w-4 h-4 mr-1" /> Add
-              </Button>
-            </div>
-            
-            <MedicationSchedule 
-              todayLogs={todayLogs}
-              medicines={medicines}
-              onSnooze={handleSnooze}
-              onStatusUpdate={handleStatusUpdate}
-              onEdit={setEditingMedicine}
-              onDelete={setMedicineToDelete}
-              isSaving={saveDoseLog.isPending}
+          {/* Right Column: Stats & Insights */}
+          <div className="space-y-8">
+            <DashboardStats 
+              progress={progress}
+              takenCount={takenCount}
+              totalToday={totalToday}
+              visibleNextDoseLogs={pendingLogs}
+              currentTime={currentTime}
             />
-          </section>
-
-          <DynamicAIInsight />
-          <InteractionChecker />
-        </main>
-      </div>
+            <DynamicAIInsight />
+            <InteractionChecker />
+          </div>
+        </div>
+      </main>
 
       <MedicationDialogs 
         editingMedicine={editingMedicine}

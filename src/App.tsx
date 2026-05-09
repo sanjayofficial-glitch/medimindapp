@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Suspense, lazy } from "react";
 import BottomTabBar from "./components/BottomTabBar";
-import AIButton from "./components/AIButton";
+import Sidebar from "./components/Sidebar";
 import NotificationPermissionPrompt from "./components/NotificationPermissionPrompt";
 import MedicationNotificationScheduler from "./components/MedicationNotificationScheduler";
 import NotificationClickHandler from "./components/NotificationClickHandler";
@@ -45,34 +45,39 @@ const App = () => {
         v7_relativeSplatPath: true,
       }}
     >
-      <Suspense fallback={<Loading />}>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/add-medicine" element={<AddMedicine />} />
-          <Route path="/history" element={<MedicationHistory />} />
-          <Route path="/family-members" element={<FamilyMembers />} />
-          <Route path="/progress" element={<Progress />} />
-          <Route path="/vitals" element={<VitalsTracker />} />
-          <Route path="/refills" element={<RefillManagement />} />
-          <Route path="/symptoms" element={<SymptomLogger />} />
-          <Route path="/emergency-id" element={<EmergencyID />} />
-          <Route path="/appointments" element={<Appointments />} />
-          <Route path="/lab-results" element={<LabResults />} />
-          <Route path="/wiki" element={<MedicationWiki />} />
-          <Route path="/mood" element={<MoodJournal />} />
-          <Route path="/wallet" element={<PrescriptionWallet />} />
-          <Route path="/more" element={<More />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/faq" element={<FAQ />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/hub" element={<HealthHub />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Suspense>
+      <div className="flex min-h-screen bg-background">
+        <Sidebar />
+        <div className="flex-1 flex flex-col min-w-0">
+          <Suspense fallback={<Loading />}>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<SignUp />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/add-medicine" element={<AddMedicine />} />
+              <Route path="/history" element={<MedicationHistory />} />
+              <Route path="/family-members" element={<FamilyMembers />} />
+              <Route path="/progress" element={<Progress />} />
+              <Route path="/vitals" element={<VitalsTracker />} />
+              <Route path="/refills" element={<RefillManagement />} />
+              <Route path="/symptoms" element={<SymptomLogger />} />
+              <Route path="/emergency-id" element={<EmergencyID />} />
+              <Route path="/appointments" element={<Appointments />} />
+              <Route path="/lab-results" element={<LabResults />} />
+              <Route path="/wiki" element={<MedicationWiki />} />
+              <Route path="/mood" element={<MoodJournal />} />
+              <Route path="/wallet" element={<PrescriptionWallet />} />
+              <Route path="/more" element={<More />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/faq" element={<FAQ />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/hub" element={<HealthHub />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </div>
+      </div>
       <NotificationClickHandler />
       <MedicationNotificationScheduler />
       <NotificationPermissionPrompt />
