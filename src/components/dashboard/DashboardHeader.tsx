@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Pill, ShieldAlert, LogOut, Settings as SettingsIcon } from "lucide-react";
+import { Pill, ShieldAlert, LogOut, Settings as SettingsIcon, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
@@ -11,6 +12,7 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
 import { User } from "@supabase/supabase-js";
 
 interface DashboardHeaderProps {
@@ -20,6 +22,7 @@ interface DashboardHeaderProps {
 
 const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
   const navigate = useNavigate();
+  const [aiEnabled, setAiEnabled] = useState(true);
 
   return (
     <header className="bg-card border-b border-border sticky top-0 z-40">
@@ -36,7 +39,16 @@ const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
           </div>
         </Link>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-secondary/50 px-3 py-1.5 rounded-full">
+            <Sparkles className={`w-4 h-4 ${aiEnabled ? "text-emerald-500" : "text-muted-foreground"}`} />
+            <Switch 
+              checked={aiEnabled} 
+              onCheckedChange={setAiEnabled}
+              className="data-[state=checked]:bg-emerald-500"
+            />
+          </div>
+
           <Button 
             variant="destructive" 
             size="sm" 

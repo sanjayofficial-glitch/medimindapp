@@ -2,23 +2,28 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Beaker, Plus, ChevronLeft, Download, Loader2 } from "lucide-react";
+import { Beaker, Plus, ChevronLeft, Download, Loader2, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
-import { useFamilyMembers, useLabResults, useAddLabResult } from "@/hooks/use-queries";
+import { useFamilyMembers, useLabResults, useAddLabResult, useUpdateLabResult, useRemoveLabResult } from "@/hooks/use-queries";
 import { toast } from "sonner";
+import { LabResult } from "@/utils/storage";
 
 const LabResults = () => {
   const navigate = useNavigate();
   const [showAdd, setShowAdd] = useState(false);
+  const [editingResult, setEditingResult] = useState<LabResult | null>(null);
 
   const { data: familyMembers = [], isLoading: membersLoading } = useFamilyMembers();
   const { data: labResults = [], isLoading: resultsLoading, refetch } = useLabResults();
   const addLabResult = useAddLabResult();
+  const updateLabResult = useUpdateLabResult();
+  const removeLabResult = useRemoveLabResult();
 
   const [formData, setFormData] = useState({
     familyMemberId: "",
@@ -61,6 +66,52 @@ const LabResults = () => {
       toast.success("Lab result added successfully!");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to add lab result");
+    }
+  };
+
+  const handleEdit = (result: LabResult) => {
+    setEditingResult(result);
+    setFormData({
+      familyMemberId: result.familyMemberId,
+      testName: result.testName,
+      value: result.value,
+      unit: result.unit,
+      date: result.date,
+      normalRange: result.normalRange || "",
+      attachment: null,
+    });
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingResult) return;
+
+    try {
+      await updateLabResult.mutateAsync({
+        ...editingResult,
+        familyMemberId: formData.familyMemberId,
+        testName: formData.testName,
+        value: formData.value,
+        unit: formData.unit,
+        date: formData.date,
+        normalRange: formData.normalRange,
+      });
+      await refetch();
+      setEditingResult(null);
+      toast.success("Lab result updated successfully!");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update lab result");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this lab result?")) return;
+    try {
+      await removeLabResult.mutateAsync(id);
+      await refetch();
+      toast.success("Lab result deleted");
+    } catch (error) {
+      toast.error("Failed to delete lab result");
     }
   };
 
@@ -167,6 +218,12 @@ const LabResults = () => {
                         </a>
                       </Button>
                     )}
+                    <Button variant="outline" size="icon" onClick={() => handleEdit(result)}>
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleDelete(result.id)}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -174,6 +231,48 @@ const LabResults = () => {
           )}
         </div>
       </div>
+
+      <Dialog open={!!editingResult} onOpenChange={() => setEditingResult(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Lab Result</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+            <div className="space-y-2">
+              <Label>Family Member</Label>
+              <Select onValueChange={v => setFormData({...formData, familyMemberId: v})} value={formData.familyMemberId}>
+                <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
+                <SelectContent>
+                  {familyMembers.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Test Name</Label>
+              <Input value={formData.testName} onChange={e => setFormData({...formData, testName: e.target.value})} placeholder="e.g. HbA1c" />
+            </div>
+            <div className="space-y-2">
+              <Label>Value</Label>
+              <Input value={formData.value} onChange={e => setFormData({...formData, value: e.target.value})} placeholder="e.g. 6.5" />
+            </div>
+            <div className="space-y-2">
+              <Label>Unit</Label>
+              <Input value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})} placeholder="e.g. %" />
+            </div>
+            <div className="space-y-2">
+              <Label>Date</Label>
+              <Input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+            </div>
+            <div className="space-y-2">
+              <Label>Normal Range</Label>
+              <Input value={formData.normalRange} onChange={e => setFormData({...formData, normalRange: e.target.value})} placeholder="e.g. 4.0 - 5.6" />
+            </div>
+            <Button type="submit" className="md:col-span-2 bg-emerald-600" disabled={updateLabResult.isPending}>
+              {updateLabResult.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Updating...</> : "Update Result"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 };
