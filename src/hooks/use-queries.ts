@@ -682,4 +682,56 @@ export const useAddLabResult = () => {
   });
 };
 
+export const useUpdateLabResult = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (result: LabResult) => {
+      const { data, error } = await supabase
+        .from('lab_results')
+        .update({
+          family_member_id: result.familyMemberId,
+          test_name: result.testName,
+          value: result.value,
+          unit: result.unit,
+          date: result.date,
+          notes: result.notes,
+          normal_range: result.normalRange,
+          file_url: result.file_url
+        })
+        .eq('id', result.id)
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      return {
+        id: data.id,
+        familyMemberId: data.family_member_id,
+        testName: data.test_name,
+        value: data.value,
+        unit: data.unit,
+        date: data.date,
+        notes: data.notes,
+        normalRange: data.normal_range,
+        file_url: data.file_url
+      } as LabResult;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.labResults });
+    },
+  });
+};
+
+export const useRemoveLabResult = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('lab_results').delete().eq('id', id);
+      if (error) throw new Error(error.message);
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.labResults });
+    },
+  });
+};
+
 export { useQueryClient };
