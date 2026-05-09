@@ -17,6 +17,7 @@ import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardStats from "@/components/dashboard/DashboardStats";
 import MedicationSchedule from "@/components/dashboard/MedicationSchedule";
 import MedicationDialogs from "@/components/dashboard/MedicationDialogs";
+import QuickActions from "@/components/dashboard/QuickActions";
 
 const Dashboard = () => {
   const { user, logout, isLoading: isAuthLoading } = useAuth();
@@ -217,6 +218,7 @@ const Dashboard = () => {
               visibleNextDoseLogs={pendingLogs}
               currentTime={currentTime}
             />
+            <QuickActions />
             <DynamicAIInsight />
             <InteractionChecker />
           </div>

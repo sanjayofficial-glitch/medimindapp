@@ -252,27 +252,27 @@ export const saveDoseLogsBatch = async (logs: DoseLog[]) => {
 };
 
 export const getVitalLogs = async (): Promise<VitalLog[]> => {
-  const { data, error } = await supabase.from('vital_logs').select('*');
+  const { data, error } = await supabase.from('vitals').select('*');
   if (error) throw new Error(error.message);
   return data || [];
 };
 
 export const addVitalLog = async (log: Omit<VitalLog, 'id'>): Promise<VitalLog> => {
   const userId = await getUserId();
-  const { data, error } = await supabase.from('vital_logs').insert([{ ...log, user_id: userId }]).select().single();
+  const { data, error } = await supabase.from('vitals').insert([{ ...log, user_id: userId }]).select().single();
   if (error) throw new Error(error.message);
   return data;
 };
 
 export const getSymptomLogs = async (): Promise<SymptomLog[]> => {
-  const { data, error } = await supabase.from('symptom_logs').select('*');
+  const { data, error } = await supabase.from('symptoms').select('*');
   if (error) throw new Error(error.message);
   return data || [];
 };
 
 export const addSymptomLog = async (log: Omit<SymptomLog, 'id'>): Promise<SymptomLog> => {
   const userId = await getUserId();
-  const { data, error } = await supabase.from('symptom_logs').insert([{ ...log, user_id: userId }]).select().single();
+  const { data, error } = await supabase.from('symptoms').insert([{ ...log, user_id: userId }]).select().single();
   if (error) throw new Error(error.message);
   return data;
 };
