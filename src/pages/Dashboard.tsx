@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Calendar, Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { useDoseLogsForDate, useSaveDoseLog, useSaveDoseLogsBatch, useMedicines, useUpdateMedicine, useRemoveMedicine } from "@/hooks/use-queries";
@@ -11,14 +11,11 @@ import { DoseLog, Medicine } from "@/utils/storage";
 import { toast } from "sonner";
 import InteractionChecker from "@/components/InteractionChecker";
 import DynamicAIInsight from "@/components/DynamicAIInsight";
-import { supabase } from "@/integrations/supabase/client";
-import { queryClient, QUERY_KEYS } from "@/lib/query-client";
 import { getCurrentTime24, getLocalDateString, normalizeTime } from "@/utils/datetime";
 
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardStats from "@/components/dashboard/DashboardStats";
 import MedicationSchedule from "@/components/dashboard/MedicationSchedule";
-import QuickActions from "@/components/dashboard/QuickActions";
 import MedicationDialogs from "@/components/dashboard/MedicationDialogs";
 
 const Dashboard = () => {
@@ -168,9 +165,20 @@ const Dashboard = () => {
           <motion.div 
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
+            className="flex items-center justify-between"
           >
-            <p className="text-sm font-medium text-primary mb-1">Good morning,</p>
-            <h2 className="text-3xl font-bold text-foreground">{user?.user_metadata?.name || "Patient"}</h2>
+            <div>
+              <p className="text-sm font-medium text-primary mb-1">Good morning,</p>
+              <h2 className="text-3xl font-bold text-foreground">{user?.user_metadata?.name || "Patient"}</h2>
+            </div>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="rounded-2xl h-12 w-12 border-emerald-100 text-emerald-600"
+              onClick={() => navigate("/hub")}
+            >
+              <LayoutGrid className="w-6 h-6" />
+            </Button>
           </motion.div>
 
           <DashboardStats 
@@ -205,7 +213,6 @@ const Dashboard = () => {
             />
           </section>
 
-          <QuickActions />
           <DynamicAIInsight />
           <InteractionChecker />
         </main>

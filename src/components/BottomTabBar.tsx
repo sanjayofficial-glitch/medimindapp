@@ -2,9 +2,9 @@
 
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, History, Plus, BarChart3, MoreHorizontal } from "lucide-react";
+import { Home, History, Plus, LayoutGrid, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { iconBounce, buttonTap } from "@/lib/animations";
+import { buttonTap } from "@/lib/animations";
 
 const BottomTabBar = () => {
   const navigate = useNavigate();
@@ -18,7 +18,7 @@ const BottomTabBar = () => {
     { name: "Home", path: "/dashboard", icon: Home },
     { name: "History", path: "/history", icon: History },
     { name: "Add", path: "/add-medicine", icon: Plus, isMain: true },
-    { name: "Progress", path: "/progress", icon: BarChart3 },
+    { name: "Hub", path: "/hub", icon: LayoutGrid },
     { name: "More", path: "/more", icon: MoreHorizontal },
   ];
 

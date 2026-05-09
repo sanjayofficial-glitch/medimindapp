@@ -29,6 +29,7 @@ const Settings = lazy(() => import("./pages/Settings"));
 const About = lazy(() => import("./pages/About"));
 const FAQ = lazy(() => import("./pages/FAQ"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const HealthHub = lazy(() => import("./pages/HealthHub"));
 
 const Loading = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -68,6 +69,7 @@ const App = () => {
           <Route path="/about" element={<About />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/hub" element={<HealthHub />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
@@ -75,7 +77,6 @@ const App = () => {
       <MedicationNotificationScheduler />
       <NotificationPermissionPrompt />
       <BottomTabBar />
-      <AIButton />
     </BrowserRouter>
   );
 };
