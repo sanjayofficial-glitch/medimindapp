@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import InteractionChecker from "@/components/InteractionChecker";
 import DynamicAIInsight from "@/components/DynamicAIInsight";
 import { getCurrentTime24, getLocalDateString, normalizeTime } from "@/utils/datetime";
+import { addMinutes } from "date-fns";
 
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardStats from "@/components/dashboard/DashboardStats";
@@ -112,7 +113,19 @@ const Dashboard = () => {
   };
 
   const handleSnooze = async (log: DoseLog) => {
-    toast.info(`Snoozed ${log.medicineName} for 10 minutes`);
+    try {
+      const snoozeUntil = addMinutes(new Date(), 10).toISOString();
+      const updatedLog: DoseLog = {
+        ...log,
+        snoozedUntil: snoozeUntil,
+        notificationSentAt: null // Reset so it can notify again
+      };
+      await saveDoseLog.mutateAsync(updatedLog);
+      toast.info(`Snoozed ${log.medicineName} for 10 minutes`);
+      refetch();
+    } catch (error) {
+      toast.error("Failed to snooze reminder");
+    }
   };
 
   const handleStatusUpdate = async (log: DoseLog, status: "taken" | "missed") => {
@@ -120,7 +133,8 @@ const Dashboard = () => {
       const updatedLog: DoseLog = {
         ...log,
         status,
-        actualTime: status === "taken" ? new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : null
+        actualTime: status === "taken" ? new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : null,
+        snoozedUntil: null // Clear snooze if taken
       };
       await saveDoseLog.mutateAsync(updatedLog);
       refetch();

@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { queryClient, QUERY_KEYS } from "@/lib/query-client";
 import { DoseLog } from "@/utils/storage";
 import { getLocalDateString, toDisplayTime } from "@/utils/datetime";
+import { isAfter, parseISO } from "date-fns";
 
 const NOTIFY_LOOKBACK_MINUTES = 30;
 const POLL_INTERVAL_MS = 15_000;
@@ -44,6 +45,11 @@ const isDue = (log: DoseLog): boolean => {
   // Must be pending and not yet sent notification
   if (log.status !== "pending" || log.notificationSentAt) return false;
   
+  // If snoozed, check if snooze period has passed
+  if (log.snoozedUntil && isAfter(parseISO(log.snoozedUntil), new Date())) {
+    return false;
+  }
+  
   const scheduled = to24h(log.scheduledTime);
   const current = nowMinutes();
   
@@ -54,6 +60,12 @@ const isDue = (log: DoseLog): boolean => {
 const isOverdue = (log: DoseLog): boolean => {
   // Only pending doses can be overdue
   if (log.status !== "pending") return false;
+  
+  // If snoozed, it's not "overdue" for notification purposes until snooze expires
+  if (log.snoozedUntil && isAfter(parseISO(log.snoozedUntil), new Date())) {
+    return false;
+  }
+  
   return to24h(log.scheduledTime) < nowMinutes();
 };
 
@@ -69,7 +81,11 @@ const MedicationNotificationScheduler = () => {
     try {
       await supabase
         .from("dose_logs")
-        .update({ status: "taken", actual_time: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) })
+        .update({ 
+          status: "taken", 
+          actual_time: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+          snoozed_until: null 
+        })
         .eq("id", log.id);
 
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogsForDate(today) });
@@ -89,26 +105,10 @@ const MedicationNotificationScheduler = () => {
         .from("dose_logs")
         .update({ 
           notification_sent_at: null,
-          snooze_duration_minutes: minutes
+          snoozed_until: snoozeUntil.toISOString()
         })
         .eq("id", log.id)
         .eq("status", "pending");
-
-      // Also create a snoozed scheduled notification for server-side handling
-      await supabase
-        .from("scheduled_notifications")
-        .insert({
-          dose_log_id: log.id,
-          medicine_id: log.medicineId,
-          user_id: user?.id,
-          scheduled_for: snoozeUntil.toISOString(),
-          status: 'snoozed',
-          notification_type: 'snooze'
-        })
-        .catch(() => {
-          // Table might not exist yet - that's OK for now
-          console.log("[MedicationNotificationScheduler] scheduled_notifications table not available");
-        });
 
       // Remove from notified set so it can be notified again after snooze
       notifiedDoseIds.current.delete(log.id);
@@ -121,7 +121,7 @@ const MedicationNotificationScheduler = () => {
       console.error("[MedicationNotificationScheduler] Snooze failed:", err);
       toast.error("Failed to snooze reminder");
     }
-  }, [user, refetch]);
+  }, [refetch]);
 
   const checkAndNotify = useCallback(async () => {
     if (!user) return;
@@ -208,7 +208,7 @@ const MedicationNotificationScheduler = () => {
     }
 
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogsForDate(today) });
-  }, [user, todayLogs, today, navigate, refetch, handleTakeNow]);
+  }, [user, todayLogs, today, navigate, refetch, handleTakeNow, handleSnooze]);
 
   useEffect(() => {
     if (!user) return;

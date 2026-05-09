@@ -34,6 +34,7 @@ export interface DoseLog {
   status: string;
   notificationSentAt?: string | null;
   notificationError?: string | null;
+  snoozedUntil?: string | null;
 }
 
 export interface VitalLog {
@@ -211,7 +212,8 @@ export const getDoseLogs = async (): Promise<DoseLog[]> => {
     date: d.date,
     status: d.status,
     notificationSentAt: d.notification_sent_at,
-    notificationError: d.notification_error
+    notificationError: d.notification_error,
+    snoozedUntil: d.snoozed_until
   }));
 };
 
@@ -225,7 +227,8 @@ export const saveDoseLog = async (log: DoseLog) => {
     actual_time: log.actualTime,
     date: log.date,
     status: log.status,
-    user_id: await getUserId()
+    user_id: await getUserId(),
+    snoozed_until: log.snoozedUntil
   }]);
   if (error) throw new Error(error.message);
   return log;
@@ -244,7 +247,8 @@ export const saveDoseLogsBatch = async (logs: DoseLog[]) => {
       actual_time: log.actualTime,
       date: log.date,
       status: log.status,
-      user_id: userId
+      user_id: userId,
+      snoozed_until: log.snoozedUntil
     }))
   );
   if (error) throw new Error(error.message);
