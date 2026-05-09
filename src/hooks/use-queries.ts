@@ -220,7 +220,8 @@ export const useDoseLogs = () => {
         date: d.date,
         status: d.status,
         notificationSentAt: d.notification_sent_at,
-        notificationError: d.notification_error
+        notificationError: d.notification_error,
+        snoozedUntil: d.snoozed_until
       })) as DoseLog[];
     },
   });
@@ -247,7 +248,8 @@ export const useDoseLogsForDate = (date: string) => {
         date: d.date,
         status: d.status,
         notificationSentAt: d.notification_sent_at,
-        notificationError: d.notification_error
+        notificationError: d.notification_error,
+        snoozedUntil: d.snoozed_until
       })) as DoseLog[];
     },
     staleTime: 0,
@@ -270,13 +272,15 @@ export const useSaveDoseLog = () => {
           actual_time: log.actualTime,
           date: log.date,
           status: log.status,
-          user_id: userId
+          user_id: userId,
+          snoozed_until: (log as any).snoozedUntil || null,
+          notification_sent_at: (log as any).notificationSentAt || null
         }])
         .select()
         .single();
       if (error) throw new Error(error.message);
       
-return {
+      return {
         id: data.id,
         medicineId: data.medicine_id,
         medicineName: data.medicine_name,
@@ -286,7 +290,8 @@ return {
         date: data.date,
         status: data.status,
         notificationSentAt: data.notification_sent_at,
-        notificationError: data.notification_error
+        notificationError: data.notification_error,
+        snoozedUntil: data.snoozed_until
       } as DoseLog;
     },
     onSuccess: (_, variables) => {
@@ -345,7 +350,7 @@ export const useAddPrescription = () => {
           image_url: rx.imageUrl,
           pharmacy_name: rx.pharmacyName,
           pharmacy_phone: rx.pharmacyPhone,
-          expiry_date: rx.expiry_date,
+          expiry_date: rx.expiryDate,
           user_id: userId,
         }])
         .select()
