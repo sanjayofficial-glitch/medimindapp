@@ -87,9 +87,14 @@ const MedicationSchedule = ({
               
               <div className="flex gap-1">
                 {medicine && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => onEdit(medicine)}>
-                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                  </Button>
+                  <>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => onEdit(medicine)}>
+                      <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-rose-500 hover:text-rose-600 hover:bg-rose-50" onClick={() => onDelete(medicine)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
