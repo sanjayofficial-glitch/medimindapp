@@ -14,7 +14,8 @@ import {
   Sparkles, 
   Wallet,
   TrendingUp,
-  Users
+  Users,
+  Bell
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +26,7 @@ const HealthHub = () => {
   const navigate = useNavigate();
 
   const features = [
+    { title: "My Reminders", icon: Bell, path: "/reminders", color: "text-amber-600", bg: "bg-amber-50" },
     { title: "Vitals Tracker", icon: Activity, path: "/vitals", color: "text-rose-500", bg: "bg-rose-50" },
     { title: "Symptom Log", icon: Stethoscope, path: "/symptoms", color: "text-blue-500", bg: "bg-blue-50" },
     { title: "Lab Results", icon: FileText, path: "/lab-results", color: "text-amber-500", bg: "bg-amber-50" },
