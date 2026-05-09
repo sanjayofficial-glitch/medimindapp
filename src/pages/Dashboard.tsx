@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -118,7 +116,7 @@ const Dashboard = () => {
       const updatedLog: DoseLog = {
         ...log,
         snoozedUntil: snoozeUntil,
-        notificationSentAt: null // Reset so it can notify again
+        notificationSentAt: null
       };
       await saveDoseLog.mutateAsync(updatedLog);
       toast.info(`Snoozed ${log.medicineName} for 10 minutes`);
@@ -134,7 +132,7 @@ const Dashboard = () => {
         ...log,
         status,
         actualTime: status === "taken" ? new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : null,
-        snoozedUntil: null // Clear snooze if taken
+        snoozedUntil: null
       };
       await saveDoseLog.mutateAsync(updatedLog);
       refetch();
@@ -196,7 +194,6 @@ const Dashboard = () => {
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* Left Column: Schedule */}
           <div className="lg:col-span-2 space-y-6">
             <section className="space-y-4">
               <div className="flex items-center justify-between">
@@ -223,7 +220,6 @@ const Dashboard = () => {
             </section>
           </div>
 
-          {/* Right Column: Stats & Insights */}
           <div className="space-y-8">
             <DashboardStats 
               progress={progress}

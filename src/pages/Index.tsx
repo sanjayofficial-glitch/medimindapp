@@ -1,6 +1,4 @@
-"use client";
-
-import React from "react";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Pill, Shield, Activity, Clock, ChevronRight, Sparkles } from "lucide-react";
@@ -12,7 +10,7 @@ const Index = () => {
   const { user } = useAuth();
 
   // Redirect to dashboard if already logged in
-  React.useEffect(() => {
+  useEffect(() => {
     if (user) {
       navigate("/dashboard");
     }
