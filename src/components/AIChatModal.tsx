@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Bot, User, Loader2, Trash2 } from "lucide-react";
+import { Send, Bot, User, Loader2, Trash2, Pill, Calendar, Heart, Activity } from "lucide-react";
 import { askAIAssistant } from "@/utils/ai-assistant";
+import { useMedicines, useAppointments } from "@/hooks/use-queries";
 
 interface Message {
   role: "user" | "assistant";
@@ -20,6 +21,9 @@ const AIChatModal = ({ open, onOpenChange }: AIChatModalProps) => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const { data: medicines = [] } = useMedicines();
+  const { data: appointments = [] } = useAppointments();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -29,16 +33,26 @@ const AIChatModal = ({ open, onOpenChange }: AIChatModalProps) => {
     scrollToBottom();
   }, [messages, isLoading]);
 
+  useEffect(() => {
+    if (open && messages.length === 0) {
+      setMessages([{
+        role: "assistant",
+        content: "Hello! I'm your MediMind AI assistant. I can help you with your medications, health questions, schedule reminders, and more. What would you like to know?"
+      }]);
+    }
+  }, [open]);
+
   const handleClearChat = () => {
     setMessages([]);
   };
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
+  const handleSend = async (text?: string) => {
+    const messageText = text || input;
+    if (!messageText.trim()) return;
 
-    const userMessage: Message = { role: "user", content: input.trim() };
+    const userMessage: Message = { role: "user", content: messageText.trim() };
     setMessages(prev => [...prev, userMessage]);
-    setInput("");
+    if (!text) setInput("");
     setIsLoading(true);
 
     try {
@@ -53,9 +67,27 @@ const AIChatModal = ({ open, onOpenChange }: AIChatModalProps) => {
     }
   };
 
+  const getQuickActions = () => {
+    const actions = [
+      { icon: Pill, label: "My medications", query: "What are my current medications and their schedules?" },
+    ];
+
+    if (medicines.length > 0) {
+      const firstMed = medicines[0].name;
+      actions.push({ icon: Activity, label: `${firstMed} side effects`, query: `What are the side effects of ${firstMed}?` });
+    }
+
+    actions.push(
+      { icon: Calendar, label: "Missed dose", query: "What should I do if I miss a dose?" },
+      { icon: Heart, label: "Medication tips", query: "Give me tips for taking my medications correctly" }
+    );
+
+    return actions;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] h-[600px] flex flex-col p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[500px] h-[700px] flex flex-col p-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-emerald-50 to-teal-50">
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2 text-emerald-800">
@@ -77,26 +109,6 @@ const AIChatModal = ({ open, onOpenChange }: AIChatModalProps) => {
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-white">
-          {messages.length === 0 && (
-            <div className="text-center text-gray-500 mt-12 space-y-4">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto">
-                <Bot className="w-8 h-8 text-emerald-600" />
-              </div>
-              <div>
-                <p className="font-semibold text-gray-900">How can I help you today?</p>
-                <p className="text-sm mt-1">Ask me about your medication schedule, potential side effects, or general health guidance.</p>
-              </div>
-              <div className="grid grid-cols-1 gap-2 max-w-xs mx-auto pt-4">
-                <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => setInput("What are the side effects of Metformin?")}>
-                  "What are the side effects of Metformin?"
-                </Button>
-                <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => setInput("I missed my morning dose, what should I do?")}>
-                  "I missed my morning dose, what should I do?"
-                </Button>
-              </div>
-            </div>
-          )}
-          
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               <div className={`flex items-start gap-3 max-w-[85%] ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
@@ -124,13 +136,31 @@ const AIChatModal = ({ open, onOpenChange }: AIChatModalProps) => {
               </div>
             </div>
           )}
+          
+          {messages.length <= 1 && !isLoading && (
+            <div className="grid grid-cols-1 gap-2 pt-4">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Try asking about:</p>
+              {getQuickActions().map((action, idx) => (
+                <Button 
+                  key={idx}
+                  variant="outline" 
+                  size="sm" 
+                  className="justify-start text-left h-auto py-3 px-4 hover:bg-emerald-50 hover:border-emerald-200"
+                  onClick={() => handleSend(action.query)}
+                >
+                  <action.icon className="w-4 h-4 mr-3 text-emerald-600 shrink-0" />
+                  <span className="text-sm">{action.label}</span>
+                </Button>
+              ))}
+            </div>
+          )}
           <div ref={messagesEndRef} />
         </div>
 
         <div className="px-6 py-4 border-t bg-gray-50">
           <div className="flex w-full gap-2">
             <Input
-              placeholder="Type your question here..."
+              placeholder="Ask about your medications, health..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSend())}
@@ -138,7 +168,7 @@ const AIChatModal = ({ open, onOpenChange }: AIChatModalProps) => {
               className="flex-1 bg-white border-gray-200 focus-visible:ring-emerald-500"
             />
             <Button 
-              onClick={handleSend} 
+              onClick={() => handleSend()} 
               disabled={isLoading || !input.trim()} 
               className="bg-emerald-600 hover:bg-emerald-700 shadow-md transition-all active:scale-95"
             >

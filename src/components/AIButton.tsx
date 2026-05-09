@@ -6,9 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, ChevronRight } from "lucide-react";
 import AIChatModal from "./AIChatModal";
 import { iconPop } from "@/lib/animations";
+import { useAI } from "@/context/AIContext";
 
 const AIButton = () => {
+  const { aiEnabled } = useAI();
   const [isOpen, setIsOpen] = useState(false);
+
+  if (!aiEnabled) return null;
 
   return (
     <>

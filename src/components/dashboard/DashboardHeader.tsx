@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Pill, ShieldAlert, LogOut, Settings as SettingsIcon, Sparkles } from "lucide-react";
+import { Pill, ShieldAlert, LogOut, Settings as SettingsIcon, Sparkles, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
@@ -13,6 +13,8 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
+import { useAI } from "@/context/AIContext";
+import AIChatModal from "@/components/AIChatModal";
 import { User } from "@supabase/supabase-js";
 
 interface DashboardHeaderProps {
@@ -22,7 +24,8 @@ interface DashboardHeaderProps {
 
 const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
   const navigate = useNavigate();
-  const [aiEnabled, setAiEnabled] = useState(true);
+  const { aiEnabled, setAiEnabled } = useAI();
+  const [aiChatOpen, setAiChatOpen] = useState(false);
 
   return (
     <header className="bg-card border-b border-border sticky top-0 z-40">
@@ -39,7 +42,19 @@ const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
           </div>
         </Link>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {aiEnabled && (
+            <Button 
+              variant="outline" 
+              size="icon"
+              className="rounded-full border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+              onClick={() => setAiChatOpen(true)}
+              title="Chat with AI"
+            >
+              <MessageCircle className="w-4 h-4" />
+            </Button>
+          )}
+          
           <div className="flex items-center gap-2 bg-secondary/50 px-3 py-1.5 rounded-full">
             <Sparkles className={`w-4 h-4 ${aiEnabled ? "text-emerald-500" : "text-muted-foreground"}`} />
             <Switch 
@@ -84,6 +99,7 @@ const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        <AIChatModal open={aiChatOpen} onOpenChange={setAiChatOpen} />
       </div>
     </header>
   );

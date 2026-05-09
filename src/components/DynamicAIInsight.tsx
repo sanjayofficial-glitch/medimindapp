@@ -5,8 +5,10 @@ import { Sparkles, Loader2, Info, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { askAIAssistant } from "@/utils/ai-assistant";
 import { Button } from "@/components/ui/button";
+import { useAI } from "@/context/AIContext";
 
 const DynamicAIInsight = () => {
+  const { aiEnabled } = useAI();
   const [insight, setInsight] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,8 +28,14 @@ const DynamicAIInsight = () => {
   };
 
   useEffect(() => {
-    generateInsight();
-  }, []);
+    if (aiEnabled) {
+      generateInsight();
+    }
+  }, [aiEnabled]);
+
+  if (!aiEnabled) {
+    return null;
+  }
 
   return (
     <Card className="bg-primary text-primary-foreground border-none shadow-xl shadow-primary/20 overflow-hidden relative">
