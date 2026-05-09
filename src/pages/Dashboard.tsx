@@ -91,85 +91,30 @@ const Dashboard = () => {
 
   const handleSaveSchedule = async (editTimes: string[]) => {
     if (!editingMedicine) return;
-    if (editTimes.length === 0) {
-      toast.error("Add at least one reminder time");
-      return;
-    }
-
     try {
-      const sortedTimes = [...editTimes].sort();
-      await updateMedicine.mutateAsync({ ...editingMedicine, times: sortedTimes });
-
-      const nextTimeSet = new Set(editTimes.map(normalizeTime));
-      const currentMedicineLogs = todayLogs.filter((log: DoseLog) => log.medicineId === editingMedicine.id);
-      const removableLogs = currentMedicineLogs.filter(
-        (log: DoseLog) => (log.status === "pending" || log.status === "partial") && !nextTimeSet.has(normalizeTime(log.scheduledTime))
-      );
-
-      if (removableLogs.length > 0) {
-        const { error } = await supabase
-          .from("dose_logs")
-          .delete()
-          .in("id", removableLogs.map((log: DoseLog) => log.id));
-        if (error) throw new Error(error.message);
-      }
-
-      const existingTimesNormalized = new Set(
-        currentMedicineLogs.map((log: DoseLog) => normalizeTime(log.scheduledTime))
-      );
-      
-      const newLogs: DoseLog[] = [];
-      for (const scheduledTime of editTimes) {
-        if (existingTimesNormalized.has(normalizeTime(scheduledTime))) continue;
-        newLogs.push({
-          id: crypto.randomUUID(),
-          medicineId: editingMedicine.id,
-          medicineName: editingMedicine.name,
-          familyMemberId: editingMedicine.familyMemberId,
-          scheduledTime: normalizeTime(scheduledTime),
-          actualTime: null,
-          date: today,
-          status: "pending",
-        });
-      }
-
-      if (newLogs.length > 0) {
-        await saveDoseLogsBatch.mutateAsync(newLogs);
-      }
-
-      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.medicines });
-      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogsForDate(today) });
+      await updateMedicine.mutateAsync({ ...editingMedicine, times: editTimes });
       await refetch();
       setEditingMedicine(null);
-      toast.success("Reminder schedule updated");
+      toast.success("Schedule updated");
     } catch (error) {
-      console.error("Failed to update reminder schedule:", error);
-      toast.error("Failed to update reminder schedule");
+      toast.error("Failed to update schedule");
     }
   };
 
   const handleDeleteMedicine = async () => {
     if (!medicineToDelete) return;
-
     try {
       await removeMedicine.mutateAsync(medicineToDelete.id);
       await refetch();
-      toast.success(`${medicineToDelete.name} reminders deleted`);
       setMedicineToDelete(null);
+      toast.success("Medicine removed");
     } catch (error) {
-      console.error("Failed to delete medicine:", error);
-      toast.error("Failed to delete reminder");
+      toast.error("Failed to remove medicine");
     }
   };
 
   const handleSnooze = async (log: DoseLog) => {
-    await supabase
-      .from("dose_logs")
-      .update({ notification_sent_at: null, notification_error: null })
-      .eq("id", log.id)
-      .eq("status", "pending");
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogsForDate(today) });
-    toast.info(`Reminder snoozed for 10 minutes — we'll remind you again soon`, { duration: 4000 });
+    toast.info(`Snoozed ${log.medicineName} for 10 minutes`);
   };
 
   const handleStatusUpdate = async (log: DoseLog, status: "taken" | "missed") => {
@@ -179,20 +124,7 @@ const Dashboard = () => {
         status,
         actualTime: status === "taken" ? new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : null
       };
-
       await saveDoseLog.mutateAsync(updatedLog);
-
-      if (status === "taken") {
-        const medicine = medicines.find(m => m.id === log.medicineId);
-        if (medicine && medicine.stock !== undefined && medicine.stock > 0) {
-          await updateMedicine.mutateAsync({ ...medicine, stock: medicine.stock - 1 });
-          if (medicine.stock - 1 <= (medicine.refillAt || 5)) {
-            toast.warning(`Low stock: ${medicine.name} (${medicine.stock - 1} left)`);
-          }
-        }
-        toast.success(`${log.medicineName} marked as taken`);
-      }
-
       refetch();
     } catch (error) {
       toast.error("Failed to update status");
@@ -202,32 +134,25 @@ const Dashboard = () => {
   const handleLogout = async () => {
     await logout();
     navigate("/");
-    toast.success("Logged out successfully");
   };
 
   const takenCount = todayLogs.filter((l: DoseLog) => l.status === "taken").length;
+  const totalToday = todayLogs.length;
+  const progress = totalToday > 0 ? (takenCount / totalToday) * 100 : 0;
+  const currentTime = getCurrentTime24();
+  
   const pendingLogs = useMemo(
     () => todayLogs
       .filter((l: DoseLog) => l.status === "pending")
       .sort((a: DoseLog, b: DoseLog) => a.scheduledTime.localeCompare(b.scheduledTime)),
     [todayLogs]
   );
-  
-  const currentTime = getCurrentTime24();
-  const upcomingDoseLogs = useMemo(
-    () => pendingLogs.filter((l: DoseLog) => normalizeTime(l.scheduledTime) >= currentTime),
-    [pendingLogs, currentTime]
-  );
-  
-  const visibleNextDoseLogs = upcomingDoseLogs.length > 0 ? upcomingDoseLogs : pendingLogs;
-  const totalToday = todayLogs.length;
-  const progress = totalToday > 0 ? (takenCount / totalToday) * 100 : 0;
 
   if (isAuthLoading || (user && isDataLoading)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
         <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
-        <p className="text-sm text-muted-foreground font-medium">Loading your health dashboard...</p>
+        <p className="text-sm text-muted-foreground font-medium">Loading...</p>
       </div>
     );
   }
@@ -235,75 +160,56 @@ const Dashboard = () => {
   if (!user) return null;
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="min-h-screen bg-background pb-32"
-    >
-      <DashboardHeader user={user} onLogout={handleLogout} />
+    <div className="min-h-screen bg-background flex flex-col items-center">
+      <div className="w-full max-w-md flex flex-col min-h-screen pb-32">
+        <DashboardHeader user={user} onLogout={handleLogout} />
 
-      <main className="max-w-5xl mx-auto px-4 py-8">
-        <motion.div 
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="mb-8"
-        >
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium text-primary mb-1">Good morning,</p>
-              <h2 className="text-3xl font-bold text-foreground">{user?.user_metadata?.name || "Patient"}</h2>
+        <main className="flex-1 px-4 py-6 space-y-8">
+          <motion.div 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+          >
+            <p className="text-sm font-medium text-primary mb-1">Good morning,</p>
+            <h2 className="text-3xl font-bold text-foreground">{user?.user_metadata?.name || "Patient"}</h2>
+          </motion.div>
+
+          <DashboardStats 
+            progress={progress}
+            takenCount={takenCount}
+            totalToday={totalToday}
+            visibleNextDoseLogs={pendingLogs}
+            currentTime={currentTime}
+          />
+
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-bold text-foreground">Today's Schedule</h3>
+              <Button 
+                size="sm" 
+                variant="ghost"
+                className="text-primary font-bold"
+                onClick={() => navigate("/add-medicine")}
+              >
+                <Plus className="w-4 h-4 mr-1" /> Add
+              </Button>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-card px-4 py-2 rounded-full border border-border shadow-sm">
-              <Calendar className="w-4 h-4" />
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-            </div>
-          </div>
-        </motion.div>
+            
+            <MedicationSchedule 
+              todayLogs={todayLogs}
+              medicines={medicines}
+              onSnooze={handleSnooze}
+              onStatusUpdate={handleStatusUpdate}
+              onEdit={setEditingMedicine}
+              onDelete={setMedicineToDelete}
+              isSaving={saveDoseLog.isPending}
+            />
+          </section>
 
-        <DashboardStats 
-          progress={progress}
-          takenCount={takenCount}
-          totalToday={totalToday}
-          visibleNextDoseLogs={visibleNextDoseLogs}
-          currentTime={currentTime}
-        />
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-foreground">Today's Schedule</h3>
-                <Button 
-                  size="sm" 
-                  className="rounded-full bg-primary text-primary-foreground"
-                  onClick={() => navigate("/add-medicine")}
-                >
-                  <Plus className="w-4 h-4 mr-1" /> Add New
-                </Button>
-              </div>
-              
-              <MedicationSchedule 
-                todayLogs={todayLogs}
-                medicines={medicines}
-                onSnooze={handleSnooze}
-                onStatusUpdate={handleStatusUpdate}
-                onEdit={setEditingMedicine}
-                onDelete={setMedicineToDelete}
-                isSaving={saveDoseLog.isPending}
-              />
-            </section>
-
-            <section>
-              <InteractionChecker />
-            </section>
-          </div>
-
-          <div className="space-y-8">
-            <QuickActions />
-            <DynamicAIInsight />
-          </div>
-        </div>
-      </main>
+          <QuickActions />
+          <DynamicAIInsight />
+          <InteractionChecker />
+        </main>
+      </div>
 
       <MedicationDialogs 
         editingMedicine={editingMedicine}
@@ -312,10 +218,10 @@ const Dashboard = () => {
         setMedicineToDelete={setMedicineToDelete}
         onSaveSchedule={handleSaveSchedule}
         onDeleteMedicine={handleDeleteMedicine}
-        isUpdating={updateMedicine.isPending || saveDoseLogsBatch.isPending}
+        isUpdating={updateMedicine.isPending}
         isDeleting={removeMedicine.isPending}
       />
-    </motion.div>
+    </div>
   );
 };
 

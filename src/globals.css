@@ -69,14 +69,35 @@
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body {
+    @apply bg-background text-foreground antialiased overflow-x-hidden;
+    height: 100%;
+    width: 100%;
+    overscroll-behavior-y: none;
   }
 
   body {
-    @apply bg-background text-foreground antialiased transition-colors duration-300;
     font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
+    @apply transition-colors duration-300;
+  }
+
+  #root {
+    height: 100%;
   }
 }
 
 .glass-card {
   @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-white/20 dark:border-slate-800/20 shadow-sm;
+}
+
+/* Hide scrollbars but keep functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
