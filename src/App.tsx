@@ -70,7 +70,7 @@ const App = () => {
               <Route path="/more" element={<More />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/about" element={<About />} />
-              <Route path="/faq" element={<FAQ />} />
+              <Route path="/help" element={<FAQ />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/hub" element={<HealthHub />} />
               <Route path="*" element={<NotFound />} />
