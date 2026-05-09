@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Loader2, Plus, LayoutGrid } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Loader2, Plus, LayoutGrid, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { useDoseLogsForDate, useSaveDoseLog, useSaveDoseLogsBatch, useMedicines, useUpdateMedicine, useRemoveMedicine } from "@/hooks/use-queries";
@@ -23,8 +23,8 @@ const Dashboard = () => {
   const navigate = useNavigate();
   
   const today = getLocalDateString();
-  const { data: todayLogs = [], isLoading: isDataLoading, refetch } = useDoseLogsForDate(today);
-  const { data: medicines = [] } = useMedicines();
+  const { data: todayLogs = [], isLoading: isLogsLoading, refetch } = useDoseLogsForDate(today);
+  const { data: medicines = [], isLoading: isMedicinesLoading } = useMedicines();
   const saveDoseLog = useSaveDoseLog();
   const saveDoseLogsBatch = useSaveDoseLogsBatch();
   const updateMedicine = useUpdateMedicine();
@@ -42,8 +42,9 @@ const Dashboard = () => {
     }
   }, [user, isAuthLoading, navigate]);
 
+  // Logic to create missing dose logs for today based on active medicines
   useEffect(() => {
-    if (!user || isDataLoading || medicines.length === 0 || isSyncingSchedule || dailySyncInFlight.current) return;
+    if (!user || isLogsLoading || isMedicinesLoading || medicines.length === 0 || dailySyncInFlight.current) return;
 
     const createMissingDailyDoseLogs = async () => {
       const existingKeys = new Set([
@@ -69,14 +70,24 @@ const Dashboard = () => {
 
       if (missingLogs.length === 0) return;
 
-      missingLogs.forEach((log) => locallyCreatedDoseKeys.current.add(`${log.medicineId}-${log.scheduledTime}`));
+      // Track locally to prevent duplicate creation attempts during the same session
+      const newKeys: string[] = [];
+      missingLogs.forEach((log) => {
+        const key = `${log.medicineId}-${log.scheduledTime}`;
+        locallyCreatedDoseKeys.current.add(key);
+        newKeys.push(key);
+      });
+
       dailySyncInFlight.current = true;
       setIsSyncingSchedule(true);
+      
       try {
         await saveDoseLogsBatch.mutateAsync(missingLogs);
         await refetch();
       } catch (error) {
         console.error("Failed to create daily dose logs:", error);
+        // Clear keys on failure so we can try again
+        newKeys.forEach(key => locallyCreatedDoseKeys.current.delete(key));
       } finally {
         dailySyncInFlight.current = false;
         setIsSyncingSchedule(false);
@@ -84,7 +95,7 @@ const Dashboard = () => {
     };
 
     createMissingDailyDoseLogs();
-  }, [user, medicines, todayLogs, today, isDataLoading, isSyncingSchedule, saveDoseLogsBatch, refetch]);
+  }, [user, medicines, todayLogs, today, isLogsLoading, isMedicinesLoading, saveDoseLogsBatch, refetch]);
 
   const handleSaveSchedule = async (editTimes: string[]) => {
     if (!editingMedicine) return;
@@ -158,11 +169,13 @@ const Dashboard = () => {
     [todayLogs]
   );
 
-  if (isAuthLoading || (user && isDataLoading)) {
+  const isInitialLoading = isAuthLoading || (user && isLogsLoading && medicines.length === 0);
+
+  if (isInitialLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
         <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
-        <p className="text-sm text-muted-foreground font-medium">Loading...</p>
+        <p className="text-sm text-muted-foreground font-medium">Loading your health dashboard...</p>
       </div>
     );
   }
@@ -197,7 +210,22 @@ const Dashboard = () => {
           <div className="lg:col-span-2 space-y-6">
             <section className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-foreground">Today's Schedule</h3>
+                <div className="flex items-center gap-3">
+                  <h3 className="text-xl font-bold text-foreground">Today's Schedule</h3>
+                  <AnimatePresence>
+                    {isSyncingSchedule && (
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                      >
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                        Syncing
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
                 <Button 
                   size="sm" 
                   variant="ghost"
@@ -215,7 +243,7 @@ const Dashboard = () => {
                 onStatusUpdate={handleStatusUpdate}
                 onEdit={setEditingMedicine}
                 onDelete={setMedicineToDelete}
-                isSaving={saveDoseLog.isPending}
+                isSaving={saveDoseLog.isPending || isSyncingSchedule}
               />
             </section>
           </div>
