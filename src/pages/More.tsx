@@ -2,7 +2,6 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import Navigation from "@/components/Navigation";
 import { 
   User, 
   Settings, 
@@ -105,8 +104,6 @@ const More = () => {
           <span className="font-medium">Sign Out</span>
         </Button>
       </main>
-
-      <Navigation />
     </div>
   );
 };
