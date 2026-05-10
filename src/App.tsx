@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useState, useEffect } from "react";
 import BottomTabBar from "./components/BottomTabBar";
 import Sidebar from "./components/Sidebar";
 import NotificationPermissionPrompt from "./components/NotificationPermissionPrompt";
@@ -7,6 +7,8 @@ import MedicationNotificationScheduler from "./components/MedicationNotification
 import NotificationClickHandler from "./components/NotificationClickHandler";
 import { AIProvider } from "./context/AIContext";
 import { Toaster } from "./components/ui/sonner";
+import { useAuth } from "./context/AuthContext";
+import SplashScreen from "./components/SplashScreen";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Index = lazy(() => import("./pages/Index"));
@@ -82,6 +84,24 @@ const AppContent = () => {
 };
 
 const App = () => {
+  const { user, isLoading } = useAuth();
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    if (isLoading) return;
+    const splashShown = sessionStorage.getItem("medimind_splash_shown");
+    if (splashShown && user) {
+      setShowSplash(false);
+    } else if (splashShown && !user) {
+      setShowSplash(false);
+    }
+  }, [isLoading, user]);
+
+  const handleSplashComplete = () => {
+    sessionStorage.setItem("medimind_splash_shown", "true");
+    setShowSplash(false);
+  };
+
   return (
     <AIProvider>
       <BrowserRouter
@@ -90,7 +110,11 @@ const App = () => {
           v7_relativeSplatPath: true,
         }}
       >
-        <AppContent />
+        {showSplash && !isLoading ? (
+          <SplashScreen onComplete={handleSplashComplete} />
+        ) : (
+          <AppContent />
+        )}
         <NotificationClickHandler />
         <MedicationNotificationScheduler />
         <NotificationPermissionPrompt />
