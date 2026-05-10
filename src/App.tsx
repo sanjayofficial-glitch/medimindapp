@@ -84,26 +84,20 @@ const AppContent = () => {
 };
 
 const App = () => {
-  const { user, isLoading } = useAuth();
+  const { isLoading } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
-  const [splashReady, setSplashReady] = useState(false);
+  const [appReady, setAppReady] = useState(false);
 
   useEffect(() => {
     if (isLoading) return;
-    
-    const splashShown = sessionStorage.getItem("medimind_splash_shown");
-    if (splashShown) {
-      setShowSplash(false);
-    }
-    setSplashReady(true);
-  }, [isLoading, user]);
+    setAppReady(true);
+  }, [isLoading]);
 
   const handleSplashComplete = () => {
-    sessionStorage.setItem("medimind_splash_shown", "true");
     setShowSplash(false);
   };
 
-  if (!splashReady || isLoading) {
+  if (!appReady || isLoading) {
     return (
       <div style={{
         position: 'fixed',
@@ -112,7 +106,7 @@ const App = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 9999
+        zIndex: 99999
       }}>
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -9,40 +9,54 @@ interface SplashScreenProps {
 }
 
 const SplashScreen = ({ onComplete }: SplashScreenProps) => {
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const [canComplete, setCanComplete] = useState(false);
+  const [showSkip, setShowSkip] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const img = new Image();
     img.src = "/animation.gif";
-    img.onload = () => setImageLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (!imageLoaded) return;
     
-    const duration = 3000;
-    const timer = setTimeout(() => {
-      onComplete();
-    }, duration);
+    img.onload = () => {
+      setCanComplete(true);
+      
+      setTimeout(() => {
+        setShowSkip(true);
+      }, 2000);
 
-    return () => clearTimeout(timer);
-  }, [imageLoaded, onComplete]);
+      timerRef.current = setTimeout(() => {
+        onComplete();
+      }, 5000);
+    };
+
+    img.onerror = () => {
+      setCanComplete(true);
+      onComplete();
+    };
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [onComplete]);
 
   const handleSkip = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
     onComplete();
   };
 
   return (
     <div 
-      className="fixed inset-0 z-[9999] bg-emerald-600"
-      style={{ 
-        position: 'fixed', 
-        top: 0, 
-        left: 0, 
-        right: 0, 
-        bottom: 0,
-        width: '100vw', 
-        height: '100vh'
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 99999,
+        backgroundColor: '#059669',
+        width: '100vw',
+        height: '100vh',
       }}
     >
       <Button
@@ -51,15 +65,30 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         onClick={handleSkip}
         style={{
           position: 'absolute',
-          top: '16px',
-          right: '16px',
-          zIndex: 10000,
-          color: 'rgba(255,255,255,0.8)',
-          backgroundColor: 'rgba(255,255,255,0.1)',
+          top: '20px',
+          right: '20px',
+          zIndex: 100000,
+          color: 'rgba(255,255,255,0.7)',
+          backgroundColor: showSkip ? 'rgba(255,255,255,0.15)' : 'transparent',
+          border: '1px solid rgba(255,255,255,0.3)',
+          borderRadius: '20px',
+          padding: '8px 16px',
+          cursor: showSkip ? 'pointer' : 'not-allowed',
+          opacity: showSkip ? 1 : 0,
+          transition: 'opacity 0.3s ease, background-color 0.3s ease',
         }}
-        className="hover:text-white hover:bg-white/20 rounded-full"
+        onMouseEnter={(e) => {
+          if (showSkip) {
+            e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.25)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (showSkip) {
+            e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)';
+          }
+        }}
       >
-        <X className="w-5 h-5 mr-1" />
+        <X className="w-4 h-4 mr-1" />
         Skip
       </Button>
 
@@ -79,8 +108,6 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
             width: '100%',
             height: '100%',
             objectFit: 'cover',
-            border: 'none',
-            outline: 'none',
           }}
         />
       </div>
