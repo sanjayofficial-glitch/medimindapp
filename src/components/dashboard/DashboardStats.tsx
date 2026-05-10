@@ -2,7 +2,8 @@
 
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { Clock } from "lucide-react";
+import { toDisplayTime } from "@/utils/datetime";
 import { DashboardStatsProps } from "./types";
 
 const DashboardStats = ({ progress, takenCount, totalToday, visibleNextDoseLogs }: DashboardStatsProps) => {
@@ -21,7 +22,9 @@ const DashboardStats = ({ progress, takenCount, totalToday, visibleNextDoseLogs 
             </div>
           </div>
           <div className="h-2.5 bg-white/20 rounded-full overflow-hidden">
-            <motion.div               initial={{ width: 0 }}               animate={{ width: `${progress}%` }} 
+            <motion.div               
+              initial={{ width: 0 }}               
+              animate={{ width: `${progress}%` }} 
               className="h-full bg-white" 
             />
           </div>

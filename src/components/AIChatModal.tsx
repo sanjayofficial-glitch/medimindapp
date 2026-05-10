@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { askAIAssistant } from "@/utils/ai-assistant";
 import { useMedicines } from "@/hooks/use-queries";
+import { Bot, Trash2, User, Loader2, Send, Pill, Activity, Calendar, Heart, LucideIcon } from "lucide-react";
 
 interface Message {
   role: "user" | "assistant";
@@ -77,9 +78,9 @@ const AIChatModal = ({ open, onOpenChange }: AIChatModalProps) => {
   };
 
   const getQuickActions = () => {
-    const actions = [
+    const actions: { icon: LucideIcon; label: string; query: string }[] = [
       {
-        icon: "Pill",
+        icon: Pill,
         label: "My medications",
         query: "What are my current medications and their schedules?",
       },
@@ -87,18 +88,18 @@ const AIChatModal = ({ open, onOpenChange }: AIChatModalProps) => {
     if (medicines.length > 0) {
       const firstMed = medicines[0].name;
       actions.push({
-        icon: "Activity",
+        icon: Activity,
         label: `${firstMed} side effects`,
         query: `What are the side effects of ${firstMed}?`,
       });
     }
     actions.push({
-      icon: "Calendar",
+      icon: Calendar,
       label: "Missed dose",
       query: "What should I do if I miss a dose?",
     });
     actions.push({
-      icon: "Heart",
+      icon: Heart,
       label: "Medication tips",
       query: "Give me tips for taking my medications correctly",
     });

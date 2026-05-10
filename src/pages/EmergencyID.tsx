@@ -26,9 +26,6 @@ import { getEmergencyProfile, saveEmergencyProfile, EmergencyProfile } from "@/u
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 
-const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"];
-const ORGAN_DONOR_OPTIONS = ["Yes", "No", "Unspecified"];
-
 const EmergencyID = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<EmergencyProfile>({
@@ -52,7 +49,6 @@ const EmergencyID = () => {
   const [newMedication, setNewMedication] = useState({ name: "", dosage: "", frequency: "" });
   const [newDoctor, setNewDoctor] = useState({ name: "", specialty: "", phone: "" });
   const [newContact, setNewContact] = useState({ name: "", relationship: "", phone: "" });
-  const [newDevice, setNewDevice] = useState("");
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -121,17 +117,6 @@ const EmergencyID = () => {
 
   const removeContact = (idx: number) => {
     setProfile({ ...profile, emergencyContacts: profile.emergencyContacts.filter((_, i) => i !== idx) });
-  };
-
-  const addDevice = () => {
-    if (newDevice.trim()) {
-      setProfile({ ...profile, medicalDevices: [...profile.medicalDevices, newDevice.trim()] });
-      setNewDevice("");
-    }
-  };
-
-  const removeDevice = (idx: number) => {
-    setProfile({ ...profile, medicalDevices: profile.medicalDevices.filter((_, i) => i !== idx) });
   };
 
   const qrData = JSON.stringify(profile);

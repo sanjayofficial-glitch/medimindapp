@@ -4,10 +4,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   Users,
   AlertTriangle,
-  Package,
-  ChevronRight,
-  Pill,
-  TrendingUp,
   Heart,
   Stethoscope,
   FileText,
@@ -17,7 +13,7 @@ import {
   LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import AIButton from "@/components/AIButton";
 
 const More = () => {
   const navigate = useNavigate();
@@ -28,19 +24,19 @@ const More = () => {
   }
 
   interface FeatureItem {
-  icon: LucideIcon;
-  label: string;
-  path: string;
-  color: string;
-  bg: string;
-}
+    icon: LucideIcon;
+    label: string;
+    path: string;
+    color: string;
+    bg: string;
+  }
 
-interface FeatureSection {
-  title: string;
-  items: FeatureItem[];
-}
+  interface FeatureSection {
+    title: string;
+    items: FeatureItem[];
+  }
 
-const features: FeatureSection[] = [
+  const features: FeatureSection[] = [
     {
       title: "Health Tools",
       items: [

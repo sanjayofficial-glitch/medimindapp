@@ -1,7 +1,7 @@
 "use client";
 
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, History, Plus, LayoutGrid, MoreHorizontal, Pill, LogOut, Settings, Users } from "lucide-react";
+import { Home, History, Plus, LayoutGrid, Pill, LogOut, Settings, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";

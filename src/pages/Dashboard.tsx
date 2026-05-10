@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Plus, LayoutGrid, RefreshCw } from "lucide-react";
@@ -34,7 +34,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   
   const today = getLocalDateString();
-  const { data: todayLogs = [], isLoading: isLogsLoading, refetch } = useDoseLogsForDate(today);
+  const { data: todayLogs = [], refetch } = useDoseLogsForDate(today);
   const { data: medicines = [], isLoading: isMedicinesLoading } = useMedicines();
   const saveDoseLog = useSaveDoseLog();
   const updateMedicine = useUpdateMedicine();
@@ -42,7 +42,7 @@ const Dashboard = () => {
 
   const [editingMedicine, setEditingMedicine] = useState<Medicine | null>(null);
   const [medicineToDelete, setMedicineToDelete] = useState<Medicine | null>(null);
-  const [isSyncingSchedule, setIsSyncingSchedule] = useState(false);
+  const [isSyncingSchedule] = useState(false);
 
   useEffect(() => {
     if (!isAuthLoading && !user) {

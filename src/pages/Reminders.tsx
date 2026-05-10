@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ChevronLeft, Clock, Bell, Calendar, Pill, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMedicines, useFamilyMembers } from "@/hooks/use-queries";
-import { toDisplayTime, getDayName } from "@/utils/datetime";
+import { toDisplayTime } from "@/utils/datetime";
 import { format } from "date-fns";
 
 const Reminders = () => {
@@ -85,7 +85,7 @@ const Reminders = () => {
                 <span className="font-medium">{today}</span>
               </div>
 
-              {sortedByTime.map((med, idx) => (
+              {sortedByTime.map((med) => (
                 <Card key={med.id} className="border-none shadow-sm">
                   <CardContent className="p-5">
                     <div className="flex items-start gap-4">

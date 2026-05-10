@@ -2,9 +2,9 @@
 
 import { useMemo } from "react";
 import { motion } from "framer-motion";
-import { Users, AlertTriangle, Package, Clock, ChevronRight, Pill, RefreshCw } from "lucide-react";
+import { Users, AlertTriangle, Package, ChevronRight, Pill, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
