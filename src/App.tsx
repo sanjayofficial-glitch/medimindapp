@@ -86,21 +86,38 @@ const AppContent = () => {
 const App = () => {
   const { user, isLoading } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
+  const [splashReady, setSplashReady] = useState(false);
 
   useEffect(() => {
     if (isLoading) return;
+    
     const splashShown = sessionStorage.getItem("medimind_splash_shown");
-    if (splashShown && user) {
-      setShowSplash(false);
-    } else if (splashShown && !user) {
+    if (splashShown) {
       setShowSplash(false);
     }
+    setSplashReady(true);
   }, [isLoading, user]);
 
   const handleSplashComplete = () => {
     sessionStorage.setItem("medimind_splash_shown", "true");
     setShowSplash(false);
   };
+
+  if (!splashReady || isLoading) {
+    return (
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: '#059669',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999
+      }}>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
+      </div>
+    );
+  }
 
   return (
     <AIProvider>
@@ -110,7 +127,7 @@ const App = () => {
           v7_relativeSplatPath: true,
         }}
       >
-        {showSplash && !isLoading ? (
+        {showSplash ? (
           <SplashScreen onComplete={handleSplashComplete} />
         ) : (
           <AppContent />
