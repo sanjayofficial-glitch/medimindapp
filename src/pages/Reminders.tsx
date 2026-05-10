@@ -85,7 +85,7 @@ const Reminders = () => {
                 <span className="font-medium">{today}</span>
               </div>
 
-              {sortedByTime.map((med) => (
+{sortedByTime.map((med) => (
                 <Card key={med.id} className="border-none shadow-sm">
                   <CardContent className="p-5">
                     <div className="flex items-start gap-4">
@@ -105,6 +105,12 @@ const Reminders = () => {
                               <span className="text-sm font-bold text-emerald-700">{toDisplayTime(time)}</span>
                             </div>
                           ))}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
                         </div>
                       </div>
                     </CardContent>

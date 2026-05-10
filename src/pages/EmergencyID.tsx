@@ -251,7 +251,7 @@ const EmergencyID = () => {
           </SectionCard>
 
           <SectionCard icon={Phone} title="Emergency Contacts">
-            {isEditing ? (
+            {isEditing && (
               <div className="space-y-2 pb-3 border-b">
                 <Input placeholder="Name" value={newContact.name} onChange={e => setNewContact({ ...newContact, name: e.target.value })} />
                 <Input placeholder="Relationship" value={newContact.relationship} onChange={e => setNewContact({ ...newContact, relationship: e.target.value })} />
