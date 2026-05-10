@@ -24,14 +24,14 @@ const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
     <div 
       className={`fixed inset-0 bg-emerald-600 flex items-center justify-center z-50 transition-opacity duration-500 ${fadeOut ? 'opacity-0' : 'opacity-100'}`}
     >
-      <div className="flex flex-col items-center gap-4">
+      <div className="flex flex-col items-center justify-center w-full h-full">
         <img 
           src="/animation.gif" 
           alt="MediMind Animation"
-          className="w-64 h-64 object-contain"
+          className="w-full max-w-sm h-auto max-h-[60vh] object-contain"
         />
         
-        <h1 className="text-3xl font-bold text-white tracking-tight">MediMind</h1>
+        <h1 className="text-3xl font-bold text-white tracking-tight mt-4">MediMind</h1>
       </div>
     </div>
   );
