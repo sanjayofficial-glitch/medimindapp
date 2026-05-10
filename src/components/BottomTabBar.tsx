@@ -2,7 +2,7 @@
 
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, History, Plus, LayoutGrid, MoreHorizontal } from "lucide-react";
+import { Home, History, Plus, LayoutGrid, MoreHorizontal, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buttonTap } from "@/lib/animations";
 
@@ -16,6 +16,7 @@ const BottomTabBar = () => {
 
   const tabs = [
     { name: "Home", path: "/dashboard", icon: Home },
+    { name: "Care", path: "/caregiver", icon: Users },
     { name: "History", path: "/history", icon: History },
     { name: "Add", path: "/add-medicine", icon: Plus, isMain: true },
     { name: "Hub", path: "/hub", icon: LayoutGrid },

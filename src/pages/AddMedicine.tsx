@@ -8,13 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { useFamilyMembers, useAddMedicine, useMedicines } from "@/hooks/use-queries";
+import { useFamilyMembers, useAddMedicine, useMedicines, useSaveDoseLogsBatch } from "@/hooks/use-queries";
 import { MedicineDBEntry } from "@/data/medicineDatabase";
 import { MedicineSelector } from "@/components/MedicineSelector";
 import { toast } from "sonner";
 import { queryClient } from "@/lib/query-client";
 import { QUERY_KEYS } from "@/lib/query-client";
 import { getLocalDateString, normalizeTime, toDisplayTime } from "@/utils/datetime";
+import { format, addDays } from "date-fns";
+import { DoseLog } from "@/utils/storage";
 
 const AddMedicine = () => {
   const navigate = useNavigate();
@@ -32,6 +34,7 @@ const AddMedicine = () => {
   const { data: familyMembers = [] } = useFamilyMembers();
   const { data: existingMedicines = [] } = useMedicines();
   const addMedicineMutation = useAddMedicine();
+  const saveDoseLogsBatch = useSaveDoseLogsBatch();
 
   const pad = (n: string) => n.padStart(2, "0");
   const hourOptions = Array.from({ length: 12 }, (_, i) => `${i + 1}`);
@@ -83,13 +86,36 @@ const AddMedicine = () => {
     }
 
     try {
-      await addMedicineMutation.mutateAsync({
+      const addedMedicine = await addMedicineMutation.mutateAsync({
         familyMemberId: selectedMember,
         name: medicineName,
         dosage: dosage.trim(),
         times: times.map(normalizeTime),
         frequency: frequency,
       });
+
+      // Create dose logs for the next 7 days immediately
+      const newDoseLogs: DoseLog[] = [];
+      for (let i = 0; i < 7; i++) {
+        const date = addDays(new Date(), i);
+        const dateStr = format(date, 'yyyy-MM-dd');
+        for (const time of times.map(normalizeTime)) {
+          newDoseLogs.push({
+            id: crypto.randomUUID(),
+            medicineId: addedMedicine.id,
+            medicineName: medicineName,
+            familyMemberId: selectedMember,
+            scheduledTime: time,
+            actualTime: null,
+            date: dateStr,
+            status: 'pending',
+          });
+        }
+      }
+      
+      if (newDoseLogs.length > 0) {
+        await saveDoseLogsBatch.mutateAsync(newDoseLogs);
+      }
 
       toast.success(`Added ${medicineName} to schedule`);
       
