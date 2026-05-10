@@ -1,11 +1,13 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Suspense, lazy } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Suspense, lazy, useState, useEffect } from "react";
 import BottomTabBar from "./components/BottomTabBar";
 import Sidebar from "./components/Sidebar";
 import NotificationPermissionPrompt from "./components/NotificationPermissionPrompt";
 import MedicationNotificationScheduler from "./components/MedicationNotificationScheduler";
 import NotificationClickHandler from "./components/NotificationClickHandler";
 import { AIProvider } from "./context/AIContext";
+import { useAuth } from "./context/AuthContext";
+import SplashScreen from "./components/SplashScreen";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Index = lazy(() => import("./pages/Index"));
