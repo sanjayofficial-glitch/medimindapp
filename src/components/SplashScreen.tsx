@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Lottie from "lottie-react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
 import animationData from "../../public/animation.lottie";
 
 interface SplashScreenProps {
@@ -11,7 +9,6 @@ interface SplashScreenProps {
 }
 
 const SplashScreen = ({ onComplete }: SplashScreenProps) => {
-  const navigate = navigate;
   const [animationLoaded, setAnimationLoaded] = useState(false);
 
   useEffect(() => {
