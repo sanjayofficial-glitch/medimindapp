@@ -3,33 +3,29 @@
 import { useEffect, useState, useRef } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Lottie from "lottie-react";
 
 interface SplashScreenProps {
   onComplete: () => void;
 }
 
 const SplashScreen = ({ onComplete }: SplashScreenProps) => {
-  const [imageLoaded, setImageLoaded] = useState(false);
   const [showSkip, setShowSkip] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
+  const [animationData, setAnimationData] = useState<any>(null);
+  const lottieRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const skipTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const img = new Image();
-    img.src = "/animation.gif";
-    
-    img.onload = () => {
-      setImageLoaded(true);
-      
-      skipTimerRef.current = setTimeout(() => {
-        setShowSkip(true);
-      }, 3000);
-    };
-
-    img.onerror = () => {
-      onComplete();
-    };
+    fetch("/animation.lottie")
+      .then(res => res.json())
+      .then(data => {
+        setAnimationData(data);
+      })
+      .catch(err => {
+        console.error("Failed to load animation:", err);
+        onComplete();
+      });
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -38,11 +34,11 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
   }, [onComplete]);
 
   useEffect(() => {
-    if (!imageLoaded) return;
-    
-    if (imgRef.current && imgRef.current.complete) {
-      return;
-    }
+    if (!animationData) return;
+
+    skipTimerRef.current = setTimeout(() => {
+      setShowSkip(true);
+    }, 3000);
 
     timerRef.current = setTimeout(() => {
       onComplete();
@@ -50,8 +46,9 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (skipTimerRef.current) clearTimeout(skipTimerRef.current);
     };
-  }, [imageLoaded, onComplete]);
+  }, [animationData, onComplete]);
 
   const handleSkip = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -103,17 +100,29 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           justifyContent: 'center',
         }}
       >
-        <img
-          ref={imgRef}
-          src="/animation.gif"
-          alt="MediMind Animation"
-          onLoad={() => setImageLoaded(true)}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-          }}
-        />
+        {animationData ? (
+          <Lottie
+            lottieRef={lottieRef}
+            animationData={animationData}
+            loop={true}
+            autoplay={true}
+            style={{
+              width: '100%',
+              height: '100%',
+              maxWidth: '100%',
+              maxHeight: '100%',
+            }}
+          />
+        ) : (
+          <div style={{
+            width: '60px',
+            height: '60px',
+            border: '4px solid rgba(255,255,255,0.3)',
+            borderTopColor: 'white',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite'
+          }} />
+        )}
       </div>
     </div>
   );
