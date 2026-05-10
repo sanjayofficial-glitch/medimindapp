@@ -3,15 +3,24 @@
 import { motion } from "framer-motion";
 import { Trophy, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import { toDisplayTime } from "@/utils/datetime";
-import { DoseLog } from "@/utils/storage";
+
+interface ScheduleItem {
+  id: string;
+  medicineId: string;
+  medicineName: string;
+  dosage: string;
+  familyMemberId: string;
+  scheduledTime: string;
+  status: "pending" | "taken" | "missed";
+  actualTime: string | null;
+}
 
 interface DashboardStatsProps {
   progress: number;
   takenCount: number;
   totalToday: number;
-  visibleNextDoseLogs: DoseLog[];
+  visibleNextDoseLogs: ScheduleItem[];
   currentTime: string;
 }
 

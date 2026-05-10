@@ -6,21 +6,32 @@ import { Pill, CheckCircle2, Clock, Pencil, Trash2, Loader2 } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toDisplayTime } from "@/utils/datetime";
-import { DoseLog, Medicine } from "@/utils/storage";
+import { Medicine } from "@/utils/storage";
 import { scaleIn } from "@/lib/animations";
 
+interface ScheduleItem {
+  id: string;
+  medicineId: string;
+  medicineName: string;
+  dosage: string;
+  familyMemberId: string;
+  scheduledTime: string;
+  status: "pending" | "taken" | "missed";
+  actualTime: string | null;
+}
+
 interface MedicationScheduleProps {
-  todayLogs: DoseLog[];
+  scheduleItems: ScheduleItem[];
   medicines: Medicine[];
-  onSnooze: (log: DoseLog) => void;
-  onStatusUpdate: (log: DoseLog, status: "taken" | "missed") => void;
+  onSnooze: (item: ScheduleItem) => void;
+  onStatusUpdate: (item: ScheduleItem, status: "taken" | "missed") => void;
   onEdit: (medicine: Medicine) => void;
   onDelete: (medicine: Medicine) => void;
   isSaving: boolean;
 }
 
 const MedicationSchedule = ({ 
-  todayLogs, 
+  scheduleItems, 
   medicines, 
   onSnooze, 
   onStatusUpdate, 
@@ -34,9 +45,7 @@ const MedicationSchedule = ({
     return h * 60 + m;
   };
 
-  const sortedLogs = [...todayLogs].sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime));
-
-  if (sortedLogs.length === 0) {
+  if (scheduleItems.length === 0) {
     return (
       <div className="bg-card rounded-3xl p-10 text-center border-2 border-dashed border-border">
         <Pill className="w-8 h-8 text-muted-foreground/30 mx-auto mb-4" />
@@ -50,20 +59,20 @@ const MedicationSchedule = ({
 
   return (
     <div className="space-y-3">
-      {sortedLogs.map((log, i) => {
-        const medicine = medicines.find((med) => med.id === log.medicineId);
-        const overdue = log.status === "pending" && to24hMinutes(log.scheduledTime) < nowMinutes();
+      {scheduleItems.map((item, i) => {
+        const medicine = medicines.find((med) => med.id === item.medicineId);
+        const overdue = item.status === "pending" && to24hMinutes(item.scheduledTime) < nowMinutes();
 
         return (
           <motion.div
-            key={log.id}
+            key={item.id}
             variants={scaleIn}
             initial="hidden"
             animate="visible"
             custom={i}
             className={cn(
               "p-4 bg-card rounded-2xl border shadow-sm transition-all active:scale-[0.98]",
-              log.status === "taken" ? "opacity-60" : "",
+              item.status === "taken" ? "opacity-60" : "",
               overdue ? "border-rose-200 bg-rose-50/30" : "border-border"
             )}
           >
@@ -71,15 +80,16 @@ const MedicationSchedule = ({
               <div className="flex items-center gap-3">
                 <div className={cn(
                   "w-10 h-10 rounded-xl flex items-center justify-center",
-                  log.status === "taken" ? "bg-primary/10 text-primary" : 
+                  item.status === "taken" ? "bg-primary/10 text-primary" : 
                   overdue ? "bg-rose-100 text-rose-600" : "bg-emerald-50 text-emerald-600"
                 )}>
-                  {log.status === "taken" ? <CheckCircle2 className="w-5 h-5" /> : <Pill className="w-5 h-5" />}
+                  {item.status === "taken" ? <CheckCircle2 className="w-5 h-5" /> : <Pill className="w-5 h-5" />}
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm text-foreground leading-tight">{log.medicineName}</h4>
+                  <h4 className="font-bold text-sm text-foreground leading-tight">{item.medicineName}</h4>
                   <p className="text-[10px] font-bold text-muted-foreground flex items-center gap-1 mt-0.5">
-                    <Clock className="w-3 h-3" /> {toDisplayTime(log.scheduledTime)}
+                    <Clock className="w-3 h-3" /> {toDisplayTime(item.scheduledTime)}
+                    {item.dosage && <span className="ml-1">• {item.dosage}</span>}
                     {overdue && <span className="text-rose-600 ml-1">• OVERDUE</span>}
                   </p>
                 </div>
@@ -99,18 +109,18 @@ const MedicationSchedule = ({
               </div>
             </div>
 
-            {log.status === "pending" ? (
+            {item.status === "pending" ? (
               <div className="flex gap-2">
                 <Button 
                   variant="outline" 
                   className="flex-1 h-10 rounded-xl text-xs font-bold border-emerald-100 text-emerald-700"
-                  onClick={() => onSnooze(log)}
+                  onClick={() => onSnooze(item)}
                 >
                   Snooze
                 </Button>
                 <Button 
                   className="flex-[2] h-10 rounded-xl text-xs font-bold bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                  onClick={() => onStatusUpdate(log, "taken")}
+                  onClick={() => onStatusUpdate(item, "taken")}
                   disabled={isSaving}
                 >
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Take Now"}
@@ -119,9 +129,9 @@ const MedicationSchedule = ({
             ) : (
               <div className={cn(
                 "w-full py-2 rounded-xl text-center text-[10px] font-black uppercase tracking-widest",
-                log.status === "taken" ? "bg-primary/10 text-primary" : "bg-rose-100 text-rose-600"
+                item.status === "taken" ? "bg-primary/10 text-primary" : "bg-rose-100 text-rose-600"
               )}>
-                {log.status}
+                {item.status === "taken" ? "Taken" : "Missed"}
               </div>
             )}
           </motion.div>

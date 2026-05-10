@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Plus, LayoutGrid, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import { useDoseLogsForDate, useSaveDoseLog, useSaveDoseLogsBatch, useMedicines, useUpdateMedicine, useRemoveMedicine } from "@/hooks/use-queries";
+import { useDoseLogsForDate, useSaveDoseLog, useMedicines, useUpdateMedicine, useRemoveMedicine } from "@/hooks/use-queries";
 import { DoseLog, Medicine } from "@/utils/storage";
 import { toast } from "sonner";
 import InteractionChecker from "@/components/InteractionChecker";
@@ -18,6 +18,17 @@ import MedicationSchedule from "@/components/dashboard/MedicationSchedule";
 import MedicationDialogs from "@/components/dashboard/MedicationDialogs";
 import QuickActions from "@/components/dashboard/QuickActions";
 
+interface ScheduleItem {
+  id: string;
+  medicineId: string;
+  medicineName: string;
+  dosage: string;
+  familyMemberId: string;
+  scheduledTime: string;
+  status: "pending" | "taken" | "missed";
+  actualTime: string | null;
+}
+
 const Dashboard = () => {
   const { user, logout, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
@@ -26,15 +37,12 @@ const Dashboard = () => {
   const { data: todayLogs = [], isLoading: isLogsLoading, refetch } = useDoseLogsForDate(today);
   const { data: medicines = [], isLoading: isMedicinesLoading } = useMedicines();
   const saveDoseLog = useSaveDoseLog();
-  const saveDoseLogsBatch = useSaveDoseLogsBatch();
   const updateMedicine = useUpdateMedicine();
   const removeMedicine = useRemoveMedicine();
 
   const [editingMedicine, setEditingMedicine] = useState<Medicine | null>(null);
   const [medicineToDelete, setMedicineToDelete] = useState<Medicine | null>(null);
   const [isSyncingSchedule, setIsSyncingSchedule] = useState(false);
-  const dailySyncInFlight = useRef(false);
-  const locallyCreatedDoseKeys = useRef(new Set<string>());
 
   useEffect(() => {
     if (!isAuthLoading && !user) {
@@ -42,66 +50,57 @@ const Dashboard = () => {
     }
   }, [user, isAuthLoading, navigate]);
 
-  // Logic to create missing dose logs for today based on active medicines
-  useEffect(() => {
-    if (!user || isLogsLoading || isMedicinesLoading || medicines.length === 0 || dailySyncInFlight.current) return;
+  // Build schedule items from medicines + dose log status - memoized for performance
+  const scheduleItems = useMemo(() => {
+    if (medicines.length === 0) return [];
+    
+    const logStatusMap = new Map<string, { status: string; actualTime: string | null }>();
+    todayLogs.forEach(log => {
+      const key = `${log.medicineId}-${normalizeTime(log.scheduledTime)}`;
+      logStatusMap.set(key, { status: log.status, actualTime: log.actualTime });
+    });
 
-    const createMissingDailyDoseLogs = async () => {
-      const existingKeys = new Set([
-        ...todayLogs.map((log: DoseLog) => `${log.medicineId}-${normalizeTime(log.scheduledTime)}`),
-        ...Array.from(locallyCreatedDoseKeys.current),
-      ]);
-
-      const missingLogs = medicines.flatMap((medicine: Medicine) =>
-        (medicine.times || [])
-          .map(normalizeTime)
-          .filter((scheduledTime) => !existingKeys.has(`${medicine.id}-${scheduledTime}`))
-          .map((scheduledTime) => ({
-            id: crypto.randomUUID(),
-            medicineId: medicine.id,
-            medicineName: medicine.name,
-            familyMemberId: medicine.familyMemberId,
-            scheduledTime,
-            actualTime: null,
-            date: today,
-            status: "pending",
-          } as DoseLog))
-      );
-
-      if (missingLogs.length === 0) return;
-
-      // Track locally to prevent duplicate creation attempts during the same session
-      const newKeys: string[] = [];
-      missingLogs.forEach((log) => {
-        const key = `${log.medicineId}-${log.scheduledTime}`;
-        locallyCreatedDoseKeys.current.add(key);
-        newKeys.push(key);
+    const items: ScheduleItem[] = [];
+    medicines.forEach(med => {
+      (med.times || []).forEach(time => {
+        const normalizedTime = normalizeTime(time);
+        const key = `${med.id}-${normalizedTime}`;
+        const logStatus = logStatusMap.get(key);
+        
+        items.push({
+          id: key,
+          medicineId: med.id,
+          medicineName: med.name,
+          dosage: med.dosage || "",
+          familyMemberId: med.familyMemberId,
+          scheduledTime: normalizedTime,
+          status: (logStatus?.status as "pending" | "taken" | "missed") || "pending",
+          actualTime: logStatus?.actualTime || null
+        });
       });
+    });
 
-      dailySyncInFlight.current = true;
-      setIsSyncingSchedule(true);
-      
-      try {
-        await saveDoseLogsBatch.mutateAsync(missingLogs);
-        await refetch();
-      } catch (error) {
-        console.error("Failed to create daily dose logs:", error);
-        // Clear keys on failure so we can try again
-        newKeys.forEach(key => locallyCreatedDoseKeys.current.delete(key));
-      } finally {
-        dailySyncInFlight.current = false;
-        setIsSyncingSchedule(false);
-      }
-    };
+    return items.sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime));
+  }, [medicines, todayLogs]);
 
-    createMissingDailyDoseLogs();
-  }, [user, medicines, todayLogs, today, isLogsLoading, isMedicinesLoading, saveDoseLogsBatch, refetch]);
+  const pendingItems = useMemo(() => 
+    scheduleItems.filter(item => item.status === "pending"),
+    [scheduleItems]
+  );
+
+  const takenCount = useMemo(() => 
+    scheduleItems.filter(item => item.status === "taken").length,
+    [scheduleItems]
+  );
+
+  const totalToday = scheduleItems.length;
+  const progress = totalToday > 0 ? (takenCount / totalToday) * 100 : 0;
+  const currentTime = getCurrentTime24();
 
   const handleSaveSchedule = async (editTimes: string[]) => {
     if (!editingMedicine) return;
     try {
       await updateMedicine.mutateAsync({ ...editingMedicine, times: editTimes });
-      await refetch();
       setEditingMedicine(null);
       toast.success("Schedule updated");
     } catch (error) {
@@ -113,7 +112,6 @@ const Dashboard = () => {
     if (!medicineToDelete) return;
     try {
       await removeMedicine.mutateAsync(medicineToDelete.id);
-      await refetch();
       setMedicineToDelete(null);
       toast.success("Medicine removed");
     } catch (error) {
@@ -121,32 +119,59 @@ const Dashboard = () => {
     }
   };
 
-  const handleSnooze = async (log: DoseLog) => {
+  const handleSnooze = async (item: ScheduleItem) => {
+    // Create a dose log entry for snoozing
+    const newLog: DoseLog = {
+      id: crypto.randomUUID(),
+      medicineId: item.medicineId,
+      medicineName: item.medicineName,
+      familyMemberId: item.familyMemberId,
+      scheduledTime: item.scheduledTime,
+      actualTime: null,
+      date: today,
+      status: "pending",
+      snoozedUntil: addMinutes(new Date(), 10).toISOString()
+    };
     try {
-      const snoozeUntil = addMinutes(new Date(), 10).toISOString();
-      const updatedLog: DoseLog = {
-        ...log,
-        snoozedUntil: snoozeUntil,
-        notificationSentAt: null
-      };
-      await saveDoseLog.mutateAsync(updatedLog);
-      toast.info(`Snoozed ${log.medicineName} for 10 minutes`);
-      refetch();
+      await saveDoseLog.mutateAsync(newLog);
+      toast.info(`Snoozed ${item.medicineName} for 10 minutes`);
+      await refetch();
     } catch (error) {
       toast.error("Failed to snooze reminder");
     }
   };
 
-  const handleStatusUpdate = async (log: DoseLog, status: "taken" | "missed") => {
+  const handleStatusUpdate = async (item: ScheduleItem, status: "taken" | "missed") => {
+    // Check if dose log exists, if not create one
+    const existingLog = todayLogs.find(log => 
+      log.medicineId === item.medicineId && 
+      normalizeTime(log.scheduledTime) === item.scheduledTime
+    );
+
     try {
-      const updatedLog: DoseLog = {
-        ...log,
-        status,
-        actualTime: status === "taken" ? new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : null,
-        snoozedUntil: null
-      };
-      await saveDoseLog.mutateAsync(updatedLog);
-      refetch();
+      if (existingLog) {
+        const updatedLog: DoseLog = {
+          ...existingLog,
+          status,
+          actualTime: status === "taken" ? new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : null,
+          snoozedUntil: null
+        };
+        await saveDoseLog.mutateAsync(updatedLog);
+      } else {
+        // Create new dose log
+        const newLog: DoseLog = {
+          id: crypto.randomUUID(),
+          medicineId: item.medicineId,
+          medicineName: item.medicineName,
+          familyMemberId: item.familyMemberId,
+          scheduledTime: item.scheduledTime,
+          actualTime: status === "taken" ? new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : null,
+          date: today,
+          status,
+        };
+        await saveDoseLog.mutateAsync(newLog);
+      }
+      await refetch();
     } catch (error) {
       toast.error("Failed to update status");
     }
@@ -157,19 +182,7 @@ const Dashboard = () => {
     navigate("/");
   };
 
-  const takenCount = todayLogs.filter((l: DoseLog) => l.status === "taken").length;
-  const totalToday = todayLogs.length;
-  const progress = totalToday > 0 ? (takenCount / totalToday) * 100 : 0;
-  const currentTime = getCurrentTime24();
-  
-  const pendingLogs = useMemo(
-    () => todayLogs
-      .filter((l: DoseLog) => l.status === "pending")
-      .sort((a: DoseLog, b: DoseLog) => a.scheduledTime.localeCompare(b.scheduledTime)),
-    [todayLogs]
-  );
-
-  const isInitialLoading = isAuthLoading || (user && isLogsLoading && medicines.length === 0);
+  const isInitialLoading = isAuthLoading || (user && isMedicinesLoading);
 
   if (isInitialLoading) {
     return (
@@ -237,13 +250,13 @@ const Dashboard = () => {
               </div>
               
               <MedicationSchedule 
-                todayLogs={todayLogs}
+                scheduleItems={scheduleItems}
                 medicines={medicines}
                 onSnooze={handleSnooze}
                 onStatusUpdate={handleStatusUpdate}
                 onEdit={setEditingMedicine}
                 onDelete={setMedicineToDelete}
-                isSaving={saveDoseLog.isPending || isSyncingSchedule}
+                isSaving={saveDoseLog.isPending}
               />
             </section>
           </div>
@@ -253,7 +266,7 @@ const Dashboard = () => {
               progress={progress}
               takenCount={takenCount}
               totalToday={totalToday}
-              visibleNextDoseLogs={pendingLogs}
+              visibleNextDoseLogs={pendingItems}
               currentTime={currentTime}
             />
             <QuickActions />
