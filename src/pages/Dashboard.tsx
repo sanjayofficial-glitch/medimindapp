@@ -17,17 +17,7 @@ import DashboardStats from "@/components/dashboard/DashboardStats";
 import MedicationSchedule from "@/components/dashboard/MedicationSchedule";
 import MedicationDialogs from "@/components/dashboard/MedicationDialogs";
 import QuickActions from "@/components/dashboard/QuickActions";
-
-interface ScheduleItem {
-  id: string;
-  medicineId: string;
-  medicineName: string;
-  dosage: string;
-  familyMemberId: string;
-  scheduledTime: string;
-  status: "pending" | "taken" | "missed";
-  actualTime: string | null;
-}
+import { ScheduleItem } from "@/components/dashboard/types";
 
 const Dashboard = () => {
   const { user, logout, isLoading: isAuthLoading } = useAuth();
