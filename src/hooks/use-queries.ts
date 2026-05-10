@@ -272,8 +272,8 @@ export const useSaveDoseLog = () => {
           date: log.date,
           status: log.status,
           user_id: userId,
-          snoozed_until: (log as any).snoozedUntil || null,
-          notification_sent_at: (log as any).notificationSentAt || null
+          snoozed_until: log.snoozedUntil || null,
+          notification_sent_at: log.notificationSentAt || null
         }])
         .select()
         .single();
