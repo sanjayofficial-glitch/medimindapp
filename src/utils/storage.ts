@@ -105,6 +105,15 @@ export interface EmergencyProfile {
   allergies: string[];
   conditions: string[];
   emergencyContacts: { name: string; relationship: string; phone: string }[];
+  medications: { name: string; dosage: string; frequency: string }[];
+  doctors: { name: string; specialty: string; phone: string }[];
+  organDonor: string;
+  medicalNotes: string;
+  height: string;
+  weight: string;
+  insuranceProvider: string;
+  insurancePolicy: string;
+  medicalDevices: string[];
 }
 
 // ========================
@@ -305,11 +314,34 @@ export const getEmergencyProfile = async (): Promise<EmergencyProfile> => {
   if (error && error.code !== 'PGRST116') throw new Error(error.message);
   
   return data ? {
-    bloodType: data.blood_type,
+    bloodType: data.blood_type || "",
     allergies: data.allergies || [],
     conditions: data.conditions || [],
-    emergencyContacts: data.emergency_contacts || []
-  } : { bloodType: "", allergies: [], conditions: [], emergencyContacts: [] };
+    emergencyContacts: data.emergency_contacts || [],
+    medications: data.medications || [],
+    doctors: data.doctors || [],
+    organDonor: data.organ_donor || "unspecified",
+    medicalNotes: data.medical_notes || "",
+    height: data.height || "",
+    weight: data.weight || "",
+    insuranceProvider: data.insurance_provider || "",
+    insurancePolicy: data.insurance_policy || "",
+    medicalDevices: data.medical_devices || []
+  } : { 
+    bloodType: "", 
+    allergies: [], 
+    conditions: [], 
+    emergencyContacts: [],
+    medications: [],
+    doctors: [],
+    organDonor: "unspecified",
+    medicalNotes: "",
+    height: "",
+    weight: "",
+    insuranceProvider: "",
+    insurancePolicy: "",
+    medicalDevices: []
+  };
 };
 
 export const saveEmergencyProfile = async (profile: EmergencyProfile) => {
@@ -319,7 +351,16 @@ export const saveEmergencyProfile = async (profile: EmergencyProfile) => {
     blood_type: profile.bloodType,
     allergies: profile.allergies,
     conditions: profile.conditions,
-    emergency_contacts: profile.emergencyContacts
+    emergency_contacts: profile.emergencyContacts,
+    medications: profile.medications,
+    doctors: profile.doctors,
+    organ_donor: profile.organDonor,
+    medical_notes: profile.medicalNotes,
+    height: profile.height,
+    weight: profile.weight,
+    insurance_provider: profile.insuranceProvider,
+    insurance_policy: profile.insurancePolicy,
+    medical_devices: profile.medicalDevices
   }]);
   if (error) throw new Error(error.message);
 };
