@@ -8,6 +8,7 @@ export default defineConfig(() => ({
     host: "::",
     port: 8080,
   },
+  assetsInclude: ["**/*.lottie"],
   plugins: [dyadComponentTagger(), react()],
   resolve: {
     alias: {
