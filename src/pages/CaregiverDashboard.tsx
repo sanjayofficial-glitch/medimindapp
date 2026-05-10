@@ -1,31 +1,35 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "framer-motion";
-import {
-  Users,
-  AlertTriangle,
-  Package,
-  ChevronRight,
-  Pill,
-  RefreshCw,
-} from "lucide-react";
+import { Users, AlertTriangle, Package, Clock, ChevronRight, Pill, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useFamilyMembers, useMedicines, useDoseLogsForDate } from "@/hooks/use-queries";
 import { getLocalDateString } from "@/utils/datetime";
-import { calculateMemberAdherence, getAdherenceColor, getAdherenceBgColor,
-  calculateDaysRemaining, getPredictedRefillDate, getRefillAlertLevel,
-  formatRefillDate } from "@/utils/medicine-utils";
-import { toast } from "sonner";
+import { 
+  calculateMemberAdherence, 
+  getAdherenceColor, 
+  getAdherenceBgColor,
+  getMedicinesForMember,
+  getLowStockMedicines,
+  getTodaysDoseLogsForMember,
+  getNextDoseForMember,
+  calculateDaysRemaining
+} from "@/utils/medicine-utils";
+import { toDisplayTime } from "@/utils/datetime";
 
 const CaregiverDashboard = () => {
   const navigate = useNavigate();
   const today = getLocalDateString();
+  
   const { data: familyMembers = [], isLoading: membersLoading } = useFamilyMembers();
   const { data: medicines = [], isLoading: medicinesLoading } = useMedicines();
   const { data: todayLogs = [], isLoading: logsLoading } = useDoseLogsForDate(today);
+
   const isLoading = membersLoading || medicinesLoading || logsLoading;
 
   const memberData = useMemo(() => {
@@ -73,7 +77,7 @@ const CaregiverDashboard = () => {
               <Users className="w-3 h-3 mr-1" /> Family View
             </Badge>
           </div>
-          <p className="text-gray-600 mt-1">Monitor all family members' medication adherence and stock</p>
+          <p className="text-gray-600">Monitor all family members' medication adherence and stock</p>
         </div>
 
         {familyMembers.length === 0 ? (
@@ -97,7 +101,7 @@ const CaregiverDashboard = () => {
                   Needs Attention
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {atRiskMembers.map((member) => (
+                  {atRiskMembers.map(member => (
                     <Card key={member.id} className="border-rose-200 bg-rose-50/30">
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
@@ -130,7 +134,7 @@ const CaregiverDashboard = () => {
                   Low Stock Alert
                 </h2>
                 <div className="space-y-3">
-                  {allLowStock.slice(0, 5).map((med) => {
+                  {allLowStock.slice(0, 5).map(med => {
                     const daysRemaining = calculateDaysRemaining(med.stock, med.frequency || 'Once daily');
                     const member = familyMembers.find(m => m.id === med.familyMemberId);
                     return (
@@ -173,7 +177,7 @@ const CaregiverDashboard = () => {
                 Family Members
               </h2>
               <div className="space-y-4">
-                {memberData.map((member) => (
+                {memberData.map(member => (
                   <Card 
                     key={member.id} 
                     className="hover:shadow-md transition-shadow cursor-pointer"
@@ -193,7 +197,7 @@ const CaregiverDashboard = () => {
                         <ChevronRight className="w-5 h-5 text-gray-400" />
                       </div>
 
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-3 gap-4 mb-4">
                         <div className="text-center p-3 bg-gray-50 rounded-lg">
                           <p className="text-xs text-gray-500 mb-1">Adherence</p>
                           <p className={`text-lg font-bold ${getAdherenceColor(member.adherence)}`}>
@@ -215,7 +219,7 @@ const CaregiverDashboard = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm">
+                        <div className="flex items-center justify-between text-sm">
                           <span className="text-gray-500">Today's Progress</span>
                           <span className="font-medium text-gray-900">{member.adherence}%</span>
                         </div>
@@ -233,8 +237,28 @@ const CaregiverDashboard = () => {
                 ))}
               </div>
             </div>
+
+            {/* Quick Actions */}
+            <div className="mt-8 grid grid-cols-2 gap-4">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/add-medicine')}
+                className="h-12 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+              >
+                <Pill className="w-4 h-4 mr-2" />
+                Add Medication
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/refills')}
+                className="h-12 border-amber-200 text-amber-700 hover:bg-amber-50"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Manage Refills
+              </Button>
+            </div>
           </>
-        </>
+        )}
       </div>
     </motion.div>
   );

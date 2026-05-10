@@ -1,20 +1,20 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ChevronLeft, Clock, Bell, Calendar, Pill, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useNavigate } from "react-router-dom";
 import { useMedicines, useFamilyMembers } from "@/hooks/use-queries";
-import { toDisplayTime } from "@/utils/datetime";
+import { toDisplayTime, getDayName } from "@/utils/datetime";
 import { format } from "date-fns";
 
 const Reminders = () => {
   const navigate = useNavigate();
   const { data: medicines = [], isLoading: medicinesLoading } = useMedicines();
-  const { data: familyMembers = [], isLoading: membersLoading } = useFamilyMembers();
+  const { data: familyMembers = [] } = useFamilyMembers();
 
   const today = format(new Date(), "EEEE");
   
@@ -85,7 +85,7 @@ const Reminders = () => {
                 <span className="font-medium">{today}</span>
               </div>
 
-{sortedByTime.map((med) => (
+              {sortedByTime.map((med, idx) => (
                 <Card key={med.id} className="border-none shadow-sm">
                   <CardContent className="p-5">
                     <div className="flex items-start gap-4">
@@ -95,7 +95,7 @@ const Reminders = () => {
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="font-bold text-gray-900">{med.name}</h4>
-                          <p className="text-xs text-gray-500">{getMemberName(med.familyMemberId)}</p>
+                          <span className="text-xs text-gray-500">{getMemberName(med.familyMemberId)}</span>
                         </div>
                         <p className="text-sm text-gray-600 mb-3">{med.dosage} • {med.frequency}</p>
                         <div className="flex flex-wrap gap-2">
@@ -111,12 +111,6 @@ const Reminders = () => {
                   </CardContent>
                 </Card>
               ))}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Card>
-              ))}
             </TabsContent>
 
             <TabsContent value="all" className="space-y-4">
@@ -130,7 +124,7 @@ const Reminders = () => {
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="font-bold text-gray-900">{med.name}</h4>
-                          <p className="text-xs text-gray-500">{getMemberName(med.familyMemberId)}</p>
+                          <span className="text-xs text-gray-500">{getMemberName(med.familyMemberId)}</span>
                         </div>
                         <p className="text-sm text-gray-600 mb-3">{med.dosage} • {med.frequency}</p>
                         <div className="flex flex-wrap gap-2">
@@ -142,8 +136,8 @@ const Reminders = () => {
                           ))}
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </CardContent>
                 </Card>
               ))}
             </TabsContent>
@@ -153,7 +147,9 @@ const Reminders = () => {
                 <div key={memberId}>
                   <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
                     <span className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-bold text-emerald-600">{getMemberName(memberId).charAt(0)}</span>
+                      <span className="text-sm font-bold text-emerald-600">
+                        {getMemberName(memberId).charAt(0)}
+                      </span>
                     </span>
                     {getMemberName(memberId)}
                   </h3>
@@ -162,31 +158,24 @@ const Reminders = () => {
                       <Card key={med.id} className="border-none shadow-sm">
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
-                                <Pill className="w-6 h-6 text-emerald-600" />
+                            <h4 className="font-bold text-gray-900">{med.name}</h4>
+                            <span className="text-xs text-gray-500">{med.dosage}</span>
+                          </div>
+                          <p className="text-xs text-gray-600 mb-3">{med.frequency}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {med.times?.map((time, timeIdx) => (
+                              <div key={timeIdx} className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full">
+                                <Clock className="w-3 h-3 text-gray-500" />
+                                <span className="text-xs font-medium text-gray-700">{toDisplayTime(time)}</span>
                               </div>
-                              <div>
-                                <p className="font-semibold text-gray-900">{med.name}</p>
-                                <p className="text-sm text-gray-500">{getMemberName(med.familyMemberId)}</p>
-                              </div>
-                            </div>
-                            <p className="text-xs text-gray-600 mb-3">{med.dosage}</p>
-                            <div className="flex flex-wrap gap-2">
-                              {med.times?.map((time, timeIdx) => (
-                                <div key={timeIdx} className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full">
-                                  <Clock className="w-3 h-3 text-gray-500" />
-                                  <span className="text-sm font-medium text-gray-700">{toDisplayTime(time)}</span>
-                                </div>
-                              ))}
-                            </div>
+                            ))}
                           </div>
                         </CardContent>
                       </Card>
                     ))}
-                  ))}
+                  </div>
                 </div>
-              </div>
+              ))}
             </TabsContent>
           </Tabs>
         )}
