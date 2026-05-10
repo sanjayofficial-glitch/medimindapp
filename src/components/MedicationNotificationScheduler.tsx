@@ -77,7 +77,7 @@ const MedicationNotificationScheduler = () => {
   const notifiedDoseIds = useRef<Set<string>>(new Set());
   const locallyCreatedDoseKeys = useRef(new Set<string>());
 
-  const handleTakeNow = useCallback(async (log: DoseLog) => {
+  const handleTakeNow = useCallback(async (doseLogId: string, medicineName: string) => {
     try {
       await supabase
         .from("dose_logs")
@@ -86,17 +86,17 @@ const MedicationNotificationScheduler = () => {
           actual_time: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
           snoozed_until: null 
         })
-        .eq("id", log.id);
+        .eq("id", doseLogId);
 
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogsForDate(today) });
-      toast.success(`${log.medicineName} marked as taken`);
+      toast.success(`${medicineName} marked as taken`);
     } catch (err) {
       console.error("[MedicationNotificationScheduler] Take now failed:", err);
       toast.error("Failed to mark dose as taken");
     }
   }, [today]);
 
-  const handleSnooze = useCallback(async (log: DoseLog, minutes: number = DEFAULT_SNOOZE_MINUTES) => {
+  const handleSnooze = useCallback(async (doseLogId: string, minutes: number = DEFAULT_SNOOZE_MINUTES) => {
     try {
       const snoozeUntil = new Date(Date.now() + minutes * 60 * 1000);
       
@@ -107,11 +107,11 @@ const MedicationNotificationScheduler = () => {
           notification_sent_at: null,
           snoozed_until: snoozeUntil.toISOString()
         })
-        .eq("id", log.id)
+        .eq("id", doseLogId)
         .eq("status", "pending");
 
       // Remove from notified set so it can be notified again after snooze
-      notifiedDoseIds.current.delete(log.id);
+      notifiedDoseIds.current.delete(doseLogId);
       
       // Refresh the data
       await refetch();
@@ -185,11 +185,11 @@ const MedicationNotificationScheduler = () => {
         duration: Infinity,
         action: { 
           label: "✓ Take", 
-          onClick: () => handleTakeNow(log) 
+          onClick: () => handleTakeNow(log.id, log.medicineName) 
         },
         cancel: { 
           label: `Snooze 10m`, 
-          onClick: () => handleSnooze(log, 10) 
+          onClick: () => handleSnooze(log.id, 10) 
         },
       });
 

@@ -8,6 +8,7 @@ import NotificationClickHandler from "./components/NotificationClickHandler";
 import { AIProvider } from "./context/AIContext";
 import { useAuth } from "./context/AuthContext";
 import SplashScreen from "./components/SplashScreen";
+import { Toaster } from "./components/ui/sonner";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Index = lazy(() => import("./pages/Index"));
@@ -122,6 +123,7 @@ const App = () => {
         <MedicationNotificationScheduler />
         <NotificationPermissionPrompt />
         <BottomTabBar />
+        <Toaster />
       </BrowserRouter>
     </AIProvider>
   );
