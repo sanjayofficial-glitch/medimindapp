@@ -1,37 +1,28 @@
 "use client";
 
-import React from "react";
 import { motion } from "framer-motion";
-import { 
-  User, 
-  Settings, 
-  Shield, 
-  Bell, 
-  HelpCircle, 
-  LogOut,
-  Heart,
-  FileText,
-  Stethoscope
+import {
+  Users,
+  AlertTriangle,
+  Package,
+  ChevronRight,
+  Pill,
+  TrendingUp,
+  Users as UsersIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import AIButton from "@/components/AIButton";
+import { cn } from "@/lib/utils";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 
 const More = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error("Error signing out");
-    } else {
-      navigate("/login");
-    }
-  };
+  if (["/", "/login", "/signup"].includes(location.pathname)) {
+    return null;
+  }
 
-  const menuGroups = [
+  const features = [
     {
       title: "Health Tools",
       items: [
@@ -43,8 +34,7 @@ const More = () => {
     {
       title: "Account & Settings",
       items: [
-        { icon: User, label: "Profile Settings", path: "/settings", color: "text-slate-600", bg: "bg-slate-100" },
-        { icon: Bell, label: "Notifications", path: "/settings", color: "text-slate-600", bg: "bg-slate-100" },
+        { icon: Users, label: "Profile Settings", path: "/settings", color: "text-slate-600", bg: "bg-slate-100" },
         { icon: Shield, label: "Privacy & Security", path: "/privacy", color: "text-slate-600", bg: "bg-slate-100" },
         { icon: Settings, label: "App Settings", path: "/settings", color: "text-slate-600", bg: "bg-slate-100" },
       ]
@@ -52,7 +42,7 @@ const More = () => {
     {
       title: "Support",
       items: [
-        { icon: HelpCircle, label: "Help Center", path: "/help", color: "text-slate-600", bg: "bg-slate-100" },
+        { icon: AlertTriangle, label: "Help Center", path: "/help", color: "text-slate-600", bg: "bg-slate-100" },
       ]
     }
   ];
@@ -72,10 +62,10 @@ const More = () => {
           </div>
         </section>
 
-        {menuGroups.map((group, idx) => (
+        {features.map((group, idx) => (
           <section key={idx} className="space-y-3">
             <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider px-1">{group.title}</h2>
-            <div className="bg-white rounded-2xl shadow-sm border overflow-hidden divide-y">
+            <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
               {group.items.map((item, itemIdx) => (
                 <Button
                   key={itemIdx}
@@ -84,7 +74,7 @@ const More = () => {
                   onClick={() => navigate(item.path)}
                 >
                   <div className={`w-8 h-8 rounded-lg ${item.bg} flex items-center justify-center ${item.color} mr-3`}>
-                    <item.icon className="w-5 h-5" />
+                    {item.icon as any}
                   </div>
                   <span className="font-medium text-slate-700">{item.label}</span>
                 </Button>
@@ -95,13 +85,10 @@ const More = () => {
 
         <Button
           variant="ghost"
-          className="w-full justify-start h-14 px-4 text-red-600 hover:text-red-700 hover:bg-red-50 bg-white rounded-2xl shadow-sm border"
-          onClick={handleLogout}
+          className="w-full justify-start h-14 px-4 text-red-600 hover:text-red-700 hover:bg-red-50 bg-white rounded-2xl shadow-sm"
+          onClick={() => navigate("/login")}
         >
-          <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center mr-3">
-            <LogOut className="w-5 h-5" />
-          </div>
-          <span className="font-medium">Sign Out</span>
+          <LogOut className="w-4 h-4 mr-3" /> Sign Out
         </Button>
       </main>
     </div>

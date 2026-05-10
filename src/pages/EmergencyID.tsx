@@ -1,8 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ShieldAlert, ChevronLeft, QrCode, Plus, X, Heart, User, Phone, Pill, Stethoscope, FileText, Shield } from "lucide-react";
+import {
+  ShieldAlert,
+  ChevronLeft,
+  QrCode,
+  Plus,
+  X,
+  Heart,
+  // User removed
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,7 +38,7 @@ const EmergencyID = () => {
     weight: "",
     insuranceProvider: "",
     insurancePolicy: "",
-    medicalDevices: []
+    medicalDevices: [],
   });
   const [isEditing, setIsEditing] = useState(false);
   const [newAllergy, setNewAllergy] = useState("");
@@ -127,7 +134,8 @@ const EmergencyID = () => {
     <Card className="border-rose-200 shadow-md">
       <CardHeader className="bg-rose-50 pb-3">
         <CardTitle className="text-rose-900 flex items-center gap-2 text-lg">
-          <Icon className="w-5 h-5" /> {title}
+          <Icon className="w-5 h-5" />
+          {title}
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-4 space-y-3">{children}</CardContent>
@@ -171,57 +179,7 @@ const EmergencyID = () => {
             </CardContent>
           </Card>
 
-          <SectionCard icon={Heart} title="Basic Info">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-rose-700">Blood Type</Label>
-                {isEditing ? (
-                  <select
-                    className="w-full h-10 px-3 border rounded-md"
-                    value={profile.bloodType}
-                    onChange={e => setProfile({ ...profile, bloodType: e.target.value })}
-                  >
-                    <option value="">Select</option>
-                    {BLOOD_TYPES.map(bt => <option key={bt} value={bt}>{bt}</option>)}
-                  </select>
-                ) : (
-                  <div className="p-2 bg-rose-100 rounded-lg font-bold text-rose-900">{profile.bloodType || "Not set"}</div>
-                )}
-              </div>
-              <div>
-                <Label className="text-rose-700">Organ Donor</Label>
-                {isEditing ? (
-                  <select
-                    className="w-full h-10 px-3 border rounded-md"
-                    value={profile.organDonor}
-                    onChange={e => setProfile({ ...profile, organDonor: e.target.value })}
-                  >
-                    {ORGAN_DONOR_OPTIONS.map(opt => <option key={opt} value={opt.toLowerCase()}>{opt}</option>)}
-                  </select>
-                ) : (
-                  <div className="p-2 bg-rose-100 rounded-lg font-semibold text-rose-900 capitalize">{profile.organDoner || "Unspecified"}</div>
-                )}
-              </div>
-              <div>
-                <Label className="text-rose-700">Height</Label>
-                {isEditing ? (
-                  <Input placeholder="5'10&quot; or 178cm" value={profile.height} onChange={e => setProfile({ ...profile, height: e.target.value })} />
-                ) : (
-                  <div className="p-2 bg-rose-100 rounded-lg">{profile.height || "—"}</div>
-                )}
-              </div>
-              <div>
-                <Label className="text-rose-700">Weight</Label>
-                {isEditing ? (
-                  <Input placeholder="170lbs or 77kg" value={profile.weight} onChange={e => setProfile({ ...profile, weight: e.target.value })} />
-                ) : (
-                  <div className="p-2 bg-rose-100 rounded-lg">{profile.weight || "—"}</div>
-                )}
-              </div>
-            </div>
-          </SectionCard>
-
-          <SectionCard icon={Pill} title="Allergies">
+          <SectionCard icon={Heart} title="Allergies">
             {isEditing ? (
               <div className="flex gap-2">
                 <Input placeholder="Add allergy" value={newAllergy} onChange={e => setNewAllergy(e.target.value)} onKeyDown={e => e.key === "Enter" && addAllergy()} />
@@ -286,17 +244,6 @@ const EmergencyID = () => {
               </div>
             ))}
             {profile.doctors.length === 0 && !isEditing && <p className="text-gray-400 text-sm">No doctors recorded</p>}
-          </SectionCard>
-
-          <SectionCard icon={Shield} title="Medical Devices">
-            {isEditing ? (
-              <div className="flex gap-2">
-                <Input placeholder="e.g., Pacemaker, Insulin pump" value={newDevice} onChange={e => setNewDevice(e.target.value)} onKeyDown={e => e.key === "Enter" && addDevice()} />
-                <Button onClick={addDevice} size="sm" className="bg-rose-600"><Plus className="w-4 h-4" /></Button>
-              </div>
-            ) : null}
-            <TagList items={profile.medicalDevices} onRemove={removeDevice} color="purple" />
-            {profile.medicalDevices.length === 0 && !isEditing && <p className="text-gray-400 text-sm">No devices recorded</p>}
           </SectionCard>
 
           <SectionCard icon={Phone} title="Emergency Contacts">
