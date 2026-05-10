@@ -42,9 +42,93 @@ const Loading = () => (
   </div>
 );
 
+const SplashWrapper = ({ children }: { children: React.ReactNode }) => {
+  const [showSplash, setShowSplash] = useState(true);
+  const { user, isLoading } = useAuth();
+
+  useEffect(() => {
+    const hasSeenSplash = sessionStorage.getItem("hasSeenSplash");
+    if (hasSeenSplash) {
+      setShowSplash(false);
+    }
+  }, []);
+
+  const handleSplashComplete = () => {
+    sessionStorage.setItem("hasSeenSplash", "true");
+    setShowSplash(false);
+  };
+
+  if (showSplash && !sessionStorage.getItem("hasSeenSplash")) {
+    return <SplashScreen onComplete={handleSplashComplete} />;
+  }
+
+  return <>{children}</>;
+};
+
+const AppContent = () => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <Loading />;
+  }
+
+  return (
+    <div className="flex min-h-screen bg-background">
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-w-0">
+        <Suspense fallback={<Loading />}>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<SignUp />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/add-medicine" element={<AddMedicine />} />
+            <Route path="/history" element={<MedicationHistory />} />
+            <Route path="/family-members" element={<FamilyMembers />} />
+            <Route path="/progress" element={<Progress />} />
+            <Route path="/vitals" element={<VitalsTracker />} />
+            <Route path="/refills" element={<RefillManagement />} />
+            <Route path="/symptoms" element={<SymptomLogger />} />
+            <Route path="/emergency-id" element={<EmergencyID />} />
+            <Route path="/appointments" element={<Appointments />} />
+            <Route path="/lab-results" element={<LabResults />} />
+            <Route path="/wiki" element={<MedicationWiki />} />
+            <Route path="/mood" element={<MoodJournal />} />
+            <Route path="/wallet" element={<PrescriptionWallet />} />
+            <Route path="/more" element={<More />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/help" element={<FAQ />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/hub" element={<HealthHub />} />
+            <Route path="/reminders" element={<Reminders />} />
+            <Route path="/caregiver" element={<CaregiverDashboard />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </div>
+    </div>
+  );
+};
+
 const App = () => {
   return (
     <AIProvider>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
+        <SplashWrapper>
+          <AppContent />
+        </SplashWrapper>
+        <NotificationClickHandler />
+        <MedicationNotificationScheduler />
+        <NotificationPermissionPrompt />
+        <BottomTabBar />
+      </BrowserRouter>
+    </AIProvider>
       <BrowserRouter
         future={{
           v7_startTransition: true,
