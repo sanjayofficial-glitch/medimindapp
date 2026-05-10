@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Users,
   AlertTriangle,
@@ -8,11 +8,16 @@ import {
   ChevronRight,
   Pill,
   TrendingUp,
-  Users as UsersIcon,
+  Heart,
+  Stethoscope,
+  FileText,
+  Shield,
+  Settings,
+  LogOut,
+  LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { staggerContainer, staggerItem } from "@/lib/animations";
 
 const More = () => {
   const navigate = useNavigate();
@@ -22,7 +27,20 @@ const More = () => {
     return null;
   }
 
-  const features = [
+  interface FeatureItem {
+  icon: LucideIcon;
+  label: string;
+  path: string;
+  color: string;
+  bg: string;
+}
+
+interface FeatureSection {
+  title: string;
+  items: FeatureItem[];
+}
+
+const features: FeatureSection[] = [
     {
       title: "Health Tools",
       items: [
@@ -74,7 +92,7 @@ const More = () => {
                   onClick={() => navigate(item.path)}
                 >
                   <div className={`w-8 h-8 rounded-lg ${item.bg} flex items-center justify-center ${item.color} mr-3`}>
-                    {item.icon as any}
+                    <item.icon className="w-5 h-5" />
                   </div>
                   <span className="font-medium text-slate-700">{item.label}</span>
                 </Button>

@@ -136,7 +136,7 @@ const EmergencyID = () => {
 
   const qrData = JSON.stringify(profile);
 
-  const SectionCard = ({ icon: Icon, title, children }: { icon: any; title: string; children: React.ReactNode }) => (
+  const SectionCard = ({ icon: Icon, title, children }: { icon: LucideIcon; title: string; children: React.ReactNode }) => (
     <Card className="border-rose-200 shadow-md">
       <CardHeader className="bg-rose-50 pb-3">
         <CardTitle className="text-rose-900 flex items-center gap-2 text-lg">
