@@ -1,13 +1,11 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Suspense, lazy, useState, useEffect } from "react";
+import { Suspense, lazy } from "react";
 import BottomTabBar from "./components/BottomTabBar";
 import Sidebar from "./components/Sidebar";
 import NotificationPermissionPrompt from "./components/NotificationPermissionPrompt";
 import MedicationNotificationScheduler from "./components/MedicationNotificationScheduler";
 import NotificationClickHandler from "./components/NotificationClickHandler";
 import { AIProvider } from "./context/AIContext";
-import { useAuth } from "./context/AuthContext";
-import SplashScreen from "./components/SplashScreen";
 import { Toaster } from "./components/ui/sonner";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -42,30 +40,6 @@ const Loading = () => (
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600" />
   </div>
 );
-
-const SplashWrapper = ({ children }: { children: React.ReactNode }) => {
-  const [showSplash, setShowSplash] = useState(true);
-  const { isLoading } = useAuth();
-
-  useEffect(() => {
-    if (isLoading) return;
-    const hasSeenSplash = sessionStorage.getItem("hasSeenSplash");
-    if (hasSeenSplash) {
-      setShowSplash(false);
-    }
-  }, [isLoading]);
-
-  const handleSplashComplete = () => {
-    sessionStorage.setItem("hasSeenSplash", "true");
-    setShowSplash(false);
-  };
-
-  if (showSplash && !sessionStorage.getItem("hasSeenSplash") && !isLoading) {
-    return <SplashScreen onComplete={handleSplashComplete} />;
-  }
-
-  return <>{children}</>;
-};
 
 const AppContent = () => {
   return (
@@ -116,9 +90,7 @@ const App = () => {
           v7_relativeSplatPath: true,
         }}
       >
-        <SplashWrapper>
-          <AppContent />
-        </SplashWrapper>
+        <AppContent />
         <NotificationClickHandler />
         <MedicationNotificationScheduler />
         <NotificationPermissionPrompt />
