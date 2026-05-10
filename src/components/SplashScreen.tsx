@@ -9,42 +9,53 @@ interface SplashScreenProps {
 }
 
 const SplashScreen = ({ onComplete }: SplashScreenProps) => {
-  const [canComplete, setCanComplete] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const [showSkip, setShowSkip] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const skipTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const img = new Image();
     img.src = "/animation.gif";
     
     img.onload = () => {
-      setCanComplete(true);
+      setImageLoaded(true);
       
-      setTimeout(() => {
+      skipTimerRef.current = setTimeout(() => {
         setShowSkip(true);
-      }, 2000);
-
-      timerRef.current = setTimeout(() => {
-        onComplete();
-      }, 5000);
+      }, 3000);
     };
 
     img.onerror = () => {
-      setCanComplete(true);
       onComplete();
     };
 
     return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (skipTimerRef.current) clearTimeout(skipTimerRef.current);
     };
   }, [onComplete]);
 
-  const handleSkip = () => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
+  useEffect(() => {
+    if (!imageLoaded) return;
+    
+    if (imgRef.current && imgRef.current.complete) {
+      return;
     }
+
+    timerRef.current = setTimeout(() => {
+      onComplete();
+    }, 8000);
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [imageLoaded, onComplete]);
+
+  const handleSkip = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (skipTimerRef.current) clearTimeout(skipTimerRef.current);
     onComplete();
   };
 
@@ -68,24 +79,15 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           top: '20px',
           right: '20px',
           zIndex: 100000,
-          color: 'rgba(255,255,255,0.7)',
+          color: 'rgba(255,255,255,0.8)',
           backgroundColor: showSkip ? 'rgba(255,255,255,0.15)' : 'transparent',
           border: '1px solid rgba(255,255,255,0.3)',
           borderRadius: '20px',
           padding: '8px 16px',
-          cursor: showSkip ? 'pointer' : 'not-allowed',
+          cursor: showSkip ? 'pointer' : 'default',
           opacity: showSkip ? 1 : 0,
-          transition: 'opacity 0.3s ease, background-color 0.3s ease',
-        }}
-        onMouseEnter={(e) => {
-          if (showSkip) {
-            e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.25)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (showSkip) {
-            e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)';
-          }
+          transition: 'opacity 0.3s ease',
+          pointerEvents: showSkip ? 'auto' : 'none',
         }}
       >
         <X className="w-4 h-4 mr-1" />
@@ -102,8 +104,10 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         }}
       >
         <img
+          ref={imgRef}
           src="/animation.gif"
           alt="MediMind Animation"
+          onLoad={() => setImageLoaded(true)}
           style={{
             width: '100%',
             height: '100%',
