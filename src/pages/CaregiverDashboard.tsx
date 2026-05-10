@@ -10,7 +10,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
 import { useFamilyMembers, useMedicines, useDoseLogsForDate } from "@/hooks/use-queries";
@@ -147,7 +147,7 @@ const CaregiverDashboard = () => {
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-sm font-bold ${daysRemaining <= 3 ? 'text-rose-600' : 'text-amber-600'}">
+                              <p className={`text-sm font-bold ${daysRemaining <= 3 ? 'text-rose-600' : 'text-amber-600'}`}>
                                 {daysRemaining} days left
                               </p>
                               <p className="text-xs text-gray-500">{med.stock} pills</p>
@@ -181,7 +181,7 @@ const CaregiverDashboard = () => {
                   >
                     <CardContent className="p-5">
                       <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-start gap-3">
+                        <div className="flex items-center gap-3">
                           <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
                             <span className="text-lg font-bold text-emerald-600">{member.name.charAt(0)}</span>
                           </div>

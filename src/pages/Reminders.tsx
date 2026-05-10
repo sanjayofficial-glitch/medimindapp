@@ -4,9 +4,7 @@ import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, Clock, Bell, Calendar, Pill, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 import { useMedicines, useFamilyMembers } from "@/hooks/use-queries";
@@ -87,7 +85,7 @@ const Reminders = () => {
                 <span className="font-medium">{today}</span>
               </div>
 
-              {sortedByTime.map((med, idx) => (
+              {sortedByTime.map((med) => (
                 <Card key={med.id} className="border-none shadow-sm">
                   <CardContent className="p-5">
                     <div className="flex items-start gap-4">
@@ -174,8 +172,8 @@ const Reminders = () => {
                                   <Clock className="w-3 h-3 text-gray-500" />
                                   <span className="text-sm font-medium text-gray-700">{toDisplayTime(time)}</span>
                                 </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
                         </CardContent>
                       </Card>

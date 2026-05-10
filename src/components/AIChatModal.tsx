@@ -27,9 +27,8 @@ const AIChatModal = ({ open, onOpenChange }: AIChatModalProps) => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
   const { data: medicines = [] } = useMedicines();
-  // const { data: appointments = [] } = useAppointments(); // <-- removed
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -106,38 +105,6 @@ const AIChatModal = ({ open, onOpenChange }: AIChatModalProps) => {
     return actions;
   };
 
-  const handleClearChat = () => {
-    setMessages([]);
-  };
-
-  const handleSend = async (text?: string) => {
-    const messageText = text || input;
-    if (!messageText.trim()) return;
-    const userMessage: Message = { role: "user", content: messageText.trim() };
-    setMessages((prev) => [...prev, userMessage]);
-    if (!text) setInput("");
-    setIsLoading(true);
-    try {
-      const response = await askAIAssistant(userMessage.content);
-      const assistantMessage: Message = { role: "assistant", content: response };
-      setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to get response from AI";
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: `Sorry, I encountered an error: ${message}` },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] h-[700px] flex flex-col p-0 overflow-hidden">
@@ -147,17 +114,15 @@ const AIChatModal = ({ open, onOpenChange }: AIChatModalProps) => {
               <Bot className="w-5 h-5" />
               MediMind AI Assistant
             </DialogTitle>
-            {open && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleClearChat}
-                className="text-gray-400 hover:text-rose-600 hover:bg-rose-50"
-                title="Clear chat"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleClearChat}
+              className="text-gray-400 hover:text-rose-600 hover:bg-rose-50"
+              title="Clear chat"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
           </div>
         </DialogHeader>
 
@@ -191,7 +156,7 @@ const AIChatModal = ({ open, onOpenChange }: AIChatModalProps) => {
               </div>
             </div>
           ))}
-          
+
           {isLoading && (
             <div className="flex justify-start">
               <div className="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-2xl rounded-tl-none px-4 py-2.5 shadow-sm">
@@ -200,7 +165,7 @@ const AIChatModal = ({ open, onOpenChange }: AIChatModalProps) => {
               </div>
             </div>
           )}
-                    {messages.length <= 1 && !isLoading && (
+          {messages.length <= 1 && !isLoading && (
             <div className="grid grid-cols-1 gap-2 pt-4">
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Try asking about:</p>
               {getQuickActions().map((action, idx) => (

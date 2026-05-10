@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+
 import { Loader2, Plus, LayoutGrid, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
@@ -12,37 +14,16 @@ import DynamicAIInsight from "@/components/DynamicAIInsight";
 import { getCurrentTime24, getLocalDateString, normalizeTime } from "@/utils/datetime";
 import { addMinutes } from "date-fns";
 
-import DashboardHeader from "@/components/dashboard/DashboardHeader";
-import DashboardStats from "@/components/dashboard/DashboardStats";
-import MedicationSchedule from "@/components/dashboard/MedicationSchedule";
-import MedicationDialogs from "@/components/dashboard/MedicationDialogs";
-import QuickActions from "@/components/dashboard/QuickActions";
-
-interface ScheduleItem {
-  id: string;
-  medicineId: string;
-  medicineName: string;
-  dosage: string;
-  familyMemberId: string;
-  scheduledTime: string;
-  status: "pending" | "taken" | "missed";
-  actualTime: string | null;
-}
-
 const Dashboard = () => {
   const { user, logout, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
   
   const today = getLocalDateString();
-  const { data: todayLogs = [], isLoading: isLogsLoading, refetch } = useDoseLogsForDate(today);
+  const { data: todayLogs = [], refetch } = useDoseLogsForDate(today);
   const { data: medicines = [], isLoading: isMedicinesLoading } = useMedicines();
-  const saveDoseLog = useSaveDoseLog();
-  const updateMedicine = useUpdateMedicine();
-  const removeMedicine = useRemoveMedicine();
 
   const [editingMedicine, setEditingMedicine] = useState<Medicine | null>(null);
   const [medicineToDelete, setMedicineToDelete] = useState<Medicine | null>(null);
-  const [isSyncingSchedule, setIsSyncingSchedule] = useState(false);
 
   useEffect(() => {
     if (!isAuthLoading && !user) {
@@ -89,7 +70,7 @@ const Dashboard = () => {
   );
 
   const takenCount = useMemo(() => 
-    scheduleItems.filter(item => item.status === "taken").length,
+    scheduleItems.filter(item => item.status === "taken").length, 
     [scheduleItems]
   );
 
@@ -120,7 +101,6 @@ const Dashboard = () => {
   };
 
   const handleSnooze = async (item: ScheduleItem) => {
-    // Create a dose log entry for snoozing
     const newLog: DoseLog = {
       id: crypto.randomUUID(),
       medicineId: item.medicineId,
@@ -142,9 +122,7 @@ const Dashboard = () => {
   };
 
   const handleStatusUpdate = async (item: ScheduleItem, status: "taken" | "missed") => {
-    // Check if dose log exists, if not create one
-    const existingLog = todayLogs.find(log => 
-      log.medicineId === item.medicineId && 
+    const existingLog = todayLogs.find(log =>       log.medicineId === item.medicineId && 
       normalizeTime(log.scheduledTime) === item.scheduledTime
     );
 
@@ -158,7 +136,6 @@ const Dashboard = () => {
         };
         await saveDoseLog.mutateAsync(updatedLog);
       } else {
-        // Create new dose log
         const newLog: DoseLog = {
           id: crypto.randomUUID(),
           medicineId: item.medicineId,
@@ -182,7 +159,7 @@ const Dashboard = () => {
     navigate("/");
   };
 
-  const isInitialLoading = isAuthLoading || (user && isMedicinesLoading);
+  const isInitialLoading = isAuthLoading || isMedicinesLoading;
 
   if (isInitialLoading) {
     return (
@@ -225,19 +202,6 @@ const Dashboard = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <h3 className="text-xl font-bold text-foreground">Today's Schedule</h3>
-                  <AnimatePresence>
-                    {isSyncingSchedule && (
-                      <motion.div 
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                      >
-                        <RefreshCw className="w-3 h-3 animate-spin" />
-                        Syncing
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
                 <Button 
                   size="sm" 
@@ -267,7 +231,6 @@ const Dashboard = () => {
               takenCount={takenCount}
               totalToday={totalToday}
               visibleNextDoseLogs={pendingItems}
-              currentTime={currentTime}
             />
             <QuickActions />
             <DynamicAIInsight />
