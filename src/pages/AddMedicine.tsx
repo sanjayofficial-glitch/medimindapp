@@ -93,9 +93,11 @@ const AddMedicine = () => {
 
       toast.success(`Added ${medicineName} to schedule`);
       
-      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.medicines });
-      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogs });
-      await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogsForDate(getLocalDateString()) });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.medicines }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogs }),
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.doseLogsForDate(getLocalDateString()) })
+      ]);
       
       navigate("/dashboard");
     } catch (error) {

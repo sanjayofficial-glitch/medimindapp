@@ -252,7 +252,6 @@ export const useDoseLogsForDate = (date: string) => {
         snoozedUntil: d.snoozed_until
       })) as DoseLog[];
     },
-    staleTime: 0,
   });
 };
 

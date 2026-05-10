@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ChevronLeft, Clock, Bell, Calendar, Pill, Loader2 } from "lucide-react";
@@ -16,24 +16,24 @@ const Reminders = () => {
   const { data: medicines = [], isLoading: medicinesLoading } = useMedicines();
   const { data: familyMembers = [] } = useFamilyMembers();
 
-  const getMemberName = (id: string) => familyMembers.find(m => m.id === id)?.name || "Unknown";
-
   const today = format(new Date(), "EEEE");
   
-  const sortedByTime = [...medicines].sort((a, b) => {
+  const getMemberName = useMemo(() => (id: string) => familyMembers.find(m => m.id === id)?.name || "Unknown", [familyMembers]);
+
+  const sortedByTime = useMemo(() => [...medicines].sort((a, b) => {
     const aTime = a.times?.[0] || "23:59";
     const bTime = b.times?.[0] || "23:59";
     return aTime.localeCompare(bTime);
-  });
+  }), [medicines]);
 
-  const byMember = medicines.reduce((acc, med) => {
+  const byMember = useMemo(() => medicines.reduce((acc, med) => {
     const memberId = med.familyMemberId || "default";
     if (!acc[memberId]) {
       acc[memberId] = [];
     }
     acc[memberId].push(med);
     return acc;
-  }, {} as Record<string, typeof medicines>);
+  }, {} as Record<string, typeof medicines>), [medicines]);
 
   if (medicinesLoading) {
     return (
