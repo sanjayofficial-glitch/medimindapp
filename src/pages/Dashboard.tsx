@@ -5,6 +5,7 @@ import { Loader2, Plus, LayoutGrid, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { useTour } from "@/context/TourContext";
+import { useOneSignal } from "@/hooks/use-one-signal";
 import { useDoseLogsForDate, useSaveDoseLog, useMedicines, useUpdateMedicine, useRemoveMedicine } from "@/hooks/use-queries";
 import { DoseLog, Medicine } from "@/utils/storage";
 import { toast } from "sonner";
@@ -42,10 +43,12 @@ const Dashboard = () => {
   }, [user, isAuthLoading, navigate]);
 
   const { openTour, hasSeenOnboarding, markOnboardingSeen } = useTour();
+  const { isEnabled: notificationsEnabled, isSupported, isConfigured, subscribe } = useOneSignal();
 
   useEffect(() => {
     if (user && !hasSeenOnboarding) {
       const tourSteps = [
+        { id: "notifications", target: "", titleKey: "tour.notifications", descKey: "tour.notificationsDesc", position: "center" as const },
         { id: "header", target: "tour-header", titleKey: "tour.appHeader", descKey: "tour.appHeaderDesc", position: "bottom" as const },
         { id: "emergency", target: "tour-emergency", titleKey: "tour.emergency", descKey: "tour.emergencyDesc", position: "bottom" as const },
         { id: "ai-toggle", target: "tour-ai-toggle", titleKey: "tour.aiAssistant", descKey: "tour.aiAssistantDesc", position: "bottom" as const },
@@ -53,8 +56,13 @@ const Dashboard = () => {
         { id: "schedule", target: "tour-schedule", titleKey: "tour.schedule", descKey: "tour.scheduleDesc", position: "bottom" as const },
         { id: "add-btn", target: "tour-add-btn", titleKey: "tour.addMedicine", descKey: "tour.addMedicineDesc", position: "bottom" as const },
       ];
-      openTour(tourSteps);
-      markOnboardingSeen();
+      
+      const timer = setTimeout(() => {
+        openTour(tourSteps);
+        markOnboardingSeen();
+      }, 3500);
+      
+      return () => clearTimeout(timer);
     }
   }, [user, hasSeenOnboarding, openTour, markOnboardingSeen]);
 
