@@ -260,13 +260,14 @@ export const useSaveDoseLog = () => {
   return useMutation({
     mutationFn: async (log: DoseLog) => {
       const userId = await getUserId();
+      console.log("Saving dose log:", { log, userId });
       const { data, error } = await supabase
         .from('dose_logs')
         .upsert([{
           id: log.id,
           medicine_id: log.medicineId,
           medicine_name: log.medicineName,
-          family_member_id: log.familyMemberId,
+          family_member_id: log.familyMemberId || null,
           scheduled_time: log.scheduledTime,
           actual_time: log.actualTime,
           date: log.date,
@@ -277,7 +278,10 @@ export const useSaveDoseLog = () => {
         }])
         .select()
         .single();
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.error("Supabase error saving dose log:", error);
+        throw new Error(error.message);
+      }
       
       return {
         id: data.id,

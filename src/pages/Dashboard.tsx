@@ -153,7 +153,7 @@ const Dashboard = () => {
           id: crypto.randomUUID(),
           medicineId: item.medicineId,
           medicineName: item.medicineName,
-          familyMemberId: item.familyMemberId,
+          familyMemberId: item.familyMemberId || "",
           scheduledTime: item.scheduledTime,
           actualTime: status === "taken" ? new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : null,
           date: today,
@@ -163,7 +163,8 @@ const Dashboard = () => {
       }
       await refetch();
     } catch (error) {
-      toast.error("Failed to update status");
+      console.error("Failed to update dose status:", error);
+      toast.error(`Failed to update status: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
