@@ -160,7 +160,7 @@ const EmergencyID = () => {
         </div>
 
         <div className="space-y-4">
-          <Card className="border-rose-300 shadow-lg overflow-hidden">
+          <Card className="border-rose-300 shadow-lg overflow-hidden" id="tour-qr">
             <CardHeader className="bg-rose-600 text-white py-3">
               <CardTitle className="flex items-center gap-2 text-lg"><QrCode className="w-5 h-5" /> Emergency QR Code</CardTitle>
             </CardHeader>

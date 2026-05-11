@@ -23,7 +23,6 @@ const Settings = () => {
   const { user, updateProfile, logout } = useAuth();
   const { language, setLanguage } = useTranslation();
   const { restartTour } = useTour();
-  const { restartTour: restartTourFn } = useTour();
   const [mounted, setMounted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -175,6 +174,46 @@ const Settings = () => {
                   {isSaving ? "Saving..." : "Save Changes"}
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+
+          <Card className="dark:bg-slate-900 dark:border-slate-800">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 dark:text-white">
+                <Globe className="w-5 h-5 text-emerald-600" />
+                Language / भाषा
+              </CardTitle>
+              <CardDescription>Select your preferred language</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Select value={language} onValueChange={(val) => setLanguage(val as "en" | "hi")}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  {languages.map((lang) => (
+                    <SelectItem key={lang.code} value={lang.code}>
+                      {lang.nativeName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+
+          <Card className="dark:bg-slate-900 dark:border-slate-800">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 dark:text-white">
+                <PlayCircle className="w-5 h-5 text-emerald-600" />
+                App Tour
+              </CardTitle>
+              <CardDescription>Take a guided tour of the app</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={handleRestartTour} className="w-full bg-emerald-600 hover:bg-emerald-700">
+                <PlayCircle className="w-4 h-4 mr-2" />
+                Restart Tour
+              </Button>
             </CardContent>
           </Card>
 
