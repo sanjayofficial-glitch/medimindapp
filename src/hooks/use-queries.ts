@@ -272,9 +272,7 @@ export const useSaveDoseLog = () => {
           actual_time: log.actualTime,
           date: log.date,
           status: log.status,
-          user_id: userId,
-          snoozed_until: log.snoozedUntil || null,
-          notification_sent_at: log.notificationSentAt || null
+          user_id: userId
         }])
         .select()
         .single();
@@ -282,6 +280,7 @@ export const useSaveDoseLog = () => {
         console.error("Supabase error saving dose log:", error);
         throw new Error(error.message);
       }
+      console.log("Dose log saved successfully:", data);
       
       return {
         id: data.id,
