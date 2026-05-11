@@ -2,15 +2,18 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { User, ChevronLeft, LogOut, ShieldCheck, Camera, Bell, BellOff, Loader2 } from "lucide-react";
+import { User, ChevronLeft, LogOut, ShieldCheck, Camera, Bell, BellOff, Loader2, Globe, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { useTour } from "@/context/TourContext";
+import { useTranslation, getLanguages } from "@/i18n";
 import { toast } from "sonner";
 import { saveProfilePicture, getProfilePicture } from "@/utils/storage";
 import { useOneSignal } from "@/hooks/use-one-signal";
@@ -18,6 +21,9 @@ import { useOneSignal } from "@/hooks/use-one-signal";
 const Settings = () => {
   const navigate = useNavigate();
   const { user, updateProfile, logout } = useAuth();
+  const { language, setLanguage } = useTranslation();
+  const { restartTour } = useTour();
+  const { restartTour: restartTourFn } = useTour();
   const [mounted, setMounted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -27,6 +33,14 @@ const Settings = () => {
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
 
   const { isEnabled: notificationsEnabled, isLoading: isCheckingNotifications, isSubscribing, isSupported, isConfigured, subscribe, unsubscribe } = useOneSignal();
+
+  const languages = getLanguages();
+
+  const handleRestartTour = () => {
+    localStorage.removeItem("medimind_has_seen_onboarding");
+    restartTour();
+    toast.success("Tour restarted!");
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -139,7 +153,7 @@ const Settings = () => {
             </CardContent>
           </Card>
 
-          <Card className="dark:bg-slate-900 dark:border-slate-800">
+          <Card className="dark:bg-slate-900 dark:border-slate-800" id="tour-profile">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 dark:text-white">
                 <User className="w-5 h-5 text-emerald-600" />

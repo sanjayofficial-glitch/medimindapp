@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Plus, LayoutGrid, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
+import { useTour } from "@/context/TourContext";
 import { useDoseLogsForDate, useSaveDoseLog, useMedicines, useUpdateMedicine, useRemoveMedicine } from "@/hooks/use-queries";
 import { DoseLog, Medicine } from "@/utils/storage";
 import { toast } from "sonner";
@@ -39,6 +40,23 @@ const Dashboard = () => {
       navigate("/login");
     }
   }, [user, isAuthLoading, navigate]);
+
+  const { openTour, hasSeenOnboarding, markOnboardingSeen } = useTour();
+
+  useEffect(() => {
+    if (user && !hasSeenOnboarding) {
+      const tourSteps = [
+        { id: "header", target: "tour-header", titleKey: "tour.appHeader", descKey: "tour.appHeaderDesc", position: "bottom" as const },
+        { id: "emergency", target: "tour-emergency", titleKey: "tour.emergency", descKey: "tour.emergencyDesc", position: "bottom" as const },
+        { id: "ai-toggle", target: "tour-ai-toggle", titleKey: "tour.aiAssistant", descKey: "tour.aiAssistantDesc", position: "bottom" as const },
+        { id: "greeting", target: "tour-greeting", titleKey: "tour.greeting", descKey: "tour.greetingDesc", position: "bottom" as const },
+        { id: "schedule", target: "tour-schedule", titleKey: "tour.schedule", descKey: "tour.scheduleDesc", position: "bottom" as const },
+        { id: "add-btn", target: "tour-add-btn", titleKey: "tour.addMedicine", descKey: "tour.addMedicineDesc", position: "bottom" as const },
+      ];
+      openTour(tourSteps);
+      markOnboardingSeen();
+    }
+  }, [user, hasSeenOnboarding, openTour, markOnboardingSeen]);
 
   // Build schedule items from medicines + dose log status - memoized for performance
   const scheduleItems = useMemo(() => {
@@ -206,7 +224,7 @@ const Dashboard = () => {
           animate={{ y: 0, opacity: 1 }}
           className="flex items-center justify-between"
         >
-          <div>
+          <div id="tour-greeting">
             <p className="text-sm font-medium text-primary mb-1">{getTimeBasedGreeting()}, {userName} — stay healthy 😊💚</p>
             <h2 className="text-3xl font-bold text-foreground hidden">{userName}</h2>
           </div>
@@ -224,7 +242,7 @@ const Dashboard = () => {
           <div className="lg:col-span-2 space-y-6">
             <section className="space-y-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3" id="tour-schedule">
                   <h3 className="text-xl font-bold text-foreground">Today's Schedule</h3>
                   <AnimatePresence>
                     {isSyncingSchedule && (
@@ -245,6 +263,7 @@ const Dashboard = () => {
                   variant="ghost"
                   className="text-primary font-bold"
                   onClick={() => navigate("/add-medicine")}
+                  id="tour-add-btn"
                 >
                   <Plus className="w-4 h-4 mr-1" /> Add
                 </Button>

@@ -6,6 +6,8 @@ import NotificationPermissionPrompt from "./components/NotificationPermissionPro
 import MedicationNotificationScheduler from "./components/MedicationNotificationScheduler";
 import NotificationClickHandler from "./components/NotificationClickHandler";
 import { AIProvider } from "./context/AIContext";
+import { TourProvider, TourOverlay } from "./components/TourOverlay";
+import { TranslationProvider } from "./i18n";
 import { Toaster } from "./components/ui/sonner";
 import { useAuth } from "./context/AuthContext";
 import SplashScreen from "./components/SplashScreen";
@@ -115,23 +117,28 @@ const App = () => {
 
   return (
     <AIProvider>
-      <BrowserRouter
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true,
-        }}
-      >
-        {showSplash ? (
-          <SplashScreen onComplete={handleSplashComplete} />
-        ) : (
-          <AppContent />
-        )}
-        <NotificationClickHandler />
-        <MedicationNotificationScheduler />
-        <NotificationPermissionPrompt />
-        <BottomTabBar />
-        <Toaster />
-      </BrowserRouter>
+      <TranslationProvider>
+        <TourProvider>
+          <BrowserRouter
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true,
+            }}
+          >
+            {showSplash ? (
+              <SplashScreen onComplete={handleSplashComplete} />
+            ) : (
+              <AppContent />
+            )}
+            <NotificationClickHandler />
+            <MedicationNotificationScheduler />
+            <NotificationPermissionPrompt />
+            <BottomTabBar />
+            <Toaster />
+            <TourOverlay />
+          </BrowserRouter>
+        </TourProvider>
+      </TranslationProvider>
     </AIProvider>
   );
 };

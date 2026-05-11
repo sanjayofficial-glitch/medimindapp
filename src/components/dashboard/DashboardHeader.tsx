@@ -31,7 +31,7 @@ const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
     <header className="bg-card border-b border-border sticky top-0 z-40">
       <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/dashboard">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3" id="tour-header">
             <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
               <Pill className="w-5 h-5 text-primary-foreground" />
             </div>
@@ -55,7 +55,7 @@ const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
             </Button>
           )}
           
-          <div className="flex items-center gap-2 bg-secondary/50 px-3 py-1.5 rounded-full">
+          <div className="flex items-center gap-2 bg-secondary/50 px-3 py-1.5 rounded-full" id="tour-ai-toggle">
             <Sparkles className={`w-4 h-4 ${aiEnabled ? "text-emerald-500" : "text-muted-foreground"}`} />
             <Switch 
               checked={aiEnabled} 
@@ -69,6 +69,7 @@ const DashboardHeader = ({ user, onLogout }: DashboardHeaderProps) => {
             size="sm" 
             className="rounded-full shadow-lg shadow-destructive/20 animate-pulse"
             onClick={() => navigate("/emergency-id")}
+            id="tour-emergency"
           >
             <ShieldAlert className="w-4 h-4 mr-1" /> Emergency
           </Button>
