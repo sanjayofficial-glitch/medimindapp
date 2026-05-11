@@ -100,4 +100,4 @@ export function useTour() {
   return context;
 }
 
-export { TourStep };
+export type { TourStep };

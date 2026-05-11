@@ -63,6 +63,6 @@ export function useTranslation() {
   return context;
 }
 
-export { Language };
-export { TranslationKey };
+export type { Language };
+export type { TranslationKey };
 export { translations };

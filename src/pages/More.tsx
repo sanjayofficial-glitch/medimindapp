@@ -8,7 +8,6 @@ import {
   Stethoscope,
   FileText,
   Shield,
-  Settings,
   LogOut,
   LucideIcon,
 } from "lucide-react";

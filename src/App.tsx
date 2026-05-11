@@ -6,7 +6,8 @@ import NotificationPermissionPrompt from "./components/NotificationPermissionPro
 import MedicationNotificationScheduler from "./components/MedicationNotificationScheduler";
 import NotificationClickHandler from "./components/NotificationClickHandler";
 import { AIProvider } from "./context/AIContext";
-import { TourProvider, TourOverlay } from "./components/TourOverlay";
+import { TourProvider } from "./context/TourContext";
+import { TourOverlay } from "./components/TourOverlay";
 import { TranslationProvider } from "./i18n";
 import { Toaster } from "./components/ui/sonner";
 import { useAuth } from "./context/AuthContext";

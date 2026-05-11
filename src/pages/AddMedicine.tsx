@@ -18,7 +18,6 @@ import { QUERY_KEYS } from "@/lib/query-client";
 import { getLocalDateString, normalizeTime, toDisplayTime } from "@/utils/datetime";
 import { format, addDays } from "date-fns";
 import { DoseLog } from "@/utils/storage";
-import { cn } from "@/lib/utils";
 
 const AddMedicine = () => {
   const navigate = useNavigate();

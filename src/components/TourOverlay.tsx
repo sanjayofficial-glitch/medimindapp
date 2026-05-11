@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, X, Play } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { useTour } from "../context/TourContext";
 import { useTranslation } from "../i18n";
 
@@ -9,7 +9,7 @@ interface TourOverlayProps {
 }
 
 export function TourOverlay({ className = "" }: TourOverlayProps) {
-  const { isOpen, currentStep, steps, closeTour, nextStep, prevStep, goToStep, markOnboardingSeen } = useTour();
+  const { isOpen, currentStep, steps, closeTour, nextStep, prevStep, markOnboardingSeen } = useTour();
   const { t, language } = useTranslation();
   const [box, setBox] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
