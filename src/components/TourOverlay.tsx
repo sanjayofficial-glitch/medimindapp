@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, X, Bell, BellOff } from "lucide-react";
+import { ChevronLeft, Bell, Loader2 } from "lucide-react";
 import { useTour } from "../context/TourContext";
 import { useTranslation } from "../i18n";
+import { toast } from "sonner";
 
 interface TourOverlayProps {
   className?: string;
@@ -12,12 +13,14 @@ export function TourOverlay({ className = "" }: TourOverlayProps) {
   const { isOpen, currentStep, steps, closeTour, nextStep, prevStep, goToStep, markOnboardingSeen } = useTour();
   const { t, language } = useTranslation();
   const [box, setBox] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+  const [isEnablingNotifications, setIsEnablingNotifications] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const step = steps[currentStep];
   const isFirst = currentStep === 0;
   const isLast = currentStep === steps.length - 1;
   const totalSteps = steps.length;
+  const isNotificationStep = step?.id === "notifications";
 
   const updateBox = useCallback(() => {
     if (!step?.target) {
@@ -79,6 +82,37 @@ export function TourOverlay({ className = "" }: TourOverlayProps) {
     if (isFirst) return;
     prevStep();
   }, [isFirst, prevStep]);
+
+  const handleEnableNotifications = async () => {
+    setIsEnablingNotifications(true);
+    try {
+      const { subscribe } = await import("@/hooks/use-one-signal").then(m => m.useOneSignal());
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission === 'granted') {
+          toast.success(t("tour.notificationsEnabled"));
+          nextStep();
+        } else if (Notification.permission === 'denied') {
+          toast.error("Notifications blocked in browser settings");
+          nextStep();
+        } else {
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted') {
+            toast.success(t("tour.notificationsEnabled"));
+            nextStep();
+          } else {
+            nextStep();
+          }
+        }
+      } else {
+        nextStep();
+      }
+    } catch (error) {
+      console.error("Failed to enable notifications:", error);
+      nextStep();
+    } finally {
+      setIsEnablingNotifications(false);
+    }
+  };
 
   const getTooltipPosition = () => {
     if (!box) return { top: "50%", left: "50%", transform: "translate(-50%, -50%)" };
@@ -338,26 +372,81 @@ export function TourOverlay({ className = "" }: TourOverlayProps) {
               textAlign: "center", width: 340,
             }}
           >
-            <div style={{ fontSize: 56, marginBottom: 16 }}>💊</div>
+            <div style={{ fontSize: 56, marginBottom: 16 }}>
+              {isNotificationStep ? "🔔" : "💊"}
+            </div>
             <h3 style={{ color: "#ecfdf5", fontSize: 26, fontWeight: 800, margin: "0 0 12px" }}>
               {t(step.titleKey)}
             </h3>
             <p style={{ color: "#a7f3d0", fontSize: 15, margin: "0 0 28px", lineHeight: 1.6 }}>
               {t(step.descKey)}
             </p>
-            <button
-              onClick={handleNext}
-              style={{
-                background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
-                border: "none", color: "#fff",
-                borderRadius: 14, padding: "14px 36px",
-                fontSize: 16, fontWeight: 700,
-                cursor: "pointer", fontFamily: "inherit",
-                boxShadow: "0 6px 20px rgba(22, 163, 74, 0.45)",
-              }}
-            >
-              {t("tour.startTour")}
-            </button>
+            
+            {isNotificationStep ? (
+              <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+                <button
+                  onClick={handleNext}
+                  style={{
+                    background: "transparent",
+                    border: "2px solid #16a34a",
+                    color: "#34d399",
+                    borderRadius: 14,
+                    padding: "14px 24px",
+                    fontSize: 15,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {t("tour.skip")}
+                </button>
+                <button
+                  onClick={handleEnableNotifications}
+                  disabled={isEnablingNotifications}
+                  style={{
+                    background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
+                    border: "none",
+                    color: "#fff",
+                    borderRadius: 14,
+                    padding: "14px 24px",
+                    fontSize: 15,
+                    fontWeight: 700,
+                    cursor: isEnablingNotifications ? "default" : "pointer",
+                    fontFamily: "inherit",
+                    boxShadow: "0 6px 20px rgba(22, 163, 74, 0.45)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  {isEnablingNotifications ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      {language === "hi" ? "चालू हो रहा है..." : "Enabling..."}
+                    </>
+                  ) : (
+                    <>
+                      <Bell size={18} />
+                      {t("tour.enableNotifications")}
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleNext}
+                style={{
+                  background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
+                  border: "none", color: "#fff",
+                  borderRadius: 14, padding: "14px 36px",
+                  fontSize: 16, fontWeight: 700,
+                  cursor: "pointer", fontFamily: "inherit",
+                  boxShadow: "0 6px 20px rgba(22, 163, 74, 0.45)",
+                }}
+              >
+                {t("tour.startTour")}
+              </button>
+            )}
           </div>
         </motion.div>
       )}
