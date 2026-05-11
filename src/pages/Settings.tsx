@@ -214,11 +214,16 @@ const Settings = () => {
                       onCheckedChange={async (checked) => {
                         if (checked) {
                           const toastId = toast.loading("Enabling notifications...");
+                          console.log("Starting notification subscription...");
                           const success = await subscribe();
+                          console.log("Subscription result:", success);
                           toast.dismiss(toastId);
                           if (success) {
                             toast.success("Notifications enabled! You'll receive medication reminders.");
                           } else {
+                            const browserPerm = typeof Notification !== 'undefined' ? Notification.permission : 'unknown';
+                            const isSupported = typeof window !== 'undefined' && 'serviceWorker' in navigator && 'Notification' in window;
+                            console.error("Notification subscription failed. Browser permission:", browserPerm, "Supported:", isSupported);
                             toast.error("Failed to enable notifications. Allow notifications in your browser and try again.");
                           }
                         } else {
