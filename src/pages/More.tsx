@@ -50,7 +50,6 @@ const More = () => {
       items: [
         { icon: Users, label: "Profile Settings", path: "/settings", color: "text-slate-600", bg: "bg-slate-100" },
         { icon: Shield, label: "Privacy & Security", path: "/privacy", color: "text-slate-600", bg: "bg-slate-100" },
-        { icon: Settings, label: "App Settings", path: "/settings", color: "text-slate-600", bg: "bg-slate-100" },
       ]
     },
     {

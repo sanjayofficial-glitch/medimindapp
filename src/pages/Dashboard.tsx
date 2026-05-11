@@ -186,6 +186,16 @@ const Dashboard = () => {
 
   if (!user) return null;
 
+  const getTimeBasedGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return "Good Morning";
+    if (hour >= 12 && hour < 17) return "Good Afternoon";
+    if (hour >= 17 && hour < 21) return "Good Evening";
+    return "Good Night";
+  };
+
+  const userName = user?.user_metadata?.name || "Patient";
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <DashboardHeader user={user} onLogout={handleLogout} />
@@ -197,8 +207,8 @@ const Dashboard = () => {
           className="flex items-center justify-between"
         >
           <div>
-            <p className="text-sm font-medium text-primary mb-1">Good morning,</p>
-            <h2 className="text-3xl font-bold text-foreground">{user?.user_metadata?.name || "Patient"}</h2>
+            <p className="text-sm font-medium text-primary mb-1">{getTimeBasedGreeting()}, {userName} — stay healthy 😊💚</p>
+            <h2 className="text-3xl font-bold text-foreground hidden">{userName}</h2>
           </div>
           <Button 
             variant="outline" 

@@ -226,7 +226,14 @@ const AddMedicine = () => {
                       <SelectItem value="Twice daily">Twice daily</SelectItem>
                       <SelectItem value="Three times daily">Three times daily</SelectItem>
                       <SelectItem value="Four times daily">Four times daily</SelectItem>
-                      <SelectItem value="As needed">As needed</SelectItem>
+                      <SelectItem value="Every 8 hours">Every 8 hours</SelectItem>
+                      <SelectItem value="Every 12 hours">Every 12 hours</SelectItem>
+                      <SelectItem value="Specific days">Specific days of the week</SelectItem>
+                      <SelectItem value="Weekly">Weekly (select day)</SelectItem>
+                      <SelectItem value="Biweekly">Biweekly</SelectItem>
+                      <SelectItem value="Monthly">Monthly (select date)</SelectItem>
+                      <SelectItem value="As needed">As needed (PRN)</SelectItem>
+                      <SelectItem value="Custom">Custom</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

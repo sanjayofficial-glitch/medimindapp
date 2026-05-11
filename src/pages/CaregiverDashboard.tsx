@@ -80,6 +80,21 @@ const CaregiverDashboard = () => {
           <p className="text-gray-600">Monitor all family members' medication adherence and stock</p>
         </div>
 
+        <Card className="mb-8 border-emerald-200 bg-emerald-50/50 cursor-pointer hover:bg-emerald-50 transition-colors" onClick={() => navigate('/family-members')}>
+          <CardContent className="py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                <Users className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900">Add Family Member</p>
+                <p className="text-xs text-gray-500">Add a new family member to monitor</p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-400" />
+          </CardContent>
+        </Card>
+
         {familyMembers.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
