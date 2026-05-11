@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { useFamilyMembers, useAddMedicine, useMedicines, useSaveDoseLogsBatch } from "@/hooks/use-queries";
 import { MedicineDBEntry } from "@/data/medicineDatabase";
 import { MedicineSelector } from "@/components/MedicineSelector";
+import { ClockTimePicker } from "@/components/ClockTimePicker";
 import { toast } from "sonner";
 import { queryClient } from "@/lib/query-client";
 import { QUERY_KEYS } from "@/lib/query-client";
@@ -38,8 +39,6 @@ const AddMedicine = () => {
   const saveDoseLogsBatch = useSaveDoseLogsBatch();
 
   const pad = (n: string) => n.padStart(2, "0");
-  const hourOptions = Array.from({ length: 12 }, (_, i) => `${i + 1}`);
-  const minuteOptions = ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"];
 
   const quickPresets = [
     { label: "Morning", time: "08:00 AM" },
@@ -65,7 +64,7 @@ const AddMedicine = () => {
     if (!timeStr) {
       setNewHour("");
       setNewMinute("");
-      setNewPeriod("AM");
+      // Keep period as is for convenience
     }
   };
 
@@ -255,17 +254,22 @@ const AddMedicine = () => {
                 </div>
               </div>
 
-              <div className="space-y-4 p-4 sm:p-6 bg-emerald-50/50 rounded-2xl border border-emerald-100">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+              <div className="space-y-6 p-4 sm:p-8 bg-emerald-50/30 rounded-[2rem] border border-emerald-100/50">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-emerald-600" />
-                    <Label className="text-sm font-bold text-gray-700">Dose Schedule</Label>
+                    <div className="p-2 bg-emerald-100 rounded-xl">
+                      <Clock className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <Label className="text-base font-bold text-gray-800">Dose Schedule</Label>
+                      <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Set medication times</p>
+                    </div>
                   </div>
                   {existingMedicines.length > 0 && (
                     <div className="flex items-center gap-2">
-                      <Copy className="w-3 h-3 text-emerald-600" />
                       <Select onValueChange={handleCopySchedule}>
-                        <SelectTrigger className="h-8 text-[10px] bg-white border-emerald-100 text-emerald-700 w-full sm:w-[160px]">
+                        <SelectTrigger className="h-9 text-[11px] bg-white border-emerald-100 text-emerald-700 w-full sm:w-[180px] rounded-xl shadow-sm">
+                          <Copy className="w-3 h-3 mr-2" />
                           <SelectValue placeholder="Copy from existing..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -278,7 +282,7 @@ const AddMedicine = () => {
                   )}
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div className="flex flex-wrap gap-2">
                     {quickPresets.map((preset) => (
                       <Button
@@ -287,88 +291,64 @@ const AddMedicine = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => addTime(preset.time)}
-                        className="text-[10px] sm:text-xs h-8 bg-white border-emerald-100 text-emerald-700 hover:bg-emerald-50"
+                        className="text-[11px] font-bold h-9 bg-white border-emerald-100 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-200 rounded-xl transition-all active:scale-95"
                       >
-                        {preset.label} ({preset.time})
+                        {preset.label} <span className="ml-1 opacity-50 font-medium">{preset.time}</span>
                       </Button>
                     ))}
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <div className="grid grid-cols-3 gap-1 flex-1">
-                      <Select value={newHour} onValueChange={setNewHour}>
-                        <SelectTrigger className="h-10 sm:h-11 bg-white text-xs sm:text-sm">
-                          <SelectValue placeholder="Hr" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {hourOptions.map((hour) => (
-                            <SelectItem key={hour} value={hour}>{hour}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  <ClockTimePicker 
+                    hour={newHour}
+                    minute={newMinute}
+                    period={newPeriod}
+                    onHourChange={setNewHour}
+                    onMinuteChange={setNewMinute}
+                    onPeriodChange={setNewPeriod}
+                  />
 
-                      <Select value={newMinute} onValueChange={setNewMinute}>
-                        <SelectTrigger className="h-10 sm:h-11 bg-white text-xs sm:text-sm">
-                          <SelectValue placeholder="Min" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {minuteOptions.map((minute) => (
-                            <SelectItem key={minute} value={minute}>{minute}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Select value={newPeriod} onValueChange={setNewPeriod}>
-                        <SelectTrigger className="h-10 sm:h-11 bg-white text-xs sm:text-sm">
-                          <SelectValue placeholder="AM/PM" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="AM">AM</SelectItem>
-                          <SelectItem value="PM">PM</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <Button
-                      type="button"
-                      onClick={() => addTime()}
-                      size="icon"
-                      className="h-10 w-10 sm:h-11 sm:w-11 bg-emerald-600 hover:bg-emerald-700 shrink-0"
-                    >
-                      <Plus className="w-5 h-5" />
-                    </Button>
-                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => addTime()}
+                    className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-lg shadow-emerald-100 transition-all active:scale-[0.98]"
+                  >
+                    <Plus className="w-5 h-5 mr-2" />
+                    Add This Time to Schedule
+                  </Button>
                 </div>
 
                 {times.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-emerald-100">
-                    {times.map((time, index) => (
-                      <div 
-                        key={index} 
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-emerald-200 text-xs sm:text-sm shadow-sm animate-in fade-in zoom-in duration-200"
-                      >
-                        <span className="font-bold text-emerald-700">{toDisplayTime(time)}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeTime(index)}
-                          className="text-gray-400 hover:text-rose-500 transition-colors"
+                  <div className="space-y-3 pt-6 border-t border-emerald-100/50">
+                    <Label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-1">Scheduled Times</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {times.map((time, index) => (
+                        <div 
+                          key={index} 
+                          className="group flex items-center gap-3 px-4 py-2 rounded-2xl bg-white border border-emerald-100 text-sm shadow-sm animate-in zoom-in duration-300 hover:border-emerald-300 transition-all"
                         >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
+                          <span className="font-black text-emerald-700 tabular-nums">{toDisplayTime(time)}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeTime(index)}
+                            className="text-gray-300 hover:text-rose-500 transition-colors p-1 -mr-1"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
 
               <Button 
                 type="submit" 
-                className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white text-lg font-bold shadow-xl shadow-emerald-100 transition-all active:scale-[0.98]" 
+                className="w-full h-16 bg-emerald-600 hover:bg-emerald-700 text-white text-lg font-black rounded-3xl shadow-xl shadow-emerald-100 transition-all active:scale-[0.98] mt-8" 
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    <Loader2 className="mr-2 h-6 w-6 animate-spin" />
                     Saving Medication...
                   </>
                 ) : (
